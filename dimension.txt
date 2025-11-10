@@ -1,0 +1,158 @@
+
+data types
+
+floating point
+[f] //default size float
+[f64] x = 6.5;
+[f32]
+[f16]
+
+integer
+[i] //default size int
+[i64]
+[i32]
+[i16]
+[i8]
+[i4]
+[i2]
+[i1]
+
+unsigned
+[u]
+[u64]
+etc.
+
+fixed point
+[i5.3] //00000.000
+[i14.2] //00000000000000.00
+
+Dimension (tm)
+3[i2] is <[i2][i2][i2]>
+
+custom type definitions:
+type [vec3] is 3[f]
+
+type [b] is [i1]
+
+parameterized custom type definitions
+[triangle(n: [i])] aka 3*n[f] //triangle in n-dimensions
+
+t: [triangle(3)] = <0 1 2 3 4 5 6 7 8>
+
+[simplex(n: [i])] aka n*n[f]
+
+
+
+vector notation
+3[i8] x = <4 3 2>
+3[f] y = <5.3 2.2 7.4>
+
+matrices
+3*3[i] = 3*<[i][i][i]> = <<[i][i][i]> <[i][i][i]> <[i][i][i]>>
+
+glsl swizzling
+<A.xy, 3> //[F64]
+
+A.<0,1> <--> A.xy
+
+matrix swizzling
+
+3*3[i] A;
+
+
+A.<0,1>.<1,2> //2*2[i]
+
+//this function takes in an integer a and float b and returns a boolean.
+define {
+
+}
+
+
+define (a:[b]) ^ (b:[b]) as {
+  return 
+}
+ 
+
+
+
+
+
+x: [3i8] = <3 0 2>
+y: [3i8] = <4,1,3>
+
+
+
+//ex. Complex Number library
+
+type [C] is <r: [f], i: [f]>
+
+fn (a: [C]) * (b: [C]) makes [C] does
+ <a.r * b.r - a.i * b.i, 
+  a.r * b.i + a.i * b.r> priority 3;
+
+//function definition
+fn Z(c: [C] z: [C]) makes [C] does z * z + c;
+
+
+
+//lambda syntax, anonymous function. call this with x(c z)
+x: [[C][C] makes [C]] = fn (c z) does z * z + c;
+
+
+define x: [i] as 3;
+
+//enums
+type [Day] is oneof <Monday Tuesday Wednesday Thursday Friday Saturday Sunday>
+type [Suit] is oneof <Clubs Spades Hearts Diamonds>
+type [Card Number] is oneof <A 2 3 4 5 6 7 8 9 10 J Q K>
+
+type [CubicBezier(n: [i])] is 4*n[f];
+
+fn (B: [CubicBezier(n: [i])]).sample(t: [i0.64]) makes n[f] does {
+  t_r = 1 - t;
+  t_map: 4*[i0.64] = <t_r * t_r * t_r, 3 * t_r * t_r, 3 * t * t, t * t * t>
+  return  t_map . B;
+}
+
+
+type [Card] is <number: [Card Number], suit: [Suit]>
+
+my_card: [Card] = <3 Diamonds>
+my_hand: 3*[Card] = <3 Diamond, 4 Clubs, 10 Spades>
+
+
+fn (number: [i]) of (suit: [Suit]) makes [Card] does <number suit>
+
+
+
+x: [Day] = Monday;
+
+fn |(a: [C])| does sqrt(a.r * a.r + a.i * a.i) makes [f];
+
+
+
+
+a.sample(0.1)*b+7
+
+              _-_             ______
+           _-`   `-_         /  __  \
+        _-`    _   |        /  /  \  \
+       `    _-`  `.|       /  /   /  / [##]  __                                                [##]   
+       |  .`    _-`|      /  /   /  /  __  /  /-``\_-````\    _-````\    _-````-_    _----_   ___    ____     _-````-_
+       |   `---`   |     /  /   /  / /  / /  _-`\   _-`\  \  /  _____/  /  _-`\  \  |  --__/ /  / ,`  __  \  /  _-`\  \
+        -_      _-`     /  /_-` _-` /  / /  /   /  /   /  / /  /__--.  /  /   /  / -__ `-_  /  / /  /__/  / /  /   /  /
+          ``````       /______-`   /__/ /__/   /__/   /__/  \______-` /__/   /__/ /_____-` /__/  \______-` /__/   /__/  [V0.0.1]
+
+
+U+255x	═	║	╒	╓	╔	╕	╖	╗	╘	╙	╚	╛	╜	╝	╞	╟
+U+256x	╠	╡	╢	╣	╤	╥	╦	╧	╨	╩	╪	╫	╬	╭	╮
+
+  ╔═╗             DIMENSION [v0.0.1]
+╔═╝ ║╔═╗╔═════╗   
+║ ║ ║║ ║║ ║ ║ ║    
+╠═══╣╠═╩╩╦╬═╩═╣
+║ ═ ║║ ║ ║║ ══╣
+║ ══╣║ ║ ║╠══ ║
+╠═╦╦╩╩═╩═╣╠═══╣ 
+║ ║║ ═══ ║║ ║ ║
+╚═╝╚═════╝╚═╩═╝

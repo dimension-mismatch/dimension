@@ -1,0 +1,34 @@
+
+type [Suit] is oneof <Hearts Spades Diamonds Clubs>;
+
+type [Number] is oneof <Ace Two Three Four Five Six Seven Eight Nine Ten Jack Queen King>;
+
+type [Card] is <[Number][Suit]>;
+
+type [Deck] is 52[Card]; 
+
+my_matrix : 3*3[i];
+
+
+
+
+fn (a: [i]) + (b: [i]) makes [i] does {} priority 1;
+
+fn (a: [i]) - (b: [i]) makes [i] does {} priority 1;
+
+fn (a: [i]) * (b: [i]) makes [i] does {} priority 2;
+
+fn (a: [i]) % (b: [i]) makes [i] does {} priority 2;
+
+fn -(n: [i]) makes [i] does {} priority 1;
+
+int_a : 2[i];
+int_b : 2[i] = int_a * int_a;
+
+int_b * (int_b + int_a) % (- int_b);
+
+
+
+
+
+

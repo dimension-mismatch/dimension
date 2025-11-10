@@ -1,0 +1,25 @@
+{
+  "name": "dimension",
+  "displayName": "Dimension",
+  "description": "Dimension support for VSCode",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.104.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "dimension",
+      "aliases": ["Dimension", "dimension"],
+      "extensions": [".dmsn"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "dimension",
+      "scopeName": "source.dmsn",
+      "path": "./syntaxes/dimension.tmLanguage.json"
+    }]
+  }
+}

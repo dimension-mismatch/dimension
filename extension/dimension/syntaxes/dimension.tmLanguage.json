@@ -1,0 +1,81 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Dimension",
+	"patterns": [
+		{"include": "#function_definition"},
+		{
+			"include": "#integer"
+		},
+		{
+			"include": "#type"
+		}
+		
+	],
+	"repository": {
+		"function_definition" : {
+			"begin" : "(?=fn)",
+			"end": ";",
+			"patterns": [
+				{"include": "#function_declaration"},
+				{"include": "#function_body"},
+				{"include": "#function_output"}]
+		},
+		"function_declaration" :{
+			"begin": "fn",
+			"end": "(?=(does|makes|priority|$))",
+			"beginCaptures": {"0": {"name": "keyword.control"}},
+			"patterns": [{"include": "#function_name"}, {"include": "#parameter_list"}]
+		},
+		"function_body" :{
+			"begin" : "does\\s+{",
+			"end": "}",
+			"beginCaptures": {"0": {"name": "keyword.control"}}
+		},
+		"function_output" : {
+			"begin" : "makes",
+			"end" : "(?=(does|priority|$))",
+			"beginCaptures": {"0": {"name": "keyword.control"}},
+			"patterns": [{"include": "#type"}]
+		},
+		"parameter_list": {
+			"begin": "\\(",
+			"end": "\\)",
+			"patterns": [
+				{"include": "#parameter"},
+				{"match": ":"},
+				{"include": "#type"}]
+		},
+		"type": {
+			"patterns": [{
+				"begin": "\\[",
+				"end": "\\]",
+				"patterns": [{
+					"include": "#typename"
+				}]
+			}]
+		},
+		"integer": {
+			"patterns": [{
+				"match": "\\b(-?\\d+)\\b",
+				"name": "constant.numeric"
+			}]
+		},
+		"typename": {
+			"match": "[^\\s<>\\(\\)\\[\\];:,]+",
+			"name": "entity.name.type"
+		},
+		"parameter": {
+			"match": "[^\\s<>\\(\\)\\[\\];:,]+",
+			"name": "variable.parameter"
+		},
+		"identifier": {
+			"match": "[^\\s<>\\(\\)\\[\\];:,]+",
+			"name": "variable"
+		},
+		"function_name": {
+			"match": "[^\\s<>\\(\\)\\[\\];:,]+",
+			"name": "entity.name.function"
+		}
+	},
+	"scopeName": "source.dmsn"
+}
