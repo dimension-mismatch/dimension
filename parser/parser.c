@@ -92,16 +92,16 @@ void attempt_read_type_declaration(token_array_t* tokens, int* index, type_recor
 
   if(match_next_content(ip, &current_token, tokens, IDENTIFIER, "oneof")){
     typedec_setName(&dec, ENUM_TYPE, type_name);
-    if(allow_only_next_content("<", PROGRAM, "Enum Type Declaration", ip, tokens, &current_token)){typedec_destroy(&dec); return;}
-    while(match_next_type(ip, &current_token, tokens, IDENTIFIER)){
+    if(allow_only_next_content("(", PROGRAM, "Enum Type Declaration", ip, tokens, &current_token)){typedec_destroy(&dec); return;}
+    while(cond_peek_next_type(ip, &current_token, tokens, IDENTIFIER) || cond_peek_next_type(ip, &current_token, tokens, NUMERIC)){
       typedec_pushEnumOption(&dec, current_token->content, current_token->length);
     }
-    if(allow_only_current_content(">", PROGRAM, "Enum Type Declaration", current_token)){ typedec_destroy(&dec); return;}
+    if(allow_only_next_content(")", PROGRAM, "Enum Type Declaration", ip, tokens, &current_token)){ typedec_destroy(&dec); return;}
   }
   else{
     typedec_setName(&dec, COMP_TYPE, type_name);
     
-    int single_type_only = !match_current_content(current_token,  PROGRAM, "<");
+    int single_type_only = !match_current_content(current_token,  PROGRAM, "(");
     if(single_type_only){
       i--;
     }
@@ -123,7 +123,7 @@ void attempt_read_type_declaration(token_array_t* tokens, int* index, type_recor
       if(single_type_only) break;
     }
 
-    if(!single_type_only && allow_only_next_content(">", PROGRAM, "Composite Type Declaration",ip, tokens, &current_token)){typedec_destroy(&dec); return;}
+    if(!single_type_only && allow_only_next_content(")", PROGRAM, "Composite Type Declaration",ip, tokens, &current_token)){typedec_destroy(&dec); return;}
   }
   if(allow_only_next_content(";", PROGRAM, "Type Declaration", ip, tokens, &current_token)){typedec_destroy(&dec); return;}
   i--;
@@ -305,6 +305,9 @@ exp_array_t* attempt_isolate_expression(token_array_t* tokens, int* index, varia
         exp_array_push_expression(&root, &matches, exp_create_identifier(current_token->content));
       }
     }
+    else if(cond_peek_next_type(ip, &current_token, tokens, NUMERIC)){
+      exp_array_push_expression(&root, &matches, exp_create_numeric_literal(string_to_int(current_token->content)));
+    }
     else{
       exp_array_destroy(root);
       return NULL;
@@ -312,7 +315,7 @@ exp_array_t* attempt_isolate_expression(token_array_t* tokens, int* index, varia
   }
 }
 
-void attempt_read_variable_assignment(token_array_t* tokens, int* index, type_record_t* type_record, variable_record_t* var_record, function_record_t* fn_record){
+expression_t* attempt_read_variable_assignment(token_array_t* tokens, int* index, type_record_t* type_record, variable_record_t* var_record, function_record_t* fn_record){
   int i = *index;
   int* ip = &i;
   token_t* current_token;
@@ -323,31 +326,32 @@ void attempt_read_variable_assignment(token_array_t* tokens, int* index, type_re
     if(match_next_type(ip, &current_token, tokens, IDENTIFIER)){
       int* var_id = variable_record_get_index(var_record, current_token->content);
       if(var_id == NULL){
-        return;
+        return NULL;
       }
       id = *var_id;
       declare = *variable_record_get_by_index(var_record, *var_id);
     }
     else{
-      return;
+      return NULL;
     }
   }
   if(match_next_content(ip, &current_token, tokens, SYMBOLIC, "=")){
     exp_array_t* expc = attempt_isolate_expression(tokens, ip, var_record);
     if(expc != NULL){
-      parse_expression(expc, fn_record, 0);
+      parse_expression(&expc, fn_record, 0);
       expression_t* final = exp_create_var_write(declare.type, id, expc->expression);
       printf("\n\n");
       print_expression(final);
       printf("\n\n");
       *index = i;
-      return;
+      return final;
     }
     else{
       error_msg("Expression", "Expession Expected", current_token);
-      return;
+      return NULL;
     }
   }
+  return NULL;
 }
 
 
@@ -385,10 +389,9 @@ void parse_tokens(token_array_t* tokens){
     if(expc != NULL){
       printf(GREEN BOLD "FOUND EXPRESSION: " RESET_COLOR);
       print_exp_array(expc);
-        
-
       printf("\n");
-      parse_expression(expc, &function_record, 0);
+
+      parse_expression(&expc, &function_record, 0);
     }
   }
   print_fn_rec(&function_record);

@@ -249,7 +249,7 @@ void exp_span_array_consume_best_span(exp_span_array_t *array, exp_array_t* matc
     }
     match = match->next;
 
-    if(match == NULL) break;
+    if(match == NULL || match->expression->type == EXP_GROUPING) break;
   }
 
   
@@ -289,42 +289,55 @@ void exp_span_array_consume_best_span(exp_span_array_t *array, exp_array_t* matc
 
 
 
-expression_t* parse_expression(exp_array_t* array, function_record_t* fn_record, int depth){
+exp_array_t* parse_expression(exp_array_t** start, function_record_t* fn_record, int depth){
   
+  exp_array_t* array = *start;
   exp_span_array_t spans = exp_span_array_init();
 
   
   exp_array_t* current = array;
   exp_array_t* prev = NULL;
 
+  exp_array_t* group_entry = NULL;
+  exp_array_t* group_prev = NULL;
   while(current != NULL){
     if(current->expression->type == EXP_GROUPING){
-      if(prev){
-        prev->next = current->next;
-      }
       if(current->expression->enter_group){
-        parse_expression(current->next, fn_record, depth + 1);
-        // printf(BLUE "\nrecursive operation complete: \n" RESET_COLOR);
-        // print_exp_array(array);
-        // printf("\n");
+        group_entry = current->next;
+        
+        
+        printf(YELLOW "recursively parsing: " RESET_COLOR);
+        print_exp_array(group_entry);
+        printf("\n");
+        exp_array_t* result = parse_expression(&group_entry, fn_record, depth + 1);
+        
+
+        if(prev){
+          prev->next = result;
+        }
+        else{
+          *start = result;
+          array = *start;
+        }
+        exp_destroy(current->expression);
+        free(current);
+        current = result;
       }
       else{
-        if(depth == 0){
-          printf(RED "Too many \")\" on this line!" RESET_COLOR);
-        }
+        
         break;
       }
     } 
     prev = current;
-    current = current->next;
+    current = prev->next;
   }
-  if(current == NULL && depth > 0){
-    printf(RED "Not Enough \")\" on this line!" RESET_COLOR);
-  }
+
   current = array;
   int i = 0;
   while(current != NULL){
-    
+    if(current->expression->type == EXP_GROUPING && !current->expression->enter_group){
+      break;
+    }
     expression_span_t span = exp_create_span(i, current, fn_record);
     
     if(span.id != -1){
@@ -342,9 +355,57 @@ expression_t* parse_expression(exp_array_t* array, function_record_t* fn_record,
     // print_exp_span_array(&spans);
     exp_span_array_consume_best_span(&spans, array, fn_record);
   }
-  print_exp_array(array);
-  printf("\n");
-  expression_t* new = array->expression;
+  
+
+  expression_t* new;
+  
+
+  
+  unsigned int exp_count = 0;
+  exp_array_t* counter = array;
+  while(counter){
+    if(counter->expression->type == EXP_GROUPING){
+      break;
+    }
+    exp_count++;
+    counter = counter->next;
+  }
+  exp_array_t* end = counter? counter->next: NULL;
+
+  if(exp_count > 1){
+    type_identifier_t returnType = typeid_copy(&(array->expression->return_type));
+    typeid_pushDimension(&returnType, exp_count);
+    new = exp_init(EXP_VECTOR_LITERAL, returnType);
+    new->vector_literal.component_count = exp_count;
+    new->vector_literal.components = malloc(exp_count * sizeof(expression_t*));
+    int exp_i = 0;
+    counter = array;
+    while(counter){
+      if(counter->expression->type == EXP_GROUPING){
+        break;
+      }
+      new->vector_literal.components[exp_i] = counter->expression;
+      exp_i++;
+      counter = counter->next;
+    }
+
+    end = counter? counter->next: NULL;
+  }
+  else{
+    new = array->expression;
+  }
+
+  
+  
   exp_span_array_destroy(&spans);
-  return new;
+  exp_array_t* new_arr = malloc(sizeof(exp_array_t));
+  new_arr->expression = new;
+
+  new_arr->next = end;
+
+  printf("resulting expression array: ");
+  print_exp_array(new_arr);
+  printf("\n");
+
+  return new_arr;
 }

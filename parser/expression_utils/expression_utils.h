@@ -35,8 +35,10 @@ typedef struct expression{
       struct expression** components;
     } vector_literal;
     int enter_group;
+    int numeric_literal;
   };
 }expression_t;
+
 
 typedef struct linked_expression{
   struct linked_expression* next;
@@ -54,6 +56,8 @@ expression_t *exp_create_var_read(type_identifier_t returnType, int varid);
 expression_t *exp_create_var_write(type_identifier_t returnType, int varid, expression_t *value);
 
 expression_t *exp_create_grouping(int enter_group);
+
+expression_t *exp_create_numeric_literal(int value);
 
 void exp_array_push_expression(exp_array_t **root, exp_array_t **current_node, expression_t *expression);
 

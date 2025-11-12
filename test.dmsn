@@ -1,9 +1,9 @@
 
-type [Suit] is oneof <Hearts Spades Diamonds Clubs>;
+type [Suit] is oneof (Hearts Spades Diamonds Clubs );
 
-type [Number] is oneof <Ace Two Three Four Five Six Seven Eight Nine Ten Jack Queen King>;
+type [Number] is oneof (A 2 3 4 5 6 7 8 9 10 J Q K);
 
-type [Card] is <[Number][Suit]>;
+type [Card] is ([Number][Suit]);
 
 type [Deck] is 52[Card]; 
 
@@ -23,7 +23,9 @@ fn (a: [i]) % (b: [i]) makes [i] does {} priority 2;
 fn -(n: [i]) makes [i] does {} priority 1;
 
 int_a : 2[i];
-int_b : 2[i] = int_a * int_a;
+
+
+int_b : 2*2[i] = (4, 2);
 
 int_b * (int_b + int_a) % (- int_b);
 

@@ -6,4 +6,4 @@
 
 
 
-expression_t* parse_expression(exp_array_t* array, function_record_t* fn_record, int depth);
+exp_array_t* parse_expression(exp_array_t** array, function_record_t* fn_record, int depth);

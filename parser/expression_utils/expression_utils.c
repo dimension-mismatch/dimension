@@ -48,6 +48,14 @@ expression_t* exp_create_grouping(int enter_group){
   return new;
 }
 
+expression_t* exp_create_numeric_literal(int value){
+  type_identifier_t typeid = typeid_newEmpty();
+  typeid.type_number = 0;
+  expression_t* new = exp_init(EXP_SINGLE_LITERAL, typeid);
+  new->numeric_literal = 0;
+  return new;
+}
+
 void exp_array_push_expression(exp_array_t** root, exp_array_t** current_node, expression_t* expression){
   exp_array_t* new_node = malloc(sizeof(exp_array_t));
   new_node->expression = expression;
@@ -63,7 +71,7 @@ void exp_array_push_expression(exp_array_t** root, exp_array_t** current_node, e
 
 
 void print_expression(expression_t* exp){
-  
+  int i;
   if(exp == NULL){
     printf("{NULL EXP}");
     return;
@@ -74,7 +82,7 @@ void print_expression(expression_t* exp){
       return;
     case EXP_CALL_FN:
       printf("{" MAGENTA "FN" GREEN "#%d" RESET_COLOR "(", exp->function_call.fn_id);
-      int i = 0;
+      i = 0;
       while(i < exp->function_call.arg_c - 1){
         print_expression(exp->function_call.arg_v[i]);
         printf(",");
@@ -96,6 +104,17 @@ void print_expression(expression_t* exp){
     case EXP_WRITE_VAR:
       printf("SET VAR #%d TO : ", exp->write.var_id);
       print_expression(exp->write.value[0]);
+      break;
+    case EXP_VECTOR_LITERAL:
+      printf("⟨");
+      i = 0;
+      while(i < exp->vector_literal.component_count - 1){
+        print_expression(exp->vector_literal.components[i]);
+        printf(",");
+        i++;
+      }
+      print_expression(exp->vector_literal.components[i]);
+      printf("⟩");
       break;
     default: 
       if(exp->text != NULL){
