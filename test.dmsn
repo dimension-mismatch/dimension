@@ -12,11 +12,19 @@
 
 
 
-fn (a: [i]) + (b: [i]) makes [i] does {~
-assmeblebley codde heere
+fn (a: [i]) + (b: [i]) makes [i] does {~I
+  add ?0, ?1
 ~} priority 1;
 
-fn (a: [i]) - (b: [i]) makes [i] does {} priority 1;
+fn (a: [i]) - (b: [i]) makes [i] does {~I
+  sub ?0, ?1
+~} priority 1;
+
+fn exit (code: [i]) makes [i] does {~I
+  mov rdi, ?0
+  mov rax, 0x2000001
+  syscall
+~};
 
 fn (a: [i]) * (b: [i]) makes [i] does {} priority 2;
 
@@ -24,12 +32,11 @@ fn (a: [i]) % (b: [i]) makes [i] does {} priority 2;
 
 fn -(n: [i]) makes [i] does {} priority 1;
 
-int_a : [i] = 0;
+int_a : [i] = 11;
 
+int_b : [i] = 3 + 7 + (int_a + 5);
 
-int_b : [i] = 2;
-
-int_b * (int_b + int_a) % (- int_b);
+exit int_b;
 
 
 

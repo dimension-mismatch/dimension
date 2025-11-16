@@ -170,7 +170,7 @@ void attempt_read_function_declaration(token_array_t* tokens, int* index, type_r
   //if(allow_only_next_content("{", PROGRAM, "Function Declaration", ip, tokens, &current_token)) return;
   exp_array_t* matches = NULL;
   exp_array_t* root = NULL;
-
+  variable_record_scope_in(var_record);
   while(/*!cond_peek_next_content(ip, &current_token, tokens, PROGRAM, "}")*/ 
     !(
       peek_next_content(ip, &current_token, tokens, IDENTIFIER, "makes") ||
@@ -187,6 +187,7 @@ void attempt_read_function_declaration(token_array_t* tokens, int* index, type_r
         if(param.name == NULL){
           error_msg("Function Parameter Declaration","Parameter Name Expected", current_token);
           exp_array_destroy(root);
+          variable_record_scope_out(var_record);
           return;
         }
         expression_t* exp = exp_create_var_declaration(param.type, param.name);
@@ -204,6 +205,7 @@ void attempt_read_function_declaration(token_array_t* tokens, int* index, type_r
     else{
       error_msg("Function Declaration", "Found Unexpected Token, Looking for parameters or identifiers", current_token);
       exp_array_destroy(root);
+      variable_record_scope_out(var_record);
       return;
     }
   }
@@ -216,20 +218,28 @@ void attempt_read_function_declaration(token_array_t* tokens, int* index, type_r
   int priority = 0;
   type_identifier_t ret_type;
 
+  char* assembly = NULL;
+  expression_t* dimension = NULL;
+
   while(!peek_next_content(ip, &current_token, tokens, PROGRAM, ";")){
     if(cond_peek_next_content(ip, &current_token, tokens, IDENTIFIER, "does")){
       if(has_body){
         error_msg("Function Body", "Function can only have one function body", current_token);
         exp_array_destroy(root);
+        variable_record_scope_out(var_record);
         return;
       }
       has_body = 1;
       if(allow_only_next_content("{", PROGRAM, "Function Body", ip, tokens, &current_token)){
         exp_array_destroy(root);
+        variable_record_scope_out(var_record);
         return;
       }
       while(!match_next_content(ip, &current_token, tokens, PROGRAM, "}")){
         print_token(current_token);
+        if(current_token->type == ASSEMBLY){
+          assembly = current_token->content;
+        }
         printf("\n");
       }
     }
@@ -237,6 +247,7 @@ void attempt_read_function_declaration(token_array_t* tokens, int* index, type_r
       if(has_return){
         error_msg("Function Return Type", "Function can only have one return type", current_token);
         exp_array_destroy(root);
+        variable_record_scope_out(var_record);
         return;
       }
       has_return = 1;
@@ -244,6 +255,7 @@ void attempt_read_function_declaration(token_array_t* tokens, int* index, type_r
       if(ret_type.type_number == -1){
         exp_array_destroy(root);
         error_msg("Function Return Type", "Could not find a return [type] for this function", current_token);
+        variable_record_scope_out(var_record);
         return;
       }
     }
@@ -251,6 +263,7 @@ void attempt_read_function_declaration(token_array_t* tokens, int* index, type_r
       if(has_priority){
         error_msg("Function Priority", "Function can only have one priority value", current_token);
         exp_array_destroy(root);
+        variable_record_scope_out(var_record);
         return;
       }
       has_priority = 1;
@@ -260,17 +273,20 @@ void attempt_read_function_declaration(token_array_t* tokens, int* index, type_r
       else{
         error_msg("Function Priority", "Priority must be an integer", current_token);
         exp_array_destroy(root);
+        variable_record_scope_out(var_record);
         return;
       }
     }
     else{
       error_msg("Function Declaration", "Unexpected token. Looking for a \"makes\", \"does\", or \"priority\"", current_token);
       exp_array_destroy(root);
+      variable_record_scope_out(var_record);
       return;
     }
   }
-  fn_rec_push_definition(fn_record, root, &ret_type, priority);
+  fn_rec_push_definition(fn_record, root, &ret_type, priority, assembly, NULL);
   *index = i;
+  variable_record_scope_out(var_record);
 }
 
 exp_array_t* attempt_isolate_expression(token_array_t* tokens, int* index, variable_record_t* var_record){
@@ -296,9 +312,9 @@ exp_array_t* attempt_isolate_expression(token_array_t* tokens, int* index, varia
     }
     else if(cond_peek_next_type(ip, &current_token, tokens, IDENTIFIER) || cond_peek_next_type(ip, &current_token, tokens, SYMBOLIC)){
       
-      int* varid = variable_record_get_index(var_record, current_token->content);
+      int* varid = variable_record_get_byte_offset(var_record, current_token->content);
       if(varid != NULL){
-        variable_t* var = variable_record_get_by_index(var_record, *varid);
+        variable_t* var = variable_record_get(var_record, current_token->content);
         exp_array_push_expression(&root, &matches, exp_create_var_read(var->type, *varid));
       }
       else{
@@ -339,7 +355,7 @@ expression_t* attempt_read_variable_assignment(token_array_t* tokens, int* index
     exp_array_t* expc = attempt_isolate_expression(tokens, ip, var_record);
     if(expc != NULL){
       parse_expression(&expc, fn_record, 0);
-      expression_t* final = exp_create_var_write(declare.type, id, expc->expression);
+      expression_t* final = exp_create_var_write(declare.type, declare.local_byte_offset, expc->expression);
       printf("\n\n");
       print_expression(final);
       printf("\n\n");
@@ -356,51 +372,54 @@ expression_t* attempt_read_variable_assignment(token_array_t* tokens, int* index
 
 
 
-void parse_tokens(token_array_t* tokens){
-  type_record_t type_record = init_type_record();
-  variable_record_t variable_record = variable_record_init();
-  function_record_t function_record = fn_rec_init();
+expression_t* parse_tokens(token_array_t* tokens, type_record_t* type_record, variable_record_t* variable_record, function_record_t* function_record){
 
   type_declaration_t Integer = typedec_newEmpty();
   typedec_setName(&Integer, BASE_TYPE, "i");
+  Integer.bit_count = 64;
 
   type_declaration_t Unsigned = typedec_newEmpty();
   typedec_setName(&Unsigned, BASE_TYPE, "u");
 
+  Unsigned.bit_count = 64;
+
   type_declaration_t Float = typedec_newEmpty();
   typedec_setName(&Float, BASE_TYPE, "f");
+
+  Float.bit_count = 64;
 
   type_declaration_t Char = typedec_newEmpty();
   typedec_setName(&Char, BASE_TYPE, "c");
 
-  type_record_push_type(&type_record, Integer);
-  type_record_push_type(&type_record, Unsigned);
-  type_record_push_type(&type_record, Float);
-  type_record_push_type(&type_record, Char);
+  Char.bit_count = 8;
 
+  type_record_push_type(type_record, Integer);
+  type_record_push_type(type_record, Unsigned);
+  type_record_push_type(type_record, Float);
+  type_record_push_type(type_record, Char);
+
+  expression_t* program = exp_create_block();
 
   for(int i = -1; i < tokens->token_count; i++){
-    attempt_read_type_declaration(tokens, &i, &type_record);
-    attempt_read_variable_assignment(tokens, &i, &type_record, &variable_record, &function_record);
+    attempt_read_type_declaration(tokens, &i, type_record);
 
+    exp_block_push_line(program, attempt_read_variable_assignment(tokens, &i, type_record, variable_record, function_record));
 
-    attempt_read_function_declaration(tokens, &i, &type_record, &variable_record, &function_record);
-    exp_array_t* expc = attempt_isolate_expression(tokens, &i, &variable_record);
+    attempt_read_function_declaration(tokens, &i, type_record, variable_record, function_record);
+    exp_array_t* expc = attempt_isolate_expression(tokens, &i, variable_record);
     if(expc != NULL){
       printf(GREEN BOLD "FOUND EXPRESSION: " RESET_COLOR);
       print_exp_array(expc);
       printf("\n");
 
-      parse_expression(&expc, &function_record, 0);
+      parse_expression(&expc, function_record, 0);
+      exp_block_push_line(program, expc->expression);
     }
   }
-  print_fn_rec(&function_record);
+  print_fn_rec(function_record);
   printf(YELLOW BOLD "VARIABLES: \n" RESET_COLOR);
-  print_variable_record(&variable_record);
+  print_variable_record(variable_record);
   
-  
-  destroy_type_record(&type_record);
-  variable_record_destroy(&variable_record);
-  fn_rec_destroy(&function_record);
+  return program;
 }
 

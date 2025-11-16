@@ -53,7 +53,9 @@ void dmsn_pushDimension(dimension_t *dimension, unsigned int d);
 
 dimension_t dmsn_copy(dimension_t *dimension);
 
-void typeid_destroy(type_identifier_t* typeId);
+int typeid_bytesize(type_identifier_t *typeid);
+
+void typeid_destroy(type_identifier_t *typeId);
 
 type_identifier_t typeid_copy(type_identifier_t* typeId);
 

@@ -103,6 +103,9 @@ void push_int_value(hash_table_t* record, int key, int value){
 
 
 void remove_key_value(hash_table_t *record, char *key){
+  if(record == NULL || key == NULL){
+    return;
+  }
   int idx = hash_fn(key) % record->array_size;
   struct hash_entry* ptr = record->array[idx];
   if(ptr == NULL){
@@ -114,7 +117,12 @@ void remove_key_value(hash_table_t *record, char *key){
       return;
     }
   }
-  ptr->prev->next = ptr->next;
+  if(ptr->prev){
+    ptr->prev->next = ptr->next;
+  }
+  else{
+    record->array[idx] = ptr->next;
+  }
   free(ptr->name);
   free(ptr);
   ptr = NULL;

@@ -57,7 +57,7 @@ int fn_tree_push_definition(struct fn_tree* tree, int fn_id, exp_array_t* array,
 }
 
 
-void fn_rec_push_definition(function_record_t *record, exp_array_t* array, type_identifier_t *returntype, int priority){;
+void fn_rec_push_definition(function_record_t *record, exp_array_t* array, type_identifier_t *returntype, int priority, char* assembly, expression_t* dmsn){
   if(array == NULL) return;
   int child_index = record->def_count;
   int pushed = fn_tree_push_definition(record->root, child_index, array, returntype, priority);
@@ -65,6 +65,16 @@ void fn_rec_push_definition(function_record_t *record, exp_array_t* array, type_
     return;
   }
   struct function_def def = {.return_type = *returntype, .num_parameters = 0, .parameters = NULL, .priority = priority};
+  if(assembly != NULL){
+    def.impl_type = FN_IMPL_ASM;
+    def.assembly = malloc(1 + strlen(assembly));
+    strcpy(def.assembly, assembly);
+  }
+  else if (dmsn != NULL){
+    def.impl_type = FN_IMPL_DMSN;
+    def.dmsn = dmsn;
+  }
+  
   while(array != NULL){
     if(array->expression->type == EXP_DECLARE_VAR){
       def.num_parameters++;

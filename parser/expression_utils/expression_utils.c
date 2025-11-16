@@ -52,8 +52,21 @@ expression_t* exp_create_numeric_literal(int value){
   type_identifier_t typeid = typeid_newEmpty();
   typeid.type_number = 0;
   expression_t* new = exp_init(EXP_SINGLE_LITERAL, typeid);
-  new->numeric_literal = 0;
+  new->numeric_literal = value;
   return new;
+}
+
+expression_t* exp_create_block(){
+  return exp_init(EXP_BLOCK, typeid_newEmpty());
+}
+
+void exp_block_push_line(expression_t* block, expression_t* line){
+  if(block == NULL || line == NULL){
+    return;
+  }
+  block->function_call.arg_c++;
+  block->function_call.arg_v = realloc(block->function_call.arg_v, block->function_call.arg_c * sizeof(expression_t*));
+  block->function_call.arg_v[block->function_call.arg_c - 1] = line;
 }
 
 void exp_array_push_expression(exp_array_t** root, exp_array_t** current_node, expression_t* expression){
@@ -92,6 +105,14 @@ void print_expression(expression_t* exp){
       printf(") -> ");
       print_type_id(&(exp->return_type));
       printf("}");
+      return;
+    case EXP_BLOCK:
+      printf(YELLOW BOLD "BLOCK: \n" RESET_COLOR);
+      for(int i = 0; i < exp->function_call.arg_c; i++){
+        printf("%d : ", i);
+        print_expression(exp->function_call.arg_v[i]);
+        printf("\n");
+      }
       return;
     case EXP_GROUPING:
       if(exp->enter_group){
@@ -145,6 +166,7 @@ void exp_destroy(expression_t* exp){
     case EXP_READ_VAR:
       exp->read.var_id = -1;
       break;
+    case EXP_BLOCK:
     case EXP_CALL_FN:
       exp->function_call.fn_id = -1;
       for(int i = 0; i < exp->function_call.arg_c; i++){

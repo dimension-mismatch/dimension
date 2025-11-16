@@ -1,3 +1,7 @@
 *.o
 dmsn
 another
+.DS_store
+
+test
+

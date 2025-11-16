@@ -11,6 +11,7 @@ typedef enum{
   EXP_WRITE_VAR,
   EXP_VECTOR_LITERAL,
   EXP_SINGLE_LITERAL,
+  EXP_BLOCK
 }expression_type_t;
 
 typedef struct expression{
@@ -58,6 +59,10 @@ expression_t *exp_create_var_write(type_identifier_t returnType, int varid, expr
 expression_t *exp_create_grouping(int enter_group);
 
 expression_t *exp_create_numeric_literal(int value);
+
+expression_t *exp_create_block();
+
+void exp_block_push_line(expression_t *block, expression_t *line);
 
 void exp_array_push_expression(exp_array_t **root, exp_array_t **current_node, expression_t *expression);
 

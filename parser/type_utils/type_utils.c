@@ -63,6 +63,10 @@ unsigned int typeid_totalDimensions(type_identifier_t *typeId){
   return dim;
 }
 
+int typeid_bytesize(type_identifier_t* typeid){
+  return (typeid->bit_count + 7) / 8 * typeid_totalDimensions(typeid);
+}
+
 void typeid_destroy(type_identifier_t *typeId){
   free(typeId->dimensions);
   typeId->dimension_count = 0;
@@ -120,7 +124,7 @@ void typedec_pushMember(type_declaration_t *typedec, type_identifier_t* member, 
   addEntry(typedec, name, length);
   typedec->composition.members = realloc(typedec->composition.members, typedec->composition.member_count * sizeof(type_identifier_t));
   typedec->composition.members[typedec->composition.member_count - 1] = *member;
-  typedec->bit_count += member->bit_count * typeid_totalDimensions(member);
+  typedec->bit_count += typeid_bytesize(member) * 8;
 
 }
 
