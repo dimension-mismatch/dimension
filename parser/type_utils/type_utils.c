@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "type_utils.h"
 #include "../colors.h"
@@ -88,15 +89,9 @@ type_declaration_t typedec_newEmpty(){
 }
 
 void typedec_setName(type_declaration_t *typedec, type_type_t type, char *name){
-  int length = 0;
-  char* p = name;
-  while(*p != '\0'){
-    p++; length++;
-  }
+  int length = 1 + strlen(name);
   typedec->type_name = realloc(typedec->type_name, length * sizeof(char));
-  for(int i = 0; i < length; i++){
-    typedec->type_name[i] = name[i];
-  }
+  strcpy(typedec->type_name, name);
   typedec->type_type = type;
 }
 
