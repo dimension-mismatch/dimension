@@ -95,6 +95,9 @@ void print_token_array(token_array_t* tokens){
       case PROGRAM:
         printf("PROGRAM    ");
         break;
+      case ASSEMBLY:
+        printf("ASM        ");
+        break;
       default:
         printf("NONE       ");
     }
@@ -117,11 +120,15 @@ token_array_t* tokenize_file(FILE* file){
   int col = 0;
 
   int in_comment = 0;
+  int in_asm = 0;
 
   char ch;
   while((ch = fgetc(file)) != EOF){
     col++;
-    
+    if(ch == '\n'){
+      col = 0;
+      line++;
+    }
     if(in_comment == 2){
       if(ch == '\n'){
         in_comment = 0;
@@ -131,6 +138,20 @@ token_array_t* tokenize_file(FILE* file){
     }
     if(ch == '/'){
       in_comment++;
+    }
+    else{
+      in_comment = 0;
+    }
+    if(ch == '~'){
+      finish_token_and_push_to_array(all_tokens, &current_token, col, line);
+      in_asm = 1 - in_asm;
+      continue;
+    }
+
+    if(in_asm){
+      current_token.type = ASSEMBLY;
+      push_char(&current_token, ch);
+      continue;
     }
 
     if(current_token.type == NUMERIC && !is_numeric(ch)){
@@ -145,10 +166,6 @@ token_array_t* tokenize_file(FILE* file){
 
     if(ch == '\n' || ch == ' ' || ch == ' ' || ch == ','){
       finish_token_and_push_to_array(all_tokens, &current_token, col, line);
-      if(ch == '\n'){
-        col = 0;
-        line++;
-      }
     }
     else if(ch == '(' || ch == ')' || ch == '[' || ch == ']' || ch == '<' || ch == '>' || ch == '{' || ch == '}' || ch == ':' || ch == ';' || ch == '.'){
       finish_token_and_push_to_array(all_tokens, &current_token, col, line);

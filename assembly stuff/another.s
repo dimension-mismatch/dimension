@@ -1,16 +1,17 @@
-global _main:
-section .text
-_main:
-  mov rax, 0x2000004
-  mov rdi, 1
-  lea rsi, [rel str]
-  mov rdx, str.len
-  syscall
+.global start
+.intel_syntax noprefix
 
+
+start:
+  push rbp
+  mov rbp, rsp
+  sub rsp, 4
+
+  mov qword ptr [rsp - 4], 3
+  mov qword ptr [rsp - 8], 20
+
+  mov rdi, 0
+  add rdi, qword ptr [rsp - 4]
   mov rax, 0x2000001
-  mov rdi, 69
   syscall
 
-section .data
-str:  db "Hello World"
-.len  equ  $ - str

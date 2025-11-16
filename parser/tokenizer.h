@@ -7,6 +7,7 @@ typedef enum{
   IDENTIFIER,
   SYMBOLIC,
   PROGRAM,
+  ASSEMBLY,
 }token_type_t;
 
 typedef struct token{

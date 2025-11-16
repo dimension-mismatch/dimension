@@ -6,15 +6,17 @@
 #include "parser.h"
 #include "string_utils.h"
 #include "colors.h"
+#include "compiler/compiler.h"
 
 
 char* message = "  ╔═╗             DIMENSION [v0.0.1]\n╔═╝ ║╔═╗╔═════╗\n║ ║ ║║ ║║ ║ ║ ║\n╠═══╣╠═╩╩╦╬═╩═╣\n║ ═ ║║ ║ ║║ ══╣\n║ ══╣║ ║ ║╠══ ║\n╠═╦╦╩╩═╩═╣╠═══╣ \n║ ║║ ═══ ║║ ║ ║\n╚═╝╚═════╝╚═╩═╝\n";
 int main(int argc, char* argv[]){
-  if(argc != 2){
+  if(argc != 2 && argc != 3){
     printf(GREEN BOLD "%s" RESET_COLOR, message);
     printf("To compile a .dmsn file, run " WHITE BOLD  "dmsn <filename>.dmsn" RESET_COLOR);
     exit(1);
   }
+  
   FILE* file;
   file = fopen(argv[1], "r");
   if(file == NULL){
@@ -31,5 +33,9 @@ int main(int argc, char* argv[]){
 
   destroy_token_array(all_tokens);
   fclose(file);
+
+  if(argc == 3){
+    compile_expression(argv[2], NULL);
+  }
 
 }

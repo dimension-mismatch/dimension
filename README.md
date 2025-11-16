@@ -23,7 +23,7 @@ Any type in Dimension can be given a 'dimension' to turn it into a vector. For e
 Since Dimension is statically typed, the dimension of a variable is declared with the variable and cannot be changed.
 
 ### Structs & Enums
-new custom types are created with the `type [...] is <...>` syntax. These custom types can be composed of any number of component types. Component types can optionally be given names. 
+new custom types are created with the `type [...] is (...)` syntax. These custom types can be composed of any number of component types. Component types can optionally be given names. 
 
 ```Dimension
   type [vec3] is 3[f];
@@ -112,7 +112,7 @@ Functions in Dimension can take on many forms. Classic C-style functions, operat
 
 Functions must also declare the type they return using the `makes` keyword. Functions that do not return anything may omit the `makes` statement.
 
-* `fn print_number(n: [i])` (doesn't need return anything)
+* `fn print_number(n: [i])` (doesn't return anything)
 * `fn (a: [R]) + (b: [R]) makes [R]` (returns data of type `[R]`)
 
 The body of the function is defined after the `does` keyword. The order of the keywords after `fn` does not matter.
@@ -202,6 +202,74 @@ Here's what I've thought so far:
 * **Reference Counting?** - This intuitively seems like it *should* be the best way to manage memory, but all the info online says that the overhead of storing and incrementing a counter for each reference is huge and not worth it. I find that hard to believe but maybe I could try it out because it seems like it would be much easier to implement.
 
 Whatever system I end up using, I definitely want to design the language so that it encourages minimal dynamic memory allocation.
+
+## Potential Memory Management Concept
+This feature is still a work in progress, and I may end up just going with one of the other methods I listed before. It is very similar to rust's memory rules, but my hope is that the rules are more embedded into the language's syntax, so it is literally impossible to write unsafe code.
+
+### Syntax
+In this system, there are no pointers (at least that the programmer will interact with, the implementation will obviously need to use pointers under the hood). To create dynamic memory, we introduce a special type for dynamic arrays. It will be declared using the `[]+` syntax. An initial size can also be specified before the `+` sign
+
+```Dimension
+my_int_array : [i]+; //a dynamically allocated array of ints (initialized to be empty)
+
+my_float_array : [f]10+; //a dynamically allocated array of floats (initialized with 10 elements)
+```
+
+These arrays can be indexed and written into just like the static vector types:
+
+```Dimension
+my_int_array = (1 2 3 4 5); //Initialize an array with a vector literal
+
+my_float_array@4 = 5.7; //set the fifth element (index 4) of the array to 5.7
+
+my_vector : 2[f] = my_float_array@(0 9); //Read elements from the array into a variable
+```
+
+There will also be built in functions to resize and push/pop from these arrays (I haven't decided on syntax yet)
+
+### All Copies are Deep Copies
+
+Every time you assign an array to a new variable, Dimension will allocate a new array and copy all of the data it contains  (recursively).
+
+```Dimension
+int_array : [i]+ = (1 2 3 4 5); 
+
+second_int_array : [i]+ = int_array; //deep copy of int_array
+```
+
+In this example, second_int_array is a copy of the original int_array, meaning modifying its values will not affect the original.
+
+But wait... Doing a recursive deep copy every time you use an assignment operator is gonna be ridiculously slow, right? What if I want to just read from a dynamic data structure, and I don't need my own copy of all the data?
+
+This is where pointers would be really useful, but also where memory safety becomes an issue. If I allow pointers, it would be possible for a program to hold onto a reference to a piece of data after it goes out of scope.
+
+
+4
+To fix this issue, we would need some kind of garbage collection to detect that we still have a pointer to the array and keep the array around. Many languages have very fancy garbage collection algorithms that handle this behind the scenes, but I don't feel confident in my ability to code a top tier GC.
+
+So my solution is to pretty much ban the use of pointers alltogether. 
+
+This severely limits what is possible with dynamic memory in Dimension, so I will introduce a few features to bring back some functionality. 
+
+### Swap Operators
+A common thing one might want to do with dynamic data would be to move the data from one location to another. If we only allow deep copies, then moving the data can be very slow, since we need to copy every entry every time we move an array. 
+
+The swap operators allow for moving data without copying, while also preserving a single owner for each piece of data. These swaps are achieved by swapping the pointer addresses, so we never need to copy all the data.
+
+* `a <-> b` Swaps the data in a and b
+* `a -> b` b now points to a's data, and a is now empty. b's original data will be deallocated.
+* `a -> b -> c` Swaps can be chained together. b now points to a's data, c now points to b's data, and a is now empty. 
+
+* `a -> b -> c -> a` The swap is now a closed loop, so a now points to c's data.
+
+### Pointers
+
+Although Dimension does not have pointers, passing a parameter to a function can serve the same purpose. 
+
+
+
+
+
 
 
 
