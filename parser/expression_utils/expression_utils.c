@@ -105,9 +105,12 @@ void print_expression(expression_t* exp){
         printf(",");
         i++;
       }
-      print_expression(exp->function_call.arg_v[i]);
+      if(exp->function_call.arg_c > 0){
+        print_expression(exp->function_call.arg_v[i]);
+      }
       printf(") -> ");
       print_type_id(&(exp->return_type));
+      //printf(RED BOLD "return type has %d dimensions\n" RESET_COLOR, exp->return_type.dimension_count);
       printf("}");
       return;
     case EXP_BLOCK:

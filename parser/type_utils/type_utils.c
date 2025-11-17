@@ -47,6 +47,7 @@ void dmsn_pushDimension(dimension_t* dimension, unsigned int d){
 
 dimension_t dmsn_copy(dimension_t* dimension){
   dimension_t new = dmsn_newEmpty();
+  if(dimension->dimension_count == 0) return new;
   new.dimensions = malloc(dimension->dimension_count * sizeof(unsigned int));
   for(int i = 0; i < dimension->dimension_count; i++){
     new.dimensions[i] = dimension->dimensions[i];
@@ -181,7 +182,7 @@ void print_type_id(type_identifier_t* typeid){
     printf(CYAN "[NULL]" RESET_COLOR);
     return;
   }
-  if(typeid->dimensions > 0){
+  if(typeid->dimension_count > 0){
     printf(MAGENTA);
     int i = 0;
     while(i < typeid->dimension_count - 1){

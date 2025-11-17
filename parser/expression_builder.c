@@ -112,6 +112,7 @@ expression_span_t exp_create_span(int index, exp_array_t* array, function_record
           
           type_identifier_t input_type = match->expression->return_type;
           
+          
           for(int d = 0; d < input_type.dimension_count; d++){
             if(d < expected_type.dimension_count){
               if(input_type.dimensions[d] != expected_type.dimensions[d]){
@@ -181,9 +182,9 @@ void exp_span_array_consume_best_span(exp_span_array_t *array, exp_array_t* matc
   new_expression->text = NULL;
 
   type_identifier_t return_type = fn_rec_get_by_index(fn_record, best.id).return_type;
+  
   new_expression->return_type = typeid_copy(&return_type);
   typeid_multiply(&(new_expression->return_type), best.multiplicity);
-
   new_expression->function_call.arg_c = 0;
   for(int i = 0; i < best.length; i++){
     if(match->expression->type != EXP_IDENTIFIER){
