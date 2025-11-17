@@ -178,6 +178,8 @@ void exp_span_array_consume_best_span(exp_span_array_t *array, exp_array_t* matc
   expression_t* new_expression = malloc(sizeof(expression_t));
   new_expression->type = EXP_CALL_FN;
   new_expression->function_call.fn_id = best.id;
+  new_expression->text = NULL;
+
   type_identifier_t return_type = fn_rec_get_by_index(fn_record, best.id).return_type;
   new_expression->return_type = typeid_copy(&return_type);
   typeid_multiply(&(new_expression->return_type), best.multiplicity);

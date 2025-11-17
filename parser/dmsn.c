@@ -41,6 +41,7 @@ int main(int argc, char* argv[]){
   
   expression_t* ast = parse_tokens(all_tokens, &type_record, &variable_record, &function_record);
 
+  print_expression(ast);
   destroy_token_array(all_tokens);
   fclose(file);
 

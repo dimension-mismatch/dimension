@@ -10,6 +10,7 @@ expression_t* exp_init(expression_type_t type, type_identifier_t returnType){
   expression_t* new = malloc(sizeof(expression_t));
   new->type = type;
   new->return_type = returnType;
+  new->text = NULL;
   return new;
 }
 
@@ -57,7 +58,10 @@ expression_t* exp_create_numeric_literal(int value){
 }
 
 expression_t* exp_create_block(){
-  return exp_init(EXP_BLOCK, typeid_newEmpty());
+  expression_t* new = exp_init(EXP_BLOCK, typeid_newEmpty());
+  new->function_call.arg_c = 0;
+  new->function_call.arg_v = NULL;
+  return new;
 }
 
 void exp_block_push_line(expression_t* block, expression_t* line){
@@ -154,9 +158,14 @@ void print_exp_array(exp_array_t* array){
 }
 
 void exp_destroy(expression_t* exp){
+  if(exp == NULL) return;
+
   typeid_destroy(&(exp->return_type));
+
   free(exp->text);
   exp->text = NULL;
+
+  
   switch(exp->type){
     case EXP_NONE:
     case EXP_IDENTIFIER:
