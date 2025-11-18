@@ -5,6 +5,8 @@
 #include "../hash_table/function_record.h"
 #include "../hash_table/variable_record.h"
 
+#include "../colors.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -35,7 +37,7 @@ typedef struct{
 }address_t;
 
 x86_register_t register_priority[] = {RAX, RBX, RCX, RDX, RSI, RDI, R8, R9, R10, R11, R12, R13, R14, R15};
-int next_free_register = 0;
+int register_use[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 char* header = "#DIMENSION v0.0.1 compiled\n.global start\n.intel_syntax noprefix\n\nstart:\n";
 char* new_stack_frame = "  push rbp\n  mov rbp, rsp";
@@ -47,19 +49,7 @@ void put_text(FILE* file, char* txt){
 }
 
 void put_number(FILE* file, unsigned int number){
-  if(number == 0){
-    put_text(file, "0");
-  }
-  int exp = 1;
-  while(number / exp > 10){
-    exp *= 10;
-  }
-  while(number > 0){
-    int digit = number / exp;
-    putc('0' + digit, file);
-    number -= digit * exp;
-    exp /= 10;
-  }
+  fprintf(file, "%d", number);
 }
 
 void put_address(FILE* file, address_t address){
@@ -79,7 +69,7 @@ void put_address(FILE* file, address_t address){
           put_text(file, "byte");
           break;
       }
-      put_text(file, " ptr [rsp - ");
+      put_text(file, " ptr [rbp - ");
       put_number(file, address.byte_offset);
       put_text(file, "]");
       break;
@@ -168,9 +158,28 @@ address_t Areg_at_index(int index, address_size_t size){
 }
 
 address_t Aconsume_next_free(address_size_t size){
-  address_t new = Areg_at_index(next_free_register, size);
-  next_free_register++;
+  int i = 0;
+  while(register_use[i] > 0){
+    i++;
+  }
+  if(i > 14){
+    printf(RED BOLD "OUT OF REGISTERS, PLEASE IMPLEMENT STACK STORING" RESET_COLOR);
+    exit(14);
+  }
+  address_t new = Areg_at_index(i, size);
+  register_use[i] = 1;
   return new;
+}
+
+int index_of(x86_register_t reg){
+  int i = 0;
+  while(register_priority[i] != reg){
+    i++;
+    if(i > 14){
+      break;
+    }
+  }
+  return i;
 }
 
 void put_instruction(FILE* file, char* instruction, address_t dest, address_t src){
@@ -205,18 +214,14 @@ address_t compile_expression(FILE* file, expression_t* expression, function_reco
   }
   else if(expression->type == EXP_CALL_FN){
     struct function_def definition = fn_rec_get_by_index(fn_rec, expression->function_call.fn_id);
-    address_t arg_locations[expression->function_call.arg_c];
+    int arg_c = expression->function_call.arg_c;
+    address_t arg_locations[arg_c];
 
     for(int i = 0; i < expression->function_call.arg_c; i++){
       arg_locations[i] = compile_expression(file, expression->function_call.arg_v[i], fn_rec, var_rec, type_rec);
     }
 
     if(definition.impl_type == FN_IMPL_ASM){
-      if(arg_locations[0].type != ADDR_REGISTER){
-        address_t reg = Aconsume_next_free(QWORD);
-        put_instruction(file, "mov", reg, arg_locations[0]);
-        arg_locations[0] = reg;
-      }
 
       char* text = definition.assembly;
       if(*text == 'I'){
@@ -225,20 +230,62 @@ address_t compile_expression(FILE* file, expression_t* expression, function_reco
       else{
         return Aliteral(0); //TODO : add support for true functions in assembly
       }
+
+      while (*text != '\0'){
+        if(*text == '@'){
+          text++;
+          int arg_i = 0;
+          while(*text >= '0' && *text <= '9' && *text != '\0'){
+            arg_i *= 10;
+            arg_i += *text - '0';
+            text++;
+          }
+          if(arg_locations[arg_i].type != ADDR_REGISTER){
+            address_t reg = Aconsume_next_free(QWORD);
+            putc('#', file);
+            for(int i = 0; i < 15; i++){
+              put_number(file, register_use[i]);
+              putc(',', file);
+            }
+            putc('\n', file);
+            put_instruction(file, "mov", reg, arg_locations[0]);
+            putc('\n', file);
+            arg_locations[arg_i] = reg;
+          }
+        }else{
+          text++;
+        }
+      }
+
+      int has_return_reg = 0;
+      for(int i = 0; i < arg_c; i++){
+        if(arg_locations[i].type == ADDR_REGISTER){
+          if(has_return_reg){
+            register_use[index_of(arg_locations[i].reg)] = 0;
+          }
+          has_return_reg = 1;
+        }
+      }
+   
+      
+      text = definition.assembly;
+      text++;
       int arg_i = 0;
       while (*text != '\0'){
-        if(*text == '?'){
+        if(*text == '?' || *text == '@'){
           text++;
-          // do{
-          //   text++;
-          // }while(*text >= '0' && *text <= '9' && *text != '\0');
+          int arg_i = 0;
+          while(*text >= '0' && *text <= '9' && *text != '\0'){
+            arg_i *= 10;
+            arg_i += *text - '0';
+            text++;
+          }
           put_address(file, arg_locations[arg_i]);
-          arg_i++;
         }
         else{
           putc(*text, file);
+          text++;
         }
-        text++;
       }
       //next_free_register--;
       return arg_locations[0];

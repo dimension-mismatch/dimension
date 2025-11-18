@@ -3,9 +3,14 @@
 	"name": "Dimension",
 	"patterns": [
 		{"include": "#function_definition"},
+		{"include": "#type_declaration"},
 		{
 			"include": "#integer"
 		},
+		
+		
+		{"include": "#comment"},
+		{"include": "#identifier"},
 		{
 			"include": "#type"
 		}
@@ -18,7 +23,8 @@
 			"patterns": [
 				{"include": "#function_declaration"},
 				{"include": "#function_body"},
-				{"include": "#function_output"}]
+				{"include": "#function_output"},
+				{"include" : "#function_priority"}]
 		},
 		"function_declaration" :{
 			"begin": "fn",
@@ -29,13 +35,20 @@
 		"function_body" :{
 			"begin" : "does\\s+{",
 			"end": "}",
-			"beginCaptures": {"0": {"name": "keyword.control"}}
+			"beginCaptures": {"0": {"name": "keyword.control"}},
+			"patterns": [{"include": "#inline-assembly"}]
 		},
 		"function_output" : {
 			"begin" : "makes",
 			"end" : "(?=(does|priority|$))",
 			"beginCaptures": {"0": {"name": "keyword.control"}},
-			"patterns": [{"include": "#type"}]
+			"patterns": [{"include": "#dimension"}, {"include": "#type"}]
+		},
+		"function_priority" : {
+			"begin" : "priority",
+			"end" : "(?=(does|makes|$))",
+			"beginCaptures": {"0": {"name": "keyword.control"}},
+			"patterns": [{"include": "#integer"}]
 		},
 		"parameter_list": {
 			"begin": "\\(",
@@ -43,12 +56,29 @@
 			"patterns": [
 				{"include": "#parameter"},
 				{"match": ":"},
+				{"include" : "#dimension"},
 				{"include": "#type"}]
+		},
+		"type_declaration": {
+			"begin" : "type",
+			"end" : ";",
+			"beginCaptures": {"0" : {"name": "keyword.control"}},
+			"patterns" : [
+				{"include": "#type"},
+				{"match": "is", "name": "keyword.control"},
+				{"match": "oneof", "name": "keyword.control"}
+
+			]
+		},
+		"dimension": {
+			"match": "[\\d\\*]+",
+			"name" : "constant.numeric"
 		},
 		"type": {
 			"patterns": [{
 				"begin": "\\[",
 				"end": "\\]",
+				"captures": {"0": {"name" : "entity.name.type"}},
 				"patterns": [{
 					"include": "#typename"
 				}]
@@ -61,20 +91,30 @@
 			}]
 		},
 		"typename": {
-			"match": "[^\\s<>\\(\\)\\[\\];:,]+",
+			"match": "[^\\s\\(\\)\\[\\];:,]+",
 			"name": "entity.name.type"
 		},
 		"parameter": {
-			"match": "[^\\s<>\\(\\)\\[\\];:,]+",
+			"match": "[^\\s\\(\\)\\[\\];:,]+",
 			"name": "variable.parameter"
 		},
 		"identifier": {
-			"match": "[^\\s<>\\(\\)\\[\\];:,]+",
+			"match": "[^\\s\\(\\)\\[\\];:,]+",
 			"name": "variable"
 		},
 		"function_name": {
-			"match": "[^\\s<>\\(\\)\\[\\];:,]+",
+			"match": "[^\\s\\(\\)\\[\\];:,]+",
 			"name": "entity.name.function"
+		},
+		"comment":{
+			"match": "//.*",
+			"name": "comment.line"
+		},
+		"inline-assembly" : {
+			"begin" : "~",
+			"end" : "~",
+			"name" : "meta.preprocessor"
+			
 		}
 	},
 	"scopeName": "source.dmsn"

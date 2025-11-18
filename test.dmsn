@@ -1,23 +1,23 @@
 
-//type [Suit] is oneof (Hearts Spades Diamonds Clubs);
+type [Suit] is oneof (Hearts Spades Diamonds Clubs);
 
-//type [Number] is oneof (A 2 3 4 5 6 7 8 9 10 J Q K);
+type [Number] is oneof (A 2 3 4 5 6 7 8 9 10 J Q K);
 
-//type [Card] is ([Number][Suit]);
+type [Card] is ([Number][Suit]);
 
-//type [Deck] is 52[Card]; 
+type [Deck] is 52[Card]; 
 
-//my_matrix : 3*3[i];
+my_matrix : 3*3[i];
 
 
 
 
 fn (a: [i]) + (b: [i]) makes [i] does {~I
-  add ?0, ?1
+  add @0, ?1
 ~} priority 1;
 
 fn (a: [i]) - (b: [i]) makes [i] does {~I
-  sub ?0, ?1
+  sub @0, ?1
 ~} priority 1;
 
 fn exit (code: [i]) makes [i] does {~I
@@ -26,15 +26,17 @@ fn exit (code: [i]) makes [i] does {~I
   syscall
 ~};
 
-fn (a: [i]) * (b: [i]) makes [i] does {} priority 2;
+fn (a: [i]) * (b: [i]) makes [i] does {~I
+  imul @0, ?1
+~} priority 2;
 
 fn (a: [i]) % (b: [i]) makes [i] does {} priority 2;
 
 fn -(n: [i]) makes [i] does {} priority 1;
 
-int_a : [i] = 11;
+int_a : [i] = 8;
 
-int_b : [i] = 3 + 7 + (int_a + 5);
+int_b : [i] = 3 + 7 * (int_a + 5);
 
 exit int_b;
 
