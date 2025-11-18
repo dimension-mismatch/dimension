@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 expression_t* exp_init(expression_type_t type, type_identifier_t returnType){
-  expression_t* new = malloc(sizeof(expression_t));
+  expression_t* new = calloc(1, sizeof(expression_t));
   new->type = type;
   new->return_type = returnType;
   new->text = NULL;
@@ -68,9 +68,9 @@ void exp_block_push_line(expression_t* block, expression_t* line){
   if(block == NULL || line == NULL){
     return;
   }
-  block->function_call.arg_c++;
-  block->function_call.arg_v = realloc(block->function_call.arg_v, block->function_call.arg_c * sizeof(expression_t*));
-  block->function_call.arg_v[block->function_call.arg_c - 1] = line;
+  block->block.arg_c++;
+  block->block.arg_v = realloc(block->block.arg_v, block->block.arg_c * sizeof(expression_t*));
+  block->block.arg_v[block->block.arg_c - 1] = line;
 }
 
 void exp_array_push_expression(exp_array_t** root, exp_array_t** current_node, expression_t* expression){
@@ -115,9 +115,9 @@ void print_expression(expression_t* exp){
       return;
     case EXP_BLOCK:
       printf(YELLOW BOLD "BLOCK: \n" RESET_COLOR);
-      for(int i = 0; i < exp->function_call.arg_c; i++){
+      for(int i = 0; i < exp->block.arg_c; i++){
         printf("%d : ", i);
-        print_expression(exp->function_call.arg_v[i]);
+        print_expression(exp->block.arg_v[i]);
         printf("\n");
       }
       return;
@@ -179,6 +179,14 @@ void exp_destroy(expression_t* exp){
       exp->read.var_id = -1;
       break;
     case EXP_BLOCK:
+      exp->block.stack_depth = 0;
+      for(int i = 0; i < exp->block.arg_c; i++){
+        exp_destroy(exp->block.arg_v[i]);
+        free(exp->block.arg_v[i]);
+      }
+      free(exp->block.arg_v);
+      exp->block.arg_v = NULL;  
+      break;
     case EXP_CALL_FN:
       exp->function_call.fn_id = -1;
       for(int i = 0; i < exp->function_call.arg_c; i++){
@@ -186,7 +194,7 @@ void exp_destroy(expression_t* exp){
         free(exp->function_call.arg_v[i]);
       }
       free(exp->function_call.arg_v);
-      exp->function_call.arg_v = NULL;
+      exp->function_call.arg_v = NULL;  
       break;
     case EXP_WRITE_VAR:
       exp->write.var_id = -1;

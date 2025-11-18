@@ -12,7 +12,7 @@
 #include "colors.h"
 #include "expression_builder.h"
 
-
+expression_t* attempt_read_block(token_array_t* tokens, int* index, type_record_t* type_record, variable_record_t* variable_record, function_record_t* function_record);
 
 type_identifier_t attempt_read_type_id(token_array_t* tokens, int* index, int allow_dimensions, type_record_t* type_record){
   type_identifier_t type = typeid_newEmpty();
@@ -133,7 +133,7 @@ void attempt_read_type_declaration(token_array_t* tokens, int* index, type_recor
   return;
 }
 
-variable_t attempt_read_variable_declaration(token_array_t* tokens, int* index, type_record_t* type_record, variable_record_t* var_record){
+variable_t attempt_read_variable_declaration(token_array_t* tokens, int* index, type_record_t* type_record, variable_record_t* var_record, int is_parameter){
   int i = *index;
   int* ip = &i;
   token_t* current_token;
@@ -156,7 +156,7 @@ variable_t attempt_read_variable_declaration(token_array_t* tokens, int* index, 
   
   *index = i;
 
-  variable_t var = variable_record_push_new(var_record, name, &type);
+  variable_t var = is_parameter? variable_record_push_param(var_record, name, &type) : variable_record_push_new(var_record, name, &type);
   return var;
 }
 
@@ -183,7 +183,7 @@ void attempt_read_function_declaration(token_array_t* tokens, int* index, type_r
         exp_array_push_expression(&root, &matches, exp_create_identifier("("));
       }
       while(!cond_peek_next_content(ip, &current_token, tokens, PROGRAM, ")")){
-        variable_t param = attempt_read_variable_declaration(tokens, ip, type_record, var_record);
+        variable_t param = attempt_read_variable_declaration(tokens, ip, type_record, var_record, 1);
         if(param.name == NULL){
           error_msg("Function Parameter Declaration","Parameter Name Expected", current_token);
           exp_array_destroy(root);
@@ -235,12 +235,16 @@ void attempt_read_function_declaration(token_array_t* tokens, int* index, type_r
         variable_record_scope_out(var_record);
         return;
       }
-      while(!match_next_content(ip, &current_token, tokens, PROGRAM, "}")){
-        print_token(current_token);
-        if(current_token->type == ASSEMBLY){
-          assembly = current_token->content;
+      if(cond_peek_next_type(ip, &current_token, tokens, ASSEMBLY)){
+        assembly = current_token->content;
+        if(allow_only_next_content("}", PROGRAM, "Function Body", ip, tokens, &current_token)){
+          exp_array_destroy(root);
+          variable_record_scope_out(var_record);
+          return;
         }
-        printf("\n");
+      }
+      else{
+        dimension = attempt_read_block(tokens, ip, type_record, var_record, fn_record);
       }
     }
     else if(cond_peek_next_content(ip, &current_token, tokens, IDENTIFIER, "makes")){
@@ -284,7 +288,7 @@ void attempt_read_function_declaration(token_array_t* tokens, int* index, type_r
       return;
     }
   }
-  fn_rec_push_definition(fn_record, root, &ret_type, priority, assembly, NULL);
+  fn_rec_push_definition(fn_record, root, &ret_type, priority, assembly, dimension);
   *index = i;
   variable_record_scope_out(var_record);
 }
@@ -336,7 +340,7 @@ expression_t* attempt_read_variable_assignment(token_array_t* tokens, int* index
   int* ip = &i;
   token_t* current_token;
   int id = var_record->table.key_count;
-  variable_t declare = attempt_read_variable_declaration(tokens, ip, type_record, var_record);
+  variable_t declare = attempt_read_variable_declaration(tokens, ip, type_record, var_record, 0);
   int exists = declare.type.type_number == -1;
   if(exists){
     if(match_next_type(ip, &current_token, tokens, IDENTIFIER)){
@@ -370,6 +374,37 @@ expression_t* attempt_read_variable_assignment(token_array_t* tokens, int* index
   return NULL;
 }
 
+expression_t* attempt_read_block(token_array_t* tokens, int* index, type_record_t* type_record, variable_record_t* variable_record, function_record_t* function_record){
+  int i = *index;
+  int* ip = &i;
+  token_t* current_token;
+
+  expression_t* program = exp_create_block();
+
+  while(!peek_next_type(ip, &current_token, tokens, NONE)){
+    if(cond_peek_next_content(ip, &current_token, tokens, PROGRAM, "}")){
+      break;
+    }
+    attempt_read_type_declaration(tokens, &i, type_record);
+
+    exp_block_push_line(program, attempt_read_variable_assignment(tokens, &i, type_record, variable_record, function_record));
+
+    attempt_read_function_declaration(tokens, &i, type_record, variable_record, function_record);
+    exp_array_t* expc = attempt_isolate_expression(tokens, &i, variable_record);
+    if(expc != NULL){
+      printf(GREEN BOLD "FOUND EXPRESSION: " RESET_COLOR);
+      print_exp_array(expc);
+      printf("\n");
+
+      parse_expression(&expc, function_record, 0);
+      exp_block_push_line(program, expc->expression);
+    }
+    i++;
+  }
+  *index = i;
+  program->block.stack_depth = variable_record->scopes[variable_record->scope_depth - 1].local_byte_offset;
+  return program;
+}
 
 
 expression_t* parse_tokens(token_array_t* tokens, type_record_t* type_record, variable_record_t* variable_record, function_record_t* function_record){
@@ -398,24 +433,9 @@ expression_t* parse_tokens(token_array_t* tokens, type_record_t* type_record, va
   type_record_push_type(type_record, Float);
   type_record_push_type(type_record, Char);
 
-  expression_t* program = exp_create_block();
-
-  for(int i = -1; i < tokens->token_count; i++){
-    attempt_read_type_declaration(tokens, &i, type_record);
-
-    exp_block_push_line(program, attempt_read_variable_assignment(tokens, &i, type_record, variable_record, function_record));
-
-    attempt_read_function_declaration(tokens, &i, type_record, variable_record, function_record);
-    exp_array_t* expc = attempt_isolate_expression(tokens, &i, variable_record);
-    if(expc != NULL){
-      printf(GREEN BOLD "FOUND EXPRESSION: " RESET_COLOR);
-      print_exp_array(expc);
-      printf("\n");
-
-      parse_expression(&expc, function_record, 0);
-      exp_block_push_line(program, expc->expression);
-    }
-  }
+  int i = -1;
+  expression_t* program = attempt_read_block(tokens, &i, type_record, variable_record, function_record);
+ 
   print_fn_rec(function_record);
   printf(YELLOW BOLD "VARIABLES: \n" RESET_COLOR);
   print_variable_record(variable_record);

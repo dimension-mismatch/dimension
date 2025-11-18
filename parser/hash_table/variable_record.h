@@ -11,6 +11,7 @@ typedef struct{
 struct scope{
   int variable_count;
   int local_byte_offset;
+  int parameter_byte_offset;
 };
 
 typedef struct{
@@ -23,6 +24,8 @@ typedef struct{
 variable_record_t variable_record_init();
 
 variable_t variable_record_push_new(variable_record_t* record, char* name, type_identifier_t* type);
+
+variable_t variable_record_push_param(variable_record_t *record, char *name, type_identifier_t *type);
 
 variable_t* variable_record_get(variable_record_t* record, char* name);
 

@@ -65,6 +65,8 @@ void fn_rec_push_definition(function_record_t *record, exp_array_t* array, type_
     return;
   }
   struct function_def def = {.return_type = *returntype, .num_parameters = 0, .parameters = NULL, .priority = priority};
+  def.dmsn = NULL;
+  def.assembly = NULL;
   if(assembly != NULL){
     def.impl_type = FN_IMPL_ASM;
     def.assembly = malloc(1 + strlen(assembly));
@@ -128,14 +130,22 @@ void fn_rec_destroy(function_record_t *record){
 
 void print_fn_def(struct function_def def)
 {
-  printf("( ");
-  for(int i = 0; i < def.num_parameters; i++){
+  printf("(");
+  int i = 0; 
+  while(i < def.num_parameters - 1){
     print_type_id((&(def.parameters + i)->type));
     printf(", ");
+    i++;
   }
+  print_type_id((&(def.parameters + i)->type));
   printf(") makes ");
   print_type_id(&(def.return_type));
   printf(" with priority %d\n", def.priority);
+  if(def.impl_type == FN_IMPL_DMSN){
+    printf("does: ");
+    print_expression(def.dmsn);
+    printf("\n");
+  }
 }
 
 void print_fn_tree(struct fn_tree* tree, int indent){

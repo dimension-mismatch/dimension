@@ -22,16 +22,34 @@ int var_record_inc_byte_offset(variable_record_t* record, int byte_count){
   return current_scope->local_byte_offset;
 }
 
-variable_t variable_record_push_new(variable_record_t *record, char *name, type_identifier_t *type){
+int var_record_inc_param_byte_offset(variable_record_t* record, int byte_count){
+  struct scope* current_scope = record->scopes + record->scope_depth - 1;
+  current_scope->variable_count++;
+  int ret = current_scope->parameter_byte_offset;
+  current_scope->parameter_byte_offset -= byte_count;
+  return ret;
+}
+
+variable_t variable_record_push_var(variable_record_t* record, char *name, type_identifier_t *type, int byte_offset){
   int idx = record->table.key_count;
   record->variables = realloc(record->variables, (idx + 1) * sizeof(variable_t));
   variable_t new = {typeid_newEmpty(), NULL};
   new.name = malloc((strlen(name) + 1) * sizeof(char));
   strcpy(new.name, name); 
   new.type = *type;
-  new.local_byte_offset = var_record_inc_byte_offset(record, typeid_bytesize(type));
-  record->variables[idx] = new;
   push_key_value(&(record->table), new.name, idx);
+  new.local_byte_offset = byte_offset;
+  record->variables[idx] = new;
+  return new;
+}
+
+variable_t variable_record_push_new(variable_record_t *record, char *name, type_identifier_t *type){
+  variable_t new = variable_record_push_var(record, name, type, var_record_inc_byte_offset(record, typeid_bytesize(type)));
+  return new;
+}
+
+variable_t variable_record_push_param(variable_record_t *record, char *name, type_identifier_t *type){
+  variable_t new = variable_record_push_var(record, name, type, var_record_inc_param_byte_offset(record, typeid_bytesize(type)));
   return new;
 }
 
@@ -59,12 +77,14 @@ int* variable_record_get_byte_offset(variable_record_t *record, char *name){
   return &(record->variables[*idx].local_byte_offset);
 }
 
+
 void variable_record_scope_in(variable_record_t *record){
   record->scope_depth++;
   record->scopes = realloc(record->scopes, record->scope_depth * sizeof(struct scope));
   struct scope* current_scope = record->scopes + record->scope_depth - 1;
   current_scope->variable_count = 0;
   current_scope->local_byte_offset = 0;
+  current_scope->parameter_byte_offset = 0;
 }
 
 void variable_record_scope_out(variable_record_t* record){

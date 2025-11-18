@@ -40,7 +40,7 @@ x86_register_t register_priority[] = {RAX, RBX, RCX, RDX, RSI, RDI, R8, R9, R10,
 int register_use[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 char* header = "#DIMENSION v0.0.1 compiled\n.global start\n.intel_syntax noprefix\n\nstart:\n";
-char* new_stack_frame = "  push rbp\n  mov rbp, rsp";
+char* new_stack_frame = "  push rbp\n  mov rbp, rsp\n";
 void put_text(FILE* file, char* txt){
   while(*txt != '\0'){
     putc(*txt, file);
@@ -69,8 +69,14 @@ void put_address(FILE* file, address_t address){
           put_text(file, "byte");
           break;
       }
-      put_text(file, " ptr [rbp - ");
-      put_number(file, address.byte_offset);
+      if(address.byte_offset > 0){
+        put_text(file, " ptr [rbp - ");
+        put_number(file, address.byte_offset);
+      }
+      else{
+        put_text(file, " ptr [rbp + ");
+        put_number(file, 8 - address.byte_offset);
+      }
       put_text(file, "]");
       break;
     case ADDR_REGISTER:
@@ -101,10 +107,10 @@ void put_address(FILE* file, address_t address){
               put_text(file, "di");
               break;
             case RSP:
-              put_text(file, "rs");
+              put_text(file, "sp");
               break;
             case RBP:
-              put_text(file, "rb");
+              put_text(file, "bp");
               break;
             default:
               break;
@@ -189,12 +195,12 @@ void put_instruction(FILE* file, char* instruction, address_t dest, address_t sr
   put_address(file, dest);
   put_text(file, ", ");
   put_address(file, src);
+  put_text(file, "\n");
 }
 
 //puts instructions to compute the value of an expression into the assembly file, and returns an address_t containing the location of the output expression.
 address_t compile_expression(FILE* file, expression_t* expression, function_record_t* fn_rec, variable_record_t* var_rec, type_record_t* type_rec){
   if(expression->type == EXP_SINGLE_LITERAL){
-    printf("literal: %d\n", expression->numeric_literal);
     return Aliteral(expression->numeric_literal);
   }
   else if(expression->type == EXP_READ_VAR){
@@ -207,8 +213,8 @@ address_t compile_expression(FILE* file, expression_t* expression, function_reco
     return addr;
   }
   else if(expression->type == EXP_BLOCK){
-    for(int i = 0; i < expression->function_call.arg_c; i++){
-      compile_expression(file, expression->function_call.arg_v[i], fn_rec, var_rec, type_rec);
+    for(int i = 0; i < expression->block.arg_c; i++){
+      compile_expression(file, expression->block.arg_v[i], fn_rec, var_rec, type_rec);
       putc('\n', file);
     }
   }
@@ -298,9 +304,22 @@ void compile_program(char* filename, expression_t* expression, function_record_t
   put_text(file, header);
   put_text(file, new_stack_frame);
   put_text(file, "\n");
+  if(expression->type == EXP_BLOCK){
+    put_instruction(file, "sub", Areg(RSP, QWORD), Aliteral(expression->block.stack_depth));
+  }
   //put_text(file, "sub rsp, 16\n");
   compile_expression(file, expression, fn_rec, var_rec, type_rec);
 
+  for(int i = 0; i < fn_rec->def_count; i++){
+    if(fn_rec->definitions[i].impl_type == FN_IMPL_DMSN){
+      put_text(file, "function_body_");
+      put_number(file, i);
+      put_text(file, ":\n");
+      put_text(file, new_stack_frame);
+      compile_expression(file, fn_rec->definitions[i].dmsn, fn_rec, var_rec, type_rec);
+    }
+    
+  }
 
   fclose(file);
   file = NULL;

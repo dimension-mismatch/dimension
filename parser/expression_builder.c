@@ -176,15 +176,13 @@ void exp_span_array_consume_best_span(exp_span_array_t *array, exp_array_t* matc
 
   exp_array_t* match = best.begin;
 
-  expression_t* new_expression = malloc(sizeof(expression_t));
-  new_expression->type = EXP_CALL_FN;
-  new_expression->function_call.fn_id = best.id;
-  new_expression->text = NULL;
 
   type_identifier_t return_type = fn_rec_get_by_index(fn_record, best.id).return_type;
   
-  new_expression->return_type = typeid_copy(&return_type);
+  expression_t* new_expression = exp_init(EXP_CALL_FN, typeid_copy(&return_type));
+  new_expression->function_call.fn_id = best.id;
   typeid_multiply(&(new_expression->return_type), best.multiplicity);
+  new_expression->function_call.multiplicity = dmsn_copy(&(best.multiplicity));
   new_expression->function_call.arg_c = 0;
   for(int i = 0; i < best.length; i++){
     if(match->expression->type != EXP_IDENTIFIER){
@@ -192,7 +190,7 @@ void exp_span_array_consume_best_span(exp_span_array_t *array, exp_array_t* matc
     }
     match = match->next;
   }
-  new_expression->function_call.arg_v = malloc(new_expression->function_call.arg_c * sizeof(expression_t));
+  new_expression->function_call.arg_v = malloc(new_expression->function_call.arg_c * sizeof(expression_t*));
   match = best.begin;
   int arg_i = 0;
   for(int i = 0; i < best.length; i++){

@@ -56,6 +56,14 @@ dimension_t dmsn_copy(dimension_t* dimension){
   return new;
 }
 
+void dmsn_destroy(dimension_t* dimension){
+  if(dimension->dimension_count > 0){
+    free(dimension->dimensions);
+    dimension->dimensions = NULL;
+    dimension->dimension_count = 0;
+  }
+}
+
 
 unsigned int typeid_totalDimensions(type_identifier_t *typeId){
   int dim = 1;

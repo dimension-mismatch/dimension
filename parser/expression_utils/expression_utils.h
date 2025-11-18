@@ -26,7 +26,13 @@ typedef struct expression{
       int fn_id;
       int arg_c;
       struct expression** arg_v;
+      dimension_t multiplicity;
     } function_call;
+    struct{
+      int stack_depth;
+      int arg_c;
+      struct expression** arg_v;
+    } block;
     struct{
       int var_id;
       struct expression** value;
