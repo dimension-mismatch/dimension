@@ -7,7 +7,8 @@
 #include "hash_table/function_record.h"
 #include "hash_table/variable_record.h"
 
+#include "error_handling/error_manager.h"
 
 
 
-expression_t *parse_tokens(token_array_t *tokens, type_record_t *type_record, variable_record_t *variable_record, function_record_t *function_record);
+expression_t *parse_tokens(parse_manager_t* manager);

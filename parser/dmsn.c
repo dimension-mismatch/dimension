@@ -12,6 +12,8 @@
 #include "hash_table/function_record.h"
 #include "hash_table/variable_record.h"
 
+#include "error_handling/error_manager.h"
+
 
 char* message = "  ╔═╗             DIMENSION [v0.0.1]\n╔═╝ ║╔═╗╔═════╗\n║ ║ ║║ ║║ ║ ║ ║\n╠═══╣╠═╩╩╦╬═╩═╣\n║ ═ ║║ ║ ║║ ══╣\n║ ══╣║ ║ ║╠══ ║\n╠═╦╦╩╩═╩═╣╠═══╣ \n║ ║║ ═══ ║║ ║ ║\n╚═╝╚═════╝╚═╩═╝\n";
 int main(int argc, char* argv[]){
@@ -28,26 +30,36 @@ int main(int argc, char* argv[]){
     exit(1);
   }
   
-  token_array_t* all_tokens = tokenize_file(file);
-  
-  print_token_array(all_tokens);
-
-  printf("Searching for type definitions\n");
-
   variable_record_t variable_record = variable_record_init();
   type_record_t type_record = init_type_record();
   function_record_t function_record = fn_rec_init();
+  
+  token_array_t* all_tokens = tokenize_file(file);
+  parse_manager_t errors = parse_manager_init(all_tokens, &function_record, &variable_record, &type_record);
+  
+
+  //throw_error(&errors, 0, 0);
+
+  printf("Searching for type definitions\n");
 
   
-  expression_t* ast = parse_tokens(all_tokens, &type_record, &variable_record, &function_record);
+
+  
+  expression_t* ast = parse_tokens(&errors);
 
   print_expression(ast);
-  destroy_token_array(all_tokens);
+  
   fclose(file);
 
-  if(argc == 3){
+  error_printout(&errors);
+  if(errors.error_count > 0){
+    exit(1);
+  }
+  if(argc == 3 && errors.error_count == 0){
     compile_program(argv[2], ast, &function_record, &variable_record, &type_record);
   }
+
+  destroy_token_array(all_tokens);
   exp_destroy(ast);
   destroy_type_record(&type_record);
   variable_record_destroy(&variable_record);

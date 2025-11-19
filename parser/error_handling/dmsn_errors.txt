@@ -1,0 +1,13 @@
+~ Syntax Error |@ Function Body should end with a '}' closing brace
+
+~ Syntax Error |@ Duplicate 'makes' found, Functions may only 'make' one type
+
+~ Syntax Error |@ 'Priority' value must be an integer literal such as '2' or '3'
+
+~ Dimension Mismatch |@ Parameter #P1 has an additional #D2 dimension, but parameter #P3 has an additional #D4 dimension
+
+~ Ambiguity Error |@ Function #F1 cannot be distiguished with function #F2
+
+~ Type Error |@ Cannot set field of type #T1 to an expression of type #T2
+
+
