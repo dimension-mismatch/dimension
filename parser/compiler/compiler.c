@@ -1,5 +1,5 @@
 #include "compiler.h"
-#include "../hash_table/function_record.h"
+#include "asm_utils.h"
 
 #include "../hash_table/type_record.h"
 #include "../hash_table/function_record.h"
@@ -10,196 +10,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-typedef enum{
-  RAX, RBX, RCX, RDX, RSI, RDI, RBP, RSP, R8, R9, R10, R11, R12, R13, R14, R15
-}x86_register_t;
-
-typedef enum{
-  ADDR_REGISTER,
-  ADDR_STACK,
-  ADDR_LITERAL,
-}address_type_t;
-
-typedef enum{
-  BYTE,
-  WORD,
-  DWORD,
-  QWORD,
-}address_size_t;
-
-typedef struct{
-  address_type_t type;
-  address_size_t size;
-  union{
-    x86_register_t reg;
-    int byte_offset;
-  };
-}address_t;
-
-x86_register_t register_priority[] = {RAX, RBX, RCX, RDX, RSI, RDI, R8, R9, R10, R11, R12, R13, R14, R15};
-int register_use[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-
 char* header = "#DIMENSION v0.0.1 compiled\n.global start\n.intel_syntax noprefix\n\nstart:\n";
-char* new_stack_frame = "  push rbp\n  mov rbp, rsp\n";
-void put_text(FILE* file, char* txt){
-  while(*txt != '\0'){
-    putc(*txt, file);
-    txt++;
-  }
-}
-
-void put_number(FILE* file, unsigned int number){
-  fprintf(file, "%d", number);
-}
-
-void put_address(FILE* file, address_t address){
-  switch(address.type){
-    case ADDR_STACK:
-      switch(address.size){
-        case QWORD:
-          put_text(file, "qword");
-          break;
-        case DWORD:
-          put_text(file, "dword");
-          break;
-        case WORD:
-          put_text(file, "word");
-          break;
-        case BYTE:
-          put_text(file, "byte");
-          break;
-      }
-      if(address.byte_offset > 0){
-        put_text(file, " ptr [rbp - ");
-        put_number(file, address.byte_offset);
-      }
-      else{
-        put_text(file, " ptr [rbp + ");
-        put_number(file, 8 - address.byte_offset);
-      }
-      put_text(file, "]");
-      break;
-    case ADDR_REGISTER:
-      if(address.reg < R8){
-        switch(address.size){
-          case QWORD: 
-            put_text(file, "r");
-            break;
-          case DWORD:
-            put_text(file, "e");
-            break;
-          default:
-            break;
-        }
-        if(address.reg <= RDX){
-          char name = 'a' + address.reg;
-          put_text(file, &name);
-          if(address.size > BYTE){
-            put_text(file, "x");
-          }
-        }
-        else{
-          switch(address.reg){
-            case RSI:
-              put_text(file, "si");
-              break;
-            case RDI:
-              put_text(file, "di");
-              break;
-            case RSP:
-              put_text(file, "sp");
-              break;
-            case RBP:
-              put_text(file, "bp");
-              break;
-            default:
-              break;
-          }
-        }
-        if(address.size == BYTE){
-          put_text(file, "l");
-        }
-      }
-      else{
-        put_text(file, "r");
-        put_number(file, address.reg);
-        switch(address.size){
-          case BYTE:
-            put_text(file, "b");
-            break;
-          case WORD:
-            put_text(file, "w");
-            break;
-          case DWORD:
-            put_text(file, "d");
-            break;
-          case QWORD:
-            break;
-        }
-      }
-      break;
-    case ADDR_LITERAL:
-      put_number(file, address.byte_offset);
-      break;
-  }
-}
-
-address_t Aliteral(int value){
-  address_t new = {.type = ADDR_LITERAL, .byte_offset = value};
-  return new;
-}
-
-address_t Astack(int byte_offset, address_size_t size){
-  address_t new = {.type = ADDR_STACK, .size = size, .byte_offset = byte_offset};
-  return new;
-}
-
-address_t Areg(x86_register_t reg, address_size_t size){
-  address_t new = {.type = ADDR_REGISTER, .size = size, .reg = reg};
-  return new;
-}
-
-address_t Areg_at_index(int index, address_size_t size){
-  return Areg(register_priority[index], size);
-}
-
-address_t Aconsume_next_free(address_size_t size){
-  int i = 0;
-  while(register_use[i] > 0){
-    i++;
-  }
-  if(i > 14){
-    printf(RED BOLD "OUT OF REGISTERS, PLEASE IMPLEMENT STACK STORING" RESET_COLOR);
-    exit(14);
-  }
-  address_t new = Areg_at_index(i, size);
-  register_use[i] = 1;
-  return new;
-}
-
-int index_of(x86_register_t reg){
-  int i = 0;
-  while(register_priority[i] != reg){
-    i++;
-    if(i > 14){
-      break;
-    }
-  }
-  return i;
-}
-
-void put_instruction(FILE* file, char* instruction, address_t dest, address_t src){
-  put_text(file, "  ");
-  put_text(file, instruction);
-  put_text(file, " ");
-  put_address(file, dest);
-  put_text(file, ", ");
-  put_address(file, src);
-  put_text(file, "\n");
-}
 
 //puts instructions to compute the value of an expression into the assembly file, and returns an address_t containing the location of the output expression.
-address_t compile_expression(FILE* file, expression_t* expression, function_record_t* fn_rec, variable_record_t* var_rec, type_record_t* type_rec){
+address_t compile_expression(FILE* file, reg_allocator_t* rega, expression_t* expression, function_record_t* fn_rec, variable_record_t* var_rec, type_record_t* type_rec){
   if(expression->type == EXP_SINGLE_LITERAL){
     return Aliteral(expression->numeric_literal);
   }
@@ -209,12 +23,18 @@ address_t compile_expression(FILE* file, expression_t* expression, function_reco
   else if(expression->type == EXP_WRITE_VAR){
     address_t addr = Astack(expression->write.var_id, QWORD);
     expression_t* value = expression->write.value[0];
-    put_instruction(file, "mov", addr, compile_expression(file, expression->write.value[0], fn_rec, var_rec, type_rec));
+    mov_instruction(file, rega, addr, compile_expression(file, rega, expression->write.value[0], fn_rec, var_rec, type_rec));
     return addr;
   }
   else if(expression->type == EXP_BLOCK){
+    int depth = expression->block.stack_depth;
+    reg_allocator_t child_rega = rega_init(depth);
+    put_new_stack_frame(file);
+    if(depth > 0){
+      put_instruction(file, "sub", Areg(RSP, QWORD), Aliteral(depth));
+    }
     for(int i = 0; i < expression->block.arg_c; i++){
-      compile_expression(file, expression->block.arg_v[i], fn_rec, var_rec, type_rec);
+      compile_expression(file, &child_rega, expression->block.arg_v[i], fn_rec, var_rec, type_rec);
       putc('\n', file);
     }
   }
@@ -223,12 +43,12 @@ address_t compile_expression(FILE* file, expression_t* expression, function_reco
     int arg_c = expression->function_call.arg_c;
     address_t arg_locations[arg_c];
 
-    for(int i = 0; i < expression->function_call.arg_c; i++){
-      arg_locations[i] = compile_expression(file, expression->function_call.arg_v[i], fn_rec, var_rec, type_rec);
-    }
+    
 
     if(definition.impl_type == FN_IMPL_ASM){
-
+      for(int i = 0; i < arg_c; i++){
+        arg_locations[i] = compile_expression(file, rega, expression->function_call.arg_v[i], fn_rec, var_rec, type_rec);
+      }
       char* text = definition.assembly;
       if(*text == 'I'){
         text++;
@@ -247,14 +67,14 @@ address_t compile_expression(FILE* file, expression_t* expression, function_reco
             text++;
           }
           if(arg_locations[arg_i].type != ADDR_REGISTER){
-            address_t reg = Aconsume_next_free(QWORD);
+            address_t reg = Aconsume_next_free(QWORD, rega);
             putc('#', file);
             for(int i = 0; i < 15; i++){
-              put_number(file, register_use[i]);
+              put_number(file, rega->usage[i]);
               putc(',', file);
             }
             putc('\n', file);
-            put_instruction(file, "mov", reg, arg_locations[0]);
+            mov_instruction(file, rega, reg,  arg_locations[0]);
             putc('\n', file);
             arg_locations[arg_i] = reg;
           }
@@ -267,7 +87,7 @@ address_t compile_expression(FILE* file, expression_t* expression, function_reco
       for(int i = 0; i < arg_c; i++){
         if(arg_locations[i].type == ADDR_REGISTER){
           if(has_return_reg){
-            register_use[index_of(arg_locations[i].reg)] = 0;
+            rega_free(rega, arg_locations[i].reg);
           }
           has_return_reg = 1;
         }
@@ -293,8 +113,28 @@ address_t compile_expression(FILE* file, expression_t* expression, function_reco
           text++;
         }
       }
-      //next_free_register--;
       return arg_locations[0];
+    }
+    else{
+      int stack_ptr = -8;
+      for(int i = arg_c - 1; i >= 0; i--){
+        //evaluate each argument of the expression
+        address_t arg = compile_expression(file, rega, expression->function_call.arg_v[i], fn_rec, var_rec, type_rec);
+
+        //move the result into the correct location on the stack
+        mov_instruction(file, rega, Astack(stack_ptr, QWORD), arg);
+
+        //Free up the register we used for this computation (if we actually used one)
+        if(arg.type == ADDR_REGISTER){
+          rega_free(rega, arg.reg);
+        }
+
+        stack_ptr -= typeid_bytesize(&(expression->function_call.arg_v[i]->return_type));
+      }
+
+      put_text(file, "call function_body_");
+      put_number(file, expression->function_call.fn_id);
+      put_text(file, "\n");
     }
   }
   return Aliteral(0);
@@ -302,21 +142,19 @@ address_t compile_expression(FILE* file, expression_t* expression, function_reco
 void compile_program(char* filename, expression_t* expression, function_record_t* fn_rec, variable_record_t* var_rec, type_record_t* type_rec){
   FILE* file = fopen(filename, "w");
   put_text(file, header);
-  put_text(file, new_stack_frame);
-  put_text(file, "\n");
-  if(expression->type == EXP_BLOCK){
-    put_instruction(file, "sub", Areg(RSP, QWORD), Aliteral(expression->block.stack_depth));
-  }
+  
   //put_text(file, "sub rsp, 16\n");
-  compile_expression(file, expression, fn_rec, var_rec, type_rec);
+
+  compile_expression(file, NULL, expression, fn_rec, var_rec, type_rec);
 
   for(int i = 0; i < fn_rec->def_count; i++){
     if(fn_rec->definitions[i].impl_type == FN_IMPL_DMSN){
+
       put_text(file, "function_body_");
       put_number(file, i);
       put_text(file, ":\n");
-      put_text(file, new_stack_frame);
-      compile_expression(file, fn_rec->definitions[i].dmsn, fn_rec, var_rec, type_rec);
+      
+      compile_expression(file, NULL, fn_rec->definitions[i].dmsn, fn_rec, var_rec, type_rec);
     }
     
   }

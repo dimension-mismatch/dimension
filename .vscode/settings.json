@@ -2,6 +2,8 @@
   "files.associations": {
     "*.fsh": "glsl",
     "*.vsh": "glsl",
-    "type_utils.h": "c"
+    "type_utils.h": "c",
+    "function_record.h": "c",
+    "variable_record.h": "c"
   }
 }

@@ -5,7 +5,6 @@
 start:
   push rbp
   mov rbp, rsp
-
   sub rsp, 88
   mov qword ptr [rbp - 80], 8
 
@@ -26,24 +25,32 @@ start:
   add rax, rbx
   mov qword ptr [rbp - 88], rax
 
+  mov rax, qword ptr [rbp - 88]
+  mov qword ptr [rbp + 16], rax
+  mov rax, qword ptr [rbp - 80]
+  mov qword ptr [rbp + 16], rax
+call function_body_5
+
 
   mov rdi, qword ptr [rbp - 88]
   mov rax, 0x2000001
   syscall
 
-function_body_4:
+function_body_5:
   push rbp
   mov rbp, rsp
+#1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  mov rax, qword ptr [rbp + 8]
+
+
+  add rax, qword ptr [rbp + 16]
 #1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
-  mov rbx, qword ptr [rbp + 8]
+  mov rbx, 3
 
 
-  add rbx, qword ptr [rbp + 16]
-#1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,
-  mov rcx, 3
+  imul rbx, qword ptr [rbp + 8]
 
+  sub rax, rbx
 
-  imul rcx, qword ptr [rbp + 8]
-
-  sub rbx, rcx
+  mov qword ptr [rbp + 3], rax
 
