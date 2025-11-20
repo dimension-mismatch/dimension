@@ -14,9 +14,10 @@ expression_t* exp_init(expression_type_t type, type_identifier_t returnType){
   return new;
 }
 
-expression_t* exp_create_identifier(char* content){
+expression_t* exp_create_identifier(char* content, int token_id){
   expression_t* new = exp_init(EXP_IDENTIFIER, typeid_newEmpty());
   new->text = malloc((strlen(content) + 1) * sizeof(char));
+  new->token_id = token_id;
   strcpy(new->text, content);
   return new;
 }

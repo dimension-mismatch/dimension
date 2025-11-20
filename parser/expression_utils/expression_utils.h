@@ -44,6 +44,7 @@ typedef struct expression{
     } vector_literal;
     int enter_group;
     int numeric_literal;
+    int token_id;
   };
 }expression_t;
 
@@ -55,7 +56,7 @@ typedef struct linked_expression{
 
 expression_t *exp_init(expression_type_t type, type_identifier_t returnType);
 
-expression_t *exp_create_identifier(char *content);
+expression_t *exp_create_identifier(char *content, int token_id);
 
 expression_t *exp_create_var_declaration(type_identifier_t returnType, char *name);
 

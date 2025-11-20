@@ -370,7 +370,7 @@ exp_array_t* parse_expression(exp_array_t** start, parse_manager_t* manager, int
       break;
     }
     if(counter->expression->type == EXP_IDENTIFIER){
-      throw_error(manager, 22, 0);
+      throw_error(manager, 22, counter->expression->token_id);
       has_err = 1;
     }
     exp_count++;

@@ -74,9 +74,26 @@ void print_error(FILE* error_src_txt, parse_manager_t* manager, int error){
     putc(c, stdout);
   }
   printf(RESET_COLOR);
+  int in_quote = 0;
   while((c = fgetc(error_src_txt)) != '\n' && c != EOF){
     if(c == '@'){
-      printf("at " BLUE "(Line " BOLD "%d" UNBOLD ", Col" BOLD " %d" UNBOLD "):\n        " RESET_COLOR, token.line_number, token.start_pos);
+      printf("at " BLUE "(Line " BOLD "%d" UNBOLD ", Col" BOLD " %d" UNBOLD "):\n        " RESET_COLOR, token.line_number, token.start_pos - token.length + 1);
+    }
+    else if(c == '\''){
+      in_quote = 1 - in_quote;
+      printf(in_quote? YELLOW BOLD : RESET_COLOR);
+    }
+    else if(c == '\"'){
+      in_quote = 1 - in_quote;
+      if(in_quote) printf(YELLOW BOLD);
+      printf("\'");
+      if(!in_quote) printf(RESET_COLOR);
+    }
+    else if(c == '#'){
+      c = fgetc(error_src_txt);
+      if(c == 'T'){
+        printf("%s", token.content);
+      }
     }
     else{
       putc(c, stdout);
@@ -92,12 +109,12 @@ void error_printout(parse_manager_t* manager){
     return;
   }
   FILE* error_src_txt = fopen("error_handling/dmsn_errors.txt", "r");
-  printf(RED BOLD "Compile Failed\n" RESET_COLOR);
+  printf(RED BOLD "\nCompile Failed\n" RESET_COLOR);
   if(manager->error_count == 1){
-    printf("Found 1 Error:\n");
+    printf("Found 1 Error:\n\n");
   }
   else{
-    printf("Found %d Errors:\n", manager->error_count);
+    printf("Found %d Errors:\n\n", manager->error_count);
   }
   
   for(int i = 0; i < manager->error_count; i++){

@@ -220,7 +220,7 @@ void attempt_read_function_declaration(int* index, parse_manager_t* manager){
       }
     }
     else if(cond_peek_next_type(ip, &current_token, manager, IDENTIFIER) || cond_peek_next_type(ip, &current_token, manager, SYMBOLIC)){
-      expression_t* exp = exp_create_identifier(current_token->content);
+      expression_t* exp = exp_create_identifier(current_token->content, i);
       exp_array_push_expression(&root, &matches, exp);
     }
     else{
@@ -239,7 +239,7 @@ void attempt_read_function_declaration(int* index, parse_manager_t* manager){
   int has_priority = 0;
 
   int priority = 0;
-  type_identifier_t ret_type;
+  type_identifier_t ret_type = typeid_newEmpty();
 
   char* assembly = NULL;
   expression_t* dimension = NULL;
@@ -312,6 +312,9 @@ void attempt_read_function_declaration(int* index, parse_manager_t* manager){
       return;
     }
   }
+  if(!has_body){
+    throw_error(manager, 23, i);
+  }
   fn_rec_push_definition(manager->fn_rec, root, &ret_type, priority, assembly, dimension);
   *index = i;
   variable_record_scope_out(manager->var_rec);
@@ -346,7 +349,7 @@ exp_array_t* attempt_isolate_expression(int* index, parse_manager_t* manager){
         exp_array_push_expression(&root, &matches, exp_create_var_read(var->type, *varid));
       }
       else{
-        exp_array_push_expression(&root, &matches, exp_create_identifier(current_token->content));
+        exp_array_push_expression(&root, &matches, exp_create_identifier(current_token->content, i));
       }
     }
     else if(cond_peek_next_type(ip, &current_token, manager, NUMERIC)){

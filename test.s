@@ -17,7 +17,7 @@ start:
   mov rbx, 7
 
 
-  imul rbx, rax
+  sub rbx, rax
 #1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
   mov rax, 3
 
@@ -40,17 +40,17 @@ function_body_5:
   push rbp
   mov rbp, rsp
 #1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-  mov rax, qword ptr [rbp + 8]
+  mov rax, qword ptr [rbp + 16]
 
 
-  add rax, qword ptr [rbp + 16]
+  sub rax, 3
+
+  imul rax, qword ptr [rbp + 8]
 #1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
-  mov rbx, 3
+  mov rbx, qword ptr [rbp + 8]
 
 
-  imul rbx, qword ptr [rbp + 8]
+  add rbx, rax
 
-  sub rax, rbx
-
-  mov qword ptr [rbp + 3], rax
+  mov qword ptr [rbp + 3], rbx
 
