@@ -1,13 +1,45 @@
-~ Syntax Error |@ Function Body should end with a '}' closing brace
+~ Type Name Error |@ Invalid Type Name. Type names should start with letters and contain only letters and numbers.
 
-~ Syntax Error |@ Duplicate 'makes' found, Functions may only 'make' one type
+~ Type Error |@ Type "#S" is not defined
 
-~ Syntax Error |@ 'Priority' value must be an integer literal such as '2' or '3'
+~ Syntax Error |@ Expected a ']' to end Type Identifer, but instead found '#T'.
 
-~ Dimension Mismatch |@ Parameter #P1 has an additional #D2 dimension, but parameter #P3 has an additional #D4 dimension
+~ Syntax Error |@ Expected a type name, but instead found #T
 
-~ Ambiguity Error |@ Function #F1 cannot be distiguished with function #F2
+~ Syntax Error |@ Expected "is" after type identifier, but found #T
 
-~ Type Error |@ Cannot set field of type #T1 to an expression of type #T2
+~ Syntax Error |@ Type Declaration expects type fields in parentheses "()", but instead found #T
 
+~ Syntax Error |@ Type field list is missing closing parenthesis ")"
 
+~ Syntax Error |@ Composite type fields expect a ':', but instead found #T
+
+~ Syntax Error |@ Expected a semicolon ';', but found #T
+
+~ Syntax Error |@ Cannot declare #T as a parameter of a function
+
+~ Syntax Error |@ Function Declarations may only consist of identifiers and parameters in parentheses, but this one had '#T'
+
+~ Syntax Error |@ Found duplicate function body. Functions can only have one body, defined with 'does {...}'
+
+~ Syntax Error |@ '{' expected after 'does' keyword, but this one had "#T"
+
+~ Syntax Error |@ '}' expected, but found '#T'; Inline Assembly functions must only contain Assembly code.
+
+~ Syntax Error |@ Found duplicate 'makes' keyword. Functions may only return one type.
+
+~ Syntax Error |@ Found duplicate 'priority' keyword. Functions may only specify one priority value.
+
+~ Syntax Error |@ Function priority must be an integer literal.
+
+~ Syntax Error |@ Unexpected '#T' token in function declaration. Expected "makes", "does", or "priority"
+
+~ Syntax Error |@ Expression expected after the '=' sign
+
+~ Dimension Error |@ Dimension prefix expected a number, but found '#T'
+
+~ Dimension Error |@ Dimension prefix expected '*', but found '#T'
+
+~ Syntax Error |@ Function name cannot be empty.
+
+~ Expression Error |@ Identifier '#T' does not match any variable or function.

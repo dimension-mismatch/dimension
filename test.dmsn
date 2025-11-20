@@ -10,8 +10,6 @@ type [Deck] is 52[Card];
 my_matrix : 3*3[i];
 
 
-
-
 fn (a: [i]) + (b: [i]) makes [i] does {~I
   add @0, ?1
 ~} priority 1;

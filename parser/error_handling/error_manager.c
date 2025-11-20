@@ -22,7 +22,6 @@ parse_manager_t parse_manager_init(token_array_t* tokens, function_record_t* fn_
       new.err_id_count++;
       new.index = realloc(new.index, new.err_id_count * sizeof(int));
       new.index[new.err_id_count - 1] = i;
-      printf("error indexed at %d\n", i);
     }
     newline = (c == '\n');
   }
@@ -77,14 +76,14 @@ void print_error(FILE* error_src_txt, parse_manager_t* manager, int error){
   printf(RESET_COLOR);
   while((c = fgetc(error_src_txt)) != '\n' && c != EOF){
     if(c == '@'){
-      printf("at " BLUE "(Line " BOLD "%d" UNBOLD ", Col" BOLD " %d" UNBOLD ")" RED, token.line_number, token.start_pos);
+      printf("at " BLUE "(Line " BOLD "%d" UNBOLD ", Col" BOLD " %d" UNBOLD "):\n        " RESET_COLOR, token.line_number, token.start_pos);
     }
     else{
       putc(c, stdout);
     }
   }
   printf(GREEN " (#%d)" RESET_COLOR, manager->errors[error].err_num + 100);
-  printf("\n");
+  printf("\n\n");
 }
 
 void error_printout(parse_manager_t* manager){

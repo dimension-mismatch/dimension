@@ -21,13 +21,16 @@ type_identifier_t attempt_read_type_id(int* index, parse_manager_t* manager, int
   int i = *index;
   int* ip = &i;
   token_t* current_token;
+  int has_prefix = 0;
   
   if(allow_dimensions){
     while(!match_next_content(ip, &current_token, manager, PROGRAM, "[")){
       if(match_current_type(current_token, NUMERIC)){
         typeid_pushDimension(&type, string_to_int(current_token->content));
+        has_prefix = 1;
       }
       else{
+        if(has_prefix) throw_error(manager, 19,i );
         typeid_destroy(&type);
         return type;
       }
@@ -36,6 +39,7 @@ type_identifier_t attempt_read_type_id(int* index, parse_manager_t* manager, int
         break;
       }
       if(!match_next_content(ip, &current_token, manager, SYMBOLIC, "*")){
+        throw_error(manager, 20,i );
         typeid_destroy(&type);
         return type;
       }
@@ -49,12 +53,12 @@ type_identifier_t attempt_read_type_id(int* index, parse_manager_t* manager, int
   }
   if(!match_next_type(ip, &current_token, manager, IDENTIFIER)){
     typeid_destroy(&type);
-    error_msg("Type Identifier", "Invalid type name",current_token);
+    throw_error(manager, 0, i);
     return type;
   }
   type_declaration_t* ref = type_record_get_type(manager->type_rec, current_token->content);
   if(ref == NULL){
-    error_msg("Composite Type Member", "Type is not defined", current_token);
+    throw_error(manager, 1, i);
     typeid_destroy(&type);
     return type;
   }
@@ -62,7 +66,8 @@ type_identifier_t attempt_read_type_id(int* index, parse_manager_t* manager, int
   type.bit_count = ref->bit_count;
 
   
-  if(allow_only_next_content("]", PROGRAM,"Type Identifier", ip, manager, &current_token)){
+  if(!match_next_content(ip, &current_token, manager, PROGRAM, "]")){
+    throw_error(manager, 2, i);
     typeid_destroy(&type);
     return type;
   }
@@ -77,27 +82,43 @@ void attempt_read_type_declaration(int* index, parse_manager_t* manager){
   token_t* current_token;
   if(!match_next_content(ip, &current_token, manager, IDENTIFIER, "type")) return;
 
-  if(allow_only_next_content("[", PROGRAM,"Type Declaration", ip, manager, &current_token)) return;
-
+  if(!match_next_content(ip, &current_token, manager, PROGRAM, "[")){
+    throw_error(manager, 3, i);
+    return;
+  }
   if(!match_next_type(ip, &current_token, manager, IDENTIFIER)){
-    error_msg("Type Declaration", "could not find a name for this type", current_token);
+    throw_error(manager, 0, i);
     return;
   }
   
   char* type_name = current_token->content;
 
-  if(allow_only_next_content("]", PROGRAM,"Type Declaration", ip, manager, &current_token)) return;
+  if(!match_next_content(ip, &current_token, manager, PROGRAM, "]")){
+    throw_error(manager, 2, i);
+    return;
+  }
 
-  if(allow_only_next_content("is", IDENTIFIER,"Type Declaration", ip, manager, &current_token)) return;
+  if(!match_next_content(ip, &current_token, manager, IDENTIFIER, "is")){
+    throw_error(manager, 4, i);
+    return;
+  }
   
 
   if(match_next_content(ip, &current_token, manager, IDENTIFIER, "oneof")){
     typedec_setName(&dec, ENUM_TYPE, type_name);
-    if(allow_only_next_content("(", PROGRAM, "Enum Type Declaration", ip, manager, &current_token)){typedec_destroy(&dec); return;}
+    if(!match_next_content(ip, &current_token, manager, PROGRAM, "(")){
+      throw_error(manager, 5, i);
+      typedec_destroy(&dec);
+      return;
+    }
     while(cond_peek_next_type(ip, &current_token, manager, IDENTIFIER) || cond_peek_next_type(ip, &current_token, manager, NUMERIC)){
       typedec_pushEnumOption(&dec, current_token->content, current_token->length);
     }
-    if(allow_only_next_content(")", PROGRAM, "Enum Type Declaration", ip, manager, &current_token)){ typedec_destroy(&dec); return;}
+    if(!match_next_content(ip, &current_token, manager, PROGRAM, ")")){
+      throw_error(manager, 6, i);
+      typedec_destroy(&dec);
+      return;
+    }
   }
   else{
     typedec_setName(&dec, COMP_TYPE, type_name);
@@ -106,29 +127,37 @@ void attempt_read_type_declaration(int* index, parse_manager_t* manager){
     if(single_type_only){
       i--;
     }
-    while(1){
+    while(!cond_peek_next_content(ip, &current_token, manager, PROGRAM, ")")){
       char* name = NULL;
       int length = 0;
       if(cond_peek_next_type(ip, &current_token, manager, IDENTIFIER)){
         name = current_token->content;
         length = current_token->length;
-        if(allow_only_next_content(":", PROGRAM, "Composite Type Member",ip, manager, &current_token)){typedec_destroy(&dec); return;}
+        if(!match_next_content(ip, &current_token, manager, PROGRAM, ":")){
+          throw_error(manager, 7, i);
+          typedec_destroy(&dec);
+          return;
+        }
       }
       type_identifier_t member;
       if((member = attempt_read_type_id(ip, manager, 1)).type_number != -1){
         typedec_pushMember(&dec, &member, name, length);
       }
       else{
-        break;
+        //No need to throw an error here, since attempt_read_type_id will have already thrown one.
+        //This way, we avoid logging two errors for the same issue.
+        typedec_destroy(&dec);
+        return;
       }
       if(single_type_only) break;
     }
-
-    if(!single_type_only && allow_only_next_content(")", PROGRAM, "Composite Type Declaration",ip, manager, &current_token)){typedec_destroy(&dec); return;}
   }
-  if(allow_only_next_content(";", PROGRAM, "Type Declaration", ip, manager, &current_token)){typedec_destroy(&dec); return;}
+  if(!match_next_content(ip, &current_token, manager, PROGRAM, ";")){
+      throw_error(manager, 8, i);
+      typedec_destroy(&dec);
+      return;
+    }
   i--;
-  print_type(&dec);
   type_record_push_type(manager->type_rec, dec);
   *index = i;
   return;
@@ -151,7 +180,7 @@ variable_t attempt_read_variable_declaration(int* index, parse_manager_t* manage
   
   type_identifier_t type = attempt_read_type_id(ip, manager, 1);
   if(type.type_number == -1){
-    error_msg("Variable Declaration", "Could not find a [type] for this variable", current_token);
+    return empty;
   }
 
   
@@ -174,21 +203,14 @@ void attempt_read_function_declaration(int* index, parse_manager_t* manager){
   exp_array_t* matches = NULL;
   exp_array_t* root = NULL;
   variable_record_scope_in(manager->var_rec);
-  while(/*!cond_peek_next_content(ip, &current_token, tokens, PROGRAM, "}")*/ 
-    !(
-      peek_next_content(ip, &current_token, manager, IDENTIFIER, "makes") ||
-      peek_next_content(ip, &current_token, manager, IDENTIFIER, "does") ||
-      peek_next_content(ip, &current_token, manager, IDENTIFIER, "priority")
-    )
-    ){
+  while(!(peek_next_content(ip, &current_token, manager, IDENTIFIER, "makes") ||
+          peek_next_content(ip, &current_token, manager, IDENTIFIER, "does") ||
+          peek_next_content(ip, &current_token, manager, IDENTIFIER, "priority"))){
     if(cond_peek_next_content(ip, &current_token, manager, PROGRAM, "(")){
-      if(cond_peek_next_content(ip, &current_token, manager, PROGRAM, "(")){
-        exp_array_push_expression(&root, &matches, exp_create_identifier("("));
-      }
       while(!cond_peek_next_content(ip, &current_token, manager, PROGRAM, ")")){
         variable_t param = attempt_read_variable_declaration(ip, manager, 1);
         if(param.name == NULL){
-          error_msg("Function Parameter Declaration","Parameter Name Expected", current_token);
+          throw_error(manager, 9, i);
           exp_array_destroy(root);
           variable_record_scope_out(manager->var_rec);
           return;
@@ -196,23 +218,21 @@ void attempt_read_function_declaration(int* index, parse_manager_t* manager){
         expression_t* exp = exp_create_var_declaration(param.type, param.name);
         exp_array_push_expression(&root, &matches, exp);
       }
-
-      if(cond_peek_next_content(ip, &current_token, manager, PROGRAM, ")")){
-        exp_array_push_expression(&root, &matches, exp_create_identifier(")"));
-      }
     }
     else if(cond_peek_next_type(ip, &current_token, manager, IDENTIFIER) || cond_peek_next_type(ip, &current_token, manager, SYMBOLIC)){
       expression_t* exp = exp_create_identifier(current_token->content);
       exp_array_push_expression(&root, &matches, exp);
     }
     else{
-      error_msg("Function Declaration", "Found Unexpected Token, Looking for parameters or identifiers", current_token);
+      throw_error(manager, 10, i);
       exp_array_destroy(root);
       variable_record_scope_out(manager->var_rec);
       return;
     }
   }
-  printf("found function definition!\n");
+  if(root == NULL){
+    throw_error(manager, 21, i);
+  }
 
   int has_body = 0;
   int has_return = 0;
@@ -227,20 +247,22 @@ void attempt_read_function_declaration(int* index, parse_manager_t* manager){
   while(!peek_next_content(ip, &current_token, manager, PROGRAM, ";")){
     if(cond_peek_next_content(ip, &current_token, manager, IDENTIFIER, "does")){
       if(has_body){
-        error_msg("Function Body", "Function can only have one function body", current_token);
+        throw_error(manager, 11, i);
         exp_array_destroy(root);
         variable_record_scope_out(manager->var_rec);
         return;
       }
       has_body = 1;
-      if(allow_only_next_content("{", PROGRAM, "Function Body", ip, manager, &current_token)){
+      if(!match_next_content(ip, &current_token, manager, PROGRAM, "{")){
+        throw_error(manager, 12, i);
         exp_array_destroy(root);
         variable_record_scope_out(manager->var_rec);
         return;
       }
       if(cond_peek_next_type(ip, &current_token, manager, ASSEMBLY)){
         assembly = current_token->content;
-        if(allow_only_next_content("}", PROGRAM, "Function Body", ip, manager, &current_token)){
+        if(!match_next_content(ip, &current_token, manager, PROGRAM, "}")){
+          throw_error(manager, 13, i);
           exp_array_destroy(root);
           variable_record_scope_out(manager->var_rec);
           return;
@@ -252,7 +274,7 @@ void attempt_read_function_declaration(int* index, parse_manager_t* manager){
     }
     else if(cond_peek_next_content(ip, &current_token, manager, IDENTIFIER, "makes")){
       if(has_return){
-        error_msg("Function Return Type", "Function can only have one return type", current_token);
+        throw_error(manager, 14, i);
         exp_array_destroy(root);
         variable_record_scope_out(manager->var_rec);
         return;
@@ -261,14 +283,13 @@ void attempt_read_function_declaration(int* index, parse_manager_t* manager){
       ret_type = attempt_read_type_id(ip, manager, 1);
       if(ret_type.type_number == -1){
         exp_array_destroy(root);
-        error_msg("Function Return Type", "Could not find a return [type] for this function", current_token);
         variable_record_scope_out(manager->var_rec);
         return;
       }
     }
     else if(cond_peek_next_content(ip, &current_token, manager, IDENTIFIER, "priority")){
       if(has_priority){
-        error_msg("Function Priority", "Function can only have one priority value", current_token);
+        throw_error(manager, 15, i);
         exp_array_destroy(root);
         variable_record_scope_out(manager->var_rec);
         return;
@@ -278,14 +299,14 @@ void attempt_read_function_declaration(int* index, parse_manager_t* manager){
         priority = string_to_int(current_token->content);
       }
       else{
-        error_msg("Function Priority", "Priority must be an integer", current_token);
+        throw_error(manager, 16, i);
         exp_array_destroy(root);
         variable_record_scope_out(manager->var_rec);
         return;
       }
     }
     else{
-      error_msg("Function Declaration", "Unexpected token. Looking for a \"makes\", \"does\", or \"priority\"", current_token);
+      throw_error(manager, 17, i);
       exp_array_destroy(root);
       variable_record_scope_out(manager->var_rec);
       return;
@@ -361,16 +382,13 @@ expression_t* attempt_read_variable_assignment(int* index, parse_manager_t* mana
   if(match_next_content(ip, &current_token, manager, SYMBOLIC, "=")){
     exp_array_t* expc = attempt_isolate_expression(ip, manager);
     if(expc != NULL){
-      parse_expression(&expc, manager->fn_rec, 0);
+      parse_expression(&expc, manager, 0);
       expression_t* final = exp_create_var_write(declare.type, declare.local_byte_offset, expc->expression);
-      printf("\n\n");
-      print_expression(final);
-      printf("\n\n");
       *index = i;
       return final;
     }
     else{
-      error_msg("Expression", "Expession Expected", current_token);
+      throw_error(manager, 18, i);
       return NULL;
     }
   }
@@ -395,11 +413,10 @@ expression_t* attempt_read_block(int* index, parse_manager_t* manager){
     attempt_read_function_declaration(&i, manager);
     exp_array_t* expc = attempt_isolate_expression(&i, manager);
     if(expc != NULL){
-      printf(GREEN BOLD "FOUND EXPRESSION: " RESET_COLOR);
-      print_exp_array(expc);
-      printf("\n");
-
-      parse_expression(&expc, manager->fn_rec, 0);
+      // printf(GREEN BOLD "FOUND EXPRESSION: " RESET_COLOR);
+      // print_exp_array(expc);
+      // printf("\n");
+      parse_expression(&expc, manager, 0);
       exp_block_push_line(program, expc->expression);
     }
     i++;
@@ -440,9 +457,9 @@ expression_t* parse_tokens(parse_manager_t* manager){
   int i = -1;
   expression_t* program = attempt_read_block(&i, manager);
  
-  // print_fn_rec(function_record);
+  // print_fn_rec(manager->fn_rec);
   // printf(YELLOW BOLD "VARIABLES: \n" RESET_COLOR);
-  // print_variable_record(variable_record);
+  // print_variable_record(manager->var_rec);
   
   return program;
 }

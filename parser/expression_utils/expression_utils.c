@@ -73,6 +73,11 @@ void exp_block_push_line(expression_t* block, expression_t* line){
   block->block.arg_v[block->block.arg_c - 1] = line;
 }
 
+expression_t* exp_create_error(){
+  expression_t* new = exp_init(EXP_ERROR, typeid_newEmpty());
+  return new;
+}
+
 void exp_array_push_expression(exp_array_t** root, exp_array_t** current_node, expression_t* expression){
   exp_array_t* new_node = malloc(sizeof(exp_array_t));
   new_node->expression = expression;
@@ -144,6 +149,8 @@ void print_expression(expression_t* exp){
       print_expression(exp->vector_literal.components[i]);
       printf("⟩");
       break;
+    case EXP_ERROR:
+      printf(RED BOLD "{ERROR EXP}" RESET_COLOR);
     default: 
       if(exp->text != NULL){
         printf("\"%s\" : ", exp->text);
@@ -174,6 +181,7 @@ void exp_destroy(expression_t* exp){
     case EXP_IDENTIFIER:
     case EXP_DECLARE_VAR:
     case EXP_GROUPING:
+    case EXP_ERROR:
       break;
     case EXP_READ_VAR:
       exp->read.var_id = -1;

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "colors.h"
+#include "error_handling/error_manager.h"
 
 
 typedef struct{
@@ -290,7 +291,7 @@ void exp_span_array_consume_best_span(exp_span_array_t *array, exp_array_t* matc
 
 
 
-exp_array_t* parse_expression(exp_array_t** start, function_record_t* fn_record, int depth){
+exp_array_t* parse_expression(exp_array_t** start, parse_manager_t* manager, int depth){
   
   exp_array_t* array = *start;
   exp_span_array_t spans = exp_span_array_init();
@@ -307,10 +308,10 @@ exp_array_t* parse_expression(exp_array_t** start, function_record_t* fn_record,
         group_entry = current->next;
         
         
-        printf(YELLOW "recursively parsing: " RESET_COLOR);
-        print_exp_array(group_entry);
-        printf("\n");
-        exp_array_t* result = parse_expression(&group_entry, fn_record, depth + 1);
+        // printf(YELLOW "recursively parsing: " RESET_COLOR);
+        // print_exp_array(group_entry);
+        // printf("\n");
+        exp_array_t* result = parse_expression(&group_entry, manager, depth + 1);
         
 
         if(prev){
@@ -339,7 +340,7 @@ exp_array_t* parse_expression(exp_array_t** start, function_record_t* fn_record,
     if(current->expression->type == EXP_GROUPING && !current->expression->enter_group){
       break;
     }
-    expression_span_t span = exp_create_span(i, current, fn_record);
+    expression_span_t span = exp_create_span(i, current, manager->fn_rec);
     
     if(span.id != -1){
       exp_span_array_push_span(&spans, span);
@@ -354,26 +355,32 @@ exp_array_t* parse_expression(exp_array_t** start, function_record_t* fn_record,
     // print_exp_array(array);
     // printf("\n");
     // print_exp_span_array(&spans);
-    exp_span_array_consume_best_span(&spans, array, fn_record);
+    exp_span_array_consume_best_span(&spans, array, manager->fn_rec);
   }
   
 
   expression_t* new;
   
 
-  
+  int has_err = 0;
   unsigned int exp_count = 0;
   exp_array_t* counter = array;
   while(counter){
     if(counter->expression->type == EXP_GROUPING){
       break;
     }
+    if(counter->expression->type == EXP_IDENTIFIER){
+      throw_error(manager, 22, 0);
+      has_err = 1;
+    }
     exp_count++;
     counter = counter->next;
   }
   exp_array_t* end = counter? counter->next: NULL;
-
-  if(exp_count > 1){
+  if(has_err){
+    new = exp_create_error();
+  }
+  else if(exp_count > 1){
     type_identifier_t returnType = typeid_copy(&(array->expression->return_type));
     typeid_pushDimension(&returnType, exp_count);
     new = exp_init(EXP_VECTOR_LITERAL, returnType);
@@ -404,9 +411,9 @@ exp_array_t* parse_expression(exp_array_t** start, function_record_t* fn_record,
 
   new_arr->next = end;
 
-  printf("resulting expression array: ");
-  print_exp_array(new_arr);
-  printf("\n");
+  // printf("resulting expression array: ");
+  // print_exp_array(new_arr);
+  // printf("\n");
 
   return new_arr;
 }

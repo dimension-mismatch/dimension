@@ -93,7 +93,6 @@ void variable_record_scope_out(variable_record_t* record){
 
   if(current_scope->variable_count != 0){
     for(int i = 0, j = record->table.key_count - 1; i < current_scope->variable_count; i++, j--){
-      printf("removing %s #%d\n", record->variables[j].name, j);
       remove_key_value(&(record->table), record->variables[j].name);
     }
     record->variables = realloc(record->variables, record->table.key_count * sizeof(variable_t));
