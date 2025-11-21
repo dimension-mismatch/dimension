@@ -20,6 +20,10 @@
       "language": "dimension",
       "scopeName": "source.dmsn",
       "path": "./syntaxes/dimension.tmLanguage.json"
+    },
+    {
+      "scopeName": "source.dmsn_inline_asm",
+      "path": "./syntaxes/asm.tmLanguage.json"
     }]
   }
 }

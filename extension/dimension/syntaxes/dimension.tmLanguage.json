@@ -2,47 +2,45 @@
 	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
 	"name": "Dimension",
 	"patterns": [
+		{"include": "#comment"},
 		{"include": "#function_definition"},
 		{"include": "#type_declaration"},
-		{
-			"include": "#integer"
-		},
-		
-		
-		{"include": "#comment"},
+
+		{"include": "#dimensioned_type"},
 		{"include": "#identifier"},
-		{
-			"include": "#type"
-		}
+		{"include": "#keywords"}
 		
 	],
 	"repository": {
+		"keywords" : {
+			"match" : "fn|makes|does|priority|type|is|oneof|return",
+			"name" : "keyword.control.dmsn"
+		},
 		"function_definition" : {
-			"begin" : "(?=fn)",
+			"begin" : "fn",
 			"end": ";",
+			"beginCaptures": {"0" : {"name" : "keyword.control.fn"}},
 			"patterns": [
 				{"include": "#function_declaration"},
-				{"include": "#function_body"},
-				{"include": "#function_output"},
-				{"include" : "#function_priority"}]
+				{"include": "#block"},
+				{"include": "#keywords"},
+				{"include": "#dimensioned_type"},
+				{"include": "#integer"}
+			]
 		},
 		"function_declaration" :{
-			"begin": "fn",
-			"end": "(?=(does|makes|priority|$))",
-			"beginCaptures": {"0": {"name": "keyword.control"}},
+			"begin": "(?<=fn)",
+			"end": "does|makes|priority|$",
+			"endCaptures": {"0" : {"name" : "keyword.control.fn_prop"}},
 			"patterns": [{"include": "#function_name"}, {"include": "#parameter_list"}]
 		},
-		"function_body" :{
-			"begin" : "does\\s+{",
+		"block" :{
+			"begin" : "{",
 			"end": "}",
-			"beginCaptures": {"0": {"name": "keyword.control"}},
-			"patterns": [{"include": "#inline-assembly"}]
-		},
-		"function_output" : {
-			"begin" : "makes",
-			"end" : "(?=(does|priority|$))",
-			"beginCaptures": {"0": {"name": "keyword.control"}},
-			"patterns": [{"include": "#dimension"}, {"include": "#type"}]
+			"patterns": [
+				{"include": "#inline-assembly"},
+				{"include": "source.dmsn"}
+			]
 		},
 		"function_priority" : {
 			"begin" : "priority",
@@ -54,36 +52,36 @@
 			"begin": "\\(",
 			"end": "\\)",
 			"patterns": [
+				{"include" : "#parameter_list"},
+				{"include" : "#dimensioned_type"},
 				{"include": "#parameter"},
-				{"match": ":"},
-				{"include" : "#dimension"},
-				{"include": "#type"}]
+				{"match": ":"}
+				]
 		},
 		"type_declaration": {
 			"begin" : "type",
 			"end" : ";",
 			"beginCaptures": {"0" : {"name": "keyword.control"}},
 			"patterns" : [
+				{"include":  "#dimensioned_type"},
 				{"include": "#type"},
 				{"match": "is", "name": "keyword.control"},
-				{"match": "oneof", "name": "keyword.control"}
-
+				{"match": "oneof", "name": "keyword.control"},
+				{"include":  "#parameter_list"}
 			]
 		},
-		"dimension": {
-			"match": "[\\d\\*]+",
-			"name" : "constant.numeric"
+		"dimensioned_type": {
+			"begin" : "[\\d\\*]*(?=\\[)",
+			"end" : "\\]",
+			"beginCaptures": {"0" : {"name" : "constant.numeric.dimension"}},
+			"endCaptures": {"0": {"name" : "entity.name.type"}},
+			"patterns": [
+				{"include": "#typename"},
+				{"include": "#parameter_list"}
+			]
 		},
-		"type": {
-			"patterns": [{
-				"begin": "\\[",
-				"end": "\\]",
-				"captures": {"0": {"name" : "entity.name.type"}},
-				"patterns": [{
-					"include": "#typename"
-				}]
-			}]
-		},
+
+
 		"integer": {
 			"patterns": [{
 				"match": "\\b(-?\\d+)\\b",
@@ -91,7 +89,7 @@
 			}]
 		},
 		"typename": {
-			"match": "[^\\s\\(\\)\\[\\];:,]+",
+			"match": "[^\\s\\(\\)\\];:,]+",
 			"name": "entity.name.type"
 		},
 		"parameter": {
@@ -113,8 +111,13 @@
 		"inline-assembly" : {
 			"begin" : "~",
 			"end" : "~",
-			"name" : "meta.preprocessor"
-			
+			"name" : "dimension.inlineassembly",
+			"patterns" : [
+				{"include": "source.dmsn_inline_asm"}
+			],
+			"captures": {
+				"0" : {"name" : "entity.name.section"}
+			}
 		}
 	},
 	"scopeName": "source.dmsn"

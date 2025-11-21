@@ -26,7 +26,7 @@ call function_body_5
 function_body_5:
   push rbp
   mov rbp, rsp
-#1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+ #1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
   mov rax, qword ptr [rbp + 16]
 
 
