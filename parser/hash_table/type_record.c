@@ -26,12 +26,23 @@ type_declaration_t* type_record_get_type(type_record_t *record, char* typename){
   return record->array[*idx];
 }
 
-int type_record_get_type_id(type_record_t *record, char *typename){
+int type_record_get_type_number(type_record_t *record, char *typename){
   int* idx = get_value_from_key(&(record->table), typename);
   if(idx == NULL){
     return -1;
   }
   return *idx;
+}
+
+type_identifier_t type_record_get_type_id(type_record_t *record, char *typename){
+  type_declaration_t* ref = type_record_get_type(record, typename);
+  type_identifier_t typeid = typeid_newEmpty();
+  if(ref == NULL){
+    return typeid;
+  }
+  typeid.type_number = type_record_get_type_number(record, typename);
+  typeid.bit_count = ref->bit_count;
+  return typeid;
 }
 
 void destroy_type_record(type_record_t *record){

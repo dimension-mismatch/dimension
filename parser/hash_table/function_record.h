@@ -16,6 +16,7 @@ struct function_def{
   variable_t* parameters;
   type_identifier_t return_type;
   int priority;
+  int param_stack_depth;
   enum fn_impl_type impl_type;
   union{
     char* assembly;

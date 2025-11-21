@@ -50,10 +50,8 @@ expression_t* exp_create_grouping(int enter_group){
   return new;
 }
 
-expression_t* exp_create_numeric_literal(int value){
-  type_identifier_t typeid = typeid_newEmpty();
-  typeid.type_number = 0;
-  expression_t* new = exp_init(EXP_SINGLE_LITERAL, typeid);
+expression_t* exp_create_numeric_literal(int value, type_identifier_t returnType){
+  expression_t* new = exp_init(EXP_SINGLE_LITERAL, typeid_copy(&returnType));
   new->numeric_literal = value;
   return new;
 }

@@ -89,6 +89,7 @@ type_identifier_t typeid_copy(type_identifier_t *typeId){
     typeid_pushDimension(&new, typeId->dimensions[i]);
   }
   new.type_number = typeId->type_number;
+  new.bit_count = typeId->bit_count;
   return new;
 }
 

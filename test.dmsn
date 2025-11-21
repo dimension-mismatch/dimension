@@ -33,7 +33,7 @@ fn (a: [i]) * (b: [i]) makes [i] does {~I
 ~} priority 2;
 
 fn (a: [i]) % (b: [i]) makes [i] does {
-  return a + b - 3 * a;
+  exit a + b;
 } priority 2;
 
 //fn -(n: [i]) makes [i] does {} priority 1;
@@ -41,7 +41,7 @@ fn (a: [i]) % (b: [i]) makes [i] does {
 
 int_a : [i] = 8;
 
-int_b : [i] = 3 + 7 - (int_a + 5);
+int_b : [i] = 18;
 
 int_a % int_b;
 

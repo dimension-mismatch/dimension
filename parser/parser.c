@@ -47,7 +47,6 @@ type_identifier_t attempt_read_type_id(int* index, parse_manager_t* manager, int
   }
   else{
     if(!match_next_content(ip, &current_token, manager, PROGRAM, "[")){
-      typeid_destroy(&type);
       return type;
     }
   }
@@ -62,7 +61,7 @@ type_identifier_t attempt_read_type_id(int* index, parse_manager_t* manager, int
     typeid_destroy(&type);
     return type;
   }
-  type.type_number = type_record_get_type_id(manager->type_rec, current_token->content);
+  type.type_number = type_record_get_type_number(manager->type_rec, current_token->content);
   type.bit_count = ref->bit_count;
 
   
@@ -353,7 +352,9 @@ exp_array_t* attempt_isolate_expression(int* index, parse_manager_t* manager){
       }
     }
     else if(cond_peek_next_type(ip, &current_token, manager, NUMERIC)){
-      exp_array_push_expression(&root, &matches, exp_create_numeric_literal(string_to_int(current_token->content)));
+      type_identifier_t int_type = type_record_get_type_id(manager->type_rec, "i");
+      exp_array_push_expression(&root, &matches, exp_create_numeric_literal(string_to_int(current_token->content), int_type));
+      typeid_destroy(&int_type);
     }
     else{
       exp_array_destroy(root);

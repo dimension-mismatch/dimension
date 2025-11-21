@@ -116,10 +116,18 @@ address_t compile_expression(FILE* file, reg_allocator_t* rega, expression_t* ex
       return arg_locations[0];
     }
     else{
-      int stack_ptr = -8;
+      //decrement the stack pointer by the total size of all the arguments and return value
+      put_instruction(file, "sub", Areg(RSP, QWORD), Aliteral(definition.param_stack_depth));
+
+      //place to start writing arguments to the stack, leaving space for the return value
+      int stack_ptr = rega->stack_depth + typeid_bytesize(&(expression->return_type));
+
       for(int i = arg_c - 1; i >= 0; i--){
         //evaluate each argument of the expression
         address_t arg = compile_expression(file, rega, expression->function_call.arg_v[i], fn_rec, var_rec, type_rec);
+
+        //move the stack pointer down by the size of each argument
+        stack_ptr += typeid_bytesize(&(expression->function_call.arg_v[i]->return_type));
 
         //move the result into the correct location on the stack
         mov_instruction(file, rega, Astack(stack_ptr, QWORD), arg);
@@ -129,8 +137,9 @@ address_t compile_expression(FILE* file, reg_allocator_t* rega, expression_t* ex
           rega_free(rega, arg.reg);
         }
 
-        stack_ptr -= typeid_bytesize(&(expression->function_call.arg_v[i]->return_type));
       }
+
+      
 
       put_text(file, "call function_body_");
       put_number(file, expression->function_call.fn_id);

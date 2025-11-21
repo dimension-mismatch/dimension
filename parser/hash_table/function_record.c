@@ -64,7 +64,7 @@ void fn_rec_push_definition(function_record_t *record, exp_array_t* array, type_
   if(!pushed){
     return;
   }
-  struct function_def def = {.return_type = *returntype, .num_parameters = 0, .parameters = NULL, .priority = priority};
+  struct function_def def = {.return_type = *returntype, .num_parameters = 0, .parameters = NULL, .priority = priority, .param_stack_depth = typeid_bytesize(returntype)};
   def.dmsn = NULL;
   def.assembly = NULL;
   if(assembly != NULL){
@@ -85,6 +85,8 @@ void fn_rec_push_definition(function_record_t *record, exp_array_t* array, type_
       new_param.name = malloc(strlen(array->expression->text) + 1);
       strcpy(new_param.name, array->expression->text);
       def.parameters[def.num_parameters - 1] = new_param;
+
+      def.param_stack_depth += typeid_bytesize(&(new_param.type));
       //printf("adding parameter %s\n", new_param.name);
     }
     array = array->next;
