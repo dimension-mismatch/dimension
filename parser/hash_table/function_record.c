@@ -64,7 +64,7 @@ void fn_rec_push_definition(function_record_t *record, exp_array_t* array, type_
   if(!pushed){
     return;
   }
-  struct function_def def = {.return_type = *returntype, .num_parameters = 0, .parameters = NULL, .priority = priority, .param_stack_depth = typeid_bytesize(returntype)};
+  struct function_def def = {.return_type = *returntype, .num_parameters = 0, .parameters = NULL, .priority = priority, .param_stack_depth = 0};
   def.dmsn = NULL;
   def.assembly = NULL;
   if(assembly != NULL){

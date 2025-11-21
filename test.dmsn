@@ -7,7 +7,7 @@ type [Card] is ([Number][Suit]);
 
 type [Deck] is 52[Card]; 
 
-my_matrix : 3*3[i];
+//my_matrix : 3*3[i];
 
 
 fn (a: [i]) + (b: [i]) makes [i] does {~I
@@ -33,7 +33,7 @@ fn (a: [i]) * (b: [i]) makes [i] does {~I
 ~} priority 2;
 
 fn (a: [i]) % (b: [i]) makes [i] does {
-  exit a + b;
+  a + b;
 } priority 2;
 
 //fn -(n: [i]) makes [i] does {} priority 1;

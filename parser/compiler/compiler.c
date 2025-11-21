@@ -116,11 +116,24 @@ address_t compile_expression(FILE* file, reg_allocator_t* rega, expression_t* ex
       return arg_locations[0];
     }
     else{
-      //decrement the stack pointer by the total size of all the arguments and return value
-      put_instruction(file, "sub", Areg(RSP, QWORD), Aliteral(definition.param_stack_depth));
+      // Stack Allocation Strategy for function calls:
 
+      // |  variables for current stack frame | return value | saved active registers | return pointer | function arguments | rip, rbp | ... (stack frame for the funciton) ...
+      // ^rbp (initial)                       ^rsp (initial)                                                                           ^rbp (during function call)
+
+      //how many bytes the return value will occupy when it is stored in the stack
+      int return_size = typeid_bytesize(&(expression->return_type));
+
+      //how many bytes the register values will occupy when they are stored in the stack
+      int register_size = 8 * rega->active_reg_count;
+
+      //decrement the stack pointer by the total size of the return value, all active registers, the return pointer, and all the arguments
+      put_instruction(file, "sub", Areg(RSP, QWORD), Aliteral(return_size + register_size + 8 + definition.param_stack_depth));
+      
+      rega_regsave(file, rega, rega->stack_depth + return_size);
+      
       //place to start writing arguments to the stack, leaving space for the return value
-      int stack_ptr = rega->stack_depth + typeid_bytesize(&(expression->return_type));
+      int stack_ptr = rega->stack_depth + return_size + register_size + 8;
 
       for(int i = arg_c - 1; i >= 0; i--){
         //evaluate each argument of the expression
@@ -138,12 +151,17 @@ address_t compile_expression(FILE* file, reg_allocator_t* rega, expression_t* ex
         }
 
       }
-
-      
-
+      //call the function with the "call" instruction
       put_text(file, "call function_body_");
       put_number(file, expression->function_call.fn_id);
       put_text(file, "\n");
+
+      //restore the state of the registers from before the function call
+      rega_regrestore(file, rega, rega->stack_depth + return_size);
+
+      //Deallocate everything we allocated except for the return value of the function (We still need that!!)
+      put_instruction(file, "add", Areg(RSP, QWORD), Aliteral(register_size + 8 + definition.param_stack_depth));
+
     }
   }
   return Aliteral(0);
@@ -164,6 +182,8 @@ void compile_program(char* filename, expression_t* expression, function_record_t
       put_text(file, ":\n");
       
       compile_expression(file, NULL, fn_rec->definitions[i].dmsn, fn_rec, var_rec, type_rec);
+
+      put_text(file, "  pop rbp \n  ret\n");
     }
     
   }

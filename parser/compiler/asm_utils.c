@@ -13,7 +13,8 @@ reg_allocator_t rega_init(int stack_depth){
     {RAX, RBX, RCX, RDX, RSI, RDI, R8, R9, R10, R11, R12, R13, R14, R15},
     {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
     0,
-    stack_depth
+    stack_depth,
+    0
   };
   return new;
 }
@@ -150,6 +151,7 @@ address_t Aget_next_free(address_size_t size, reg_allocator_t* rega){
 
 address_t Aconsume_next_free(address_size_t size, reg_allocator_t* rega){
   int reg_i = rega->next_free_register;
+  rega->active_reg_count++;
   int i = reg_i + 1;
   while(rega->usage[reg_i]){
     reg_i++;
@@ -193,8 +195,30 @@ void mov_instruction(FILE* file, reg_allocator_t* rega, address_t dest, address_
 
 void rega_free(reg_allocator_t* rega, x86_register_t reg){
   int reg_i = index_of(reg);
+  rega->active_reg_count--;
   rega->usage[reg_i] = 0;
   if(reg_i < rega->next_free_register){
     rega->next_free_register = reg_i;
+  }
+}
+
+//Save the state of all active registers to the stack so that they can be restored later
+void rega_regsave(FILE* file, reg_allocator_t* rega, int stack_ptr){
+  for(int i = 0; i < NUM_REGISTERS; i++){
+    if(rega->usage[i]){
+      stack_ptr += 8;
+
+      mov_instruction(file, rega, Astack(stack_ptr, QWORD), Areg(rega->priority[i], QWORD));
+    }
+  }
+}
+
+//restore the saved state of all active registers
+void rega_regrestore(FILE* file, reg_allocator_t* rega, int stack_ptr){
+  for(int i = 0; i < NUM_REGISTERS; i++){
+    if(rega->usage[i]){
+      stack_ptr += 8;
+      mov_instruction(file, rega, Areg(rega->priority[i], QWORD), Astack(stack_ptr, QWORD));
+    }
   }
 }

@@ -34,6 +34,7 @@ typedef struct{
   int usage[NUM_REGISTERS];
   int next_free_register;
   int stack_depth;
+  int active_reg_count;
 }reg_allocator_t;
 
 reg_allocator_t rega_init(int stack_depth);
@@ -65,3 +66,7 @@ void put_instruction(FILE *file, char *instruction, address_t dest, address_t sr
 void mov_instruction(FILE *file, reg_allocator_t *rega, address_t dest, address_t src);
 
 void rega_free(reg_allocator_t *rega, x86_register_t reg);
+
+void rega_regsave(FILE *file, reg_allocator_t *rega, int stack_ptr);
+
+void rega_regrestore(FILE *file, reg_allocator_t *rega, int stack_ptr);
