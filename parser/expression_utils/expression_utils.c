@@ -44,6 +44,22 @@ expression_t* exp_create_var_write(type_identifier_t returnType, int varid, expr
   return new;
 }
 
+expression_t* exp_create_return(int byte_offset, expression_t* value){
+  expression_t* new;
+  if(value != NULL){
+    new = exp_init(EXP_RETURN, typeid_copy(&(value->return_type)));
+    new->write.var_id = byte_offset;
+    new->write.value = malloc(sizeof(expression_t*));
+    new->write.value[0] = value;
+  }
+  else{
+    new = exp_init(EXP_RETURN, typeid_newEmpty());
+    new->write.var_id = byte_offset;
+  }
+ 
+  return new;
+}
+
 expression_t* exp_create_grouping(int enter_group){
   expression_t* new = exp_init(EXP_GROUPING, typeid_newEmpty());
   new->enter_group = enter_group;
@@ -137,6 +153,10 @@ void print_expression(expression_t* exp){
       printf("SET VAR #%d TO : ", exp->write.var_id);
       print_expression(exp->write.value[0]);
       break;
+    case EXP_RETURN:
+      printf("RETURN: ");
+      if(exp->write.value) print_expression(exp->write.value[0]);
+      break;
     case EXP_VECTOR_LITERAL:
       printf("⟨");
       i = 0;
@@ -204,8 +224,9 @@ void exp_destroy(expression_t* exp){
       exp->function_call.arg_v = NULL;  
       break;
     case EXP_WRITE_VAR:
+    case EXP_RETURN:
       exp->write.var_id = -1;
-      exp_destroy(exp->write.value[0]); 
+      if(exp->write.value) exp_destroy(exp->write.value[0]); 
       free(exp->write.value);
       exp->write.value = NULL;
       break;

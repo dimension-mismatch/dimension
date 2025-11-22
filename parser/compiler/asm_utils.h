@@ -23,6 +23,7 @@ typedef enum{
 typedef struct{
   address_type_t type;
   address_size_t size;
+  int is_pointer;
   union{
     x86_register_t reg;
     int byte_offset;
@@ -57,6 +58,8 @@ address_t Areg_at_index(int index, address_size_t size, reg_allocator_t *rega);
 
 address_t Aget_next_free(address_size_t size, reg_allocator_t *rega);
 
+address_t Aderef(address_t pointer);
+
 address_t Aconsume_next_free(address_size_t size, reg_allocator_t *rega);
 
 int index_of(x86_register_t reg);
@@ -64,6 +67,10 @@ int index_of(x86_register_t reg);
 void put_instruction(FILE *file, char *instruction, address_t dest, address_t src);
 
 void mov_instruction(FILE *file, reg_allocator_t *rega, address_t dest, address_t src);
+
+void return_instruction(FILE *file);
+
+void lea_instruction(FILE *file, reg_allocator_t *rega, address_t dest, x86_register_t base, int offset, address_size_t size);
 
 void rega_free(reg_allocator_t *rega, x86_register_t reg);
 

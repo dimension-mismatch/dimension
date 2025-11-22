@@ -362,6 +362,25 @@ exp_array_t* attempt_isolate_expression(int* index, parse_manager_t* manager){
     }
   }
 }
+expression_t* attempt_read_return_statement(int* index, parse_manager_t* manager){
+  int i = *index;
+  int* ip = &i;
+  token_t* current_token;
+  if(!match_next_content(ip, &current_token, manager, IDENTIFIER, "return")){
+    return NULL;
+  }
+  exp_array_t* expc = attempt_isolate_expression(ip, manager);
+    if(expc != NULL){
+      parse_expression(&expc, manager, 0);
+      expression_t* final = exp_create_return(0, expc->expression);
+      *index = i;
+      return final;
+    }
+    else{
+      expression_t* final = exp_create_return(0, NULL);
+      return final;
+    }
+}
 
 expression_t* attempt_read_variable_assignment(int* index, parse_manager_t* manager){
   int i = *index;
@@ -413,6 +432,7 @@ expression_t* attempt_read_block(int* index, parse_manager_t* manager){
     attempt_read_type_declaration(&i, manager);
 
     exp_block_push_line(program, attempt_read_variable_assignment(&i, manager));
+    exp_block_push_line(program, attempt_read_return_statement(&i, manager));
 
     attempt_read_function_declaration(&i, manager);
     exp_array_t* expc = attempt_isolate_expression(&i, manager);

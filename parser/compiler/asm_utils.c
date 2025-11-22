@@ -31,6 +31,9 @@ void put_number(FILE* file, unsigned int number){
 }
 
 void put_address(FILE* file, address_t address){
+  if(address.is_pointer){
+    put_text(file, "[");
+  }
   switch(address.type){
     case ADDR_STACK:
       switch(address.size){
@@ -120,6 +123,9 @@ void put_address(FILE* file, address_t address){
       put_number(file, address.byte_offset);
       break;
   }
+  if(address.is_pointer){
+    put_text(file, "]");
+  }
 }
 
 void put_new_stack_frame(FILE* file){
@@ -147,6 +153,11 @@ address_t Areg_at_index(int index, address_size_t size, reg_allocator_t* rega){
 
 address_t Aget_next_free(address_size_t size, reg_allocator_t* rega){
   return Areg_at_index(rega->next_free_register, size, rega);
+}
+
+address_t Aderef(address_t pointer){
+  pointer.is_pointer = 1;
+  return pointer;
 }
 
 address_t Aconsume_next_free(address_size_t size, reg_allocator_t* rega){
@@ -191,6 +202,27 @@ void mov_instruction(FILE* file, reg_allocator_t* rega, address_t dest, address_
   else{
     put_instruction(file, "mov", dest, src);
   }
+}
+
+void return_instruction(FILE* file){
+  put_text(file, "  pop rbp \n  ret\n");
+}
+
+void lea_instruction(FILE* file, reg_allocator_t* rega, address_t dest, x86_register_t base, int offset, address_size_t size){
+  put_text(file, "  lea ");
+  put_address(file, dest);
+  put_text(file, ", [");
+  put_address(file, Areg(base, size));
+  if(offset > 0){
+    put_text(file, " + ");
+    put_number(file, offset);
+  }
+  else{
+    put_text(file, " - ");
+    put_number(file, -offset);
+  }
+  
+  put_text(file, "]\n");
 }
 
 void rega_free(reg_allocator_t* rega, x86_register_t reg){

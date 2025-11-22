@@ -84,7 +84,7 @@ void variable_record_scope_in(variable_record_t *record){
   struct scope* current_scope = record->scopes + record->scope_depth - 1;
   current_scope->variable_count = 0;
   current_scope->local_byte_offset = 0;
-  current_scope->parameter_byte_offset = -8;
+  current_scope->parameter_byte_offset = -16;
 }
 
 void variable_record_scope_out(variable_record_t* record){

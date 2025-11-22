@@ -12,6 +12,7 @@ typedef enum{
   EXP_VECTOR_LITERAL,
   EXP_SINGLE_LITERAL,
   EXP_BLOCK,
+  EXP_RETURN,
   EXP_ERROR
 }expression_type_t;
 
@@ -63,6 +64,8 @@ expression_t *exp_create_var_declaration(type_identifier_t returnType, char *nam
 expression_t *exp_create_var_read(type_identifier_t returnType, int varid);
 
 expression_t *exp_create_var_write(type_identifier_t returnType, int varid, expression_t *value);
+
+expression_t *exp_create_return(int byte_offset, expression_t *value);
 
 expression_t *exp_create_grouping(int enter_group);
 
