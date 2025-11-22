@@ -1,0 +1,24 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Dimension Inline Assembly",
+  "patterns": [
+    { "include": "#comments" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line",
+          "match": "#.*$"
+        },
+        {
+          "name": "comment.block.x86asm",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    }
+    
+  },
+  "scopeName": "source.dmsn_inline_asm"
+}
