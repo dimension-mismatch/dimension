@@ -6,6 +6,7 @@ typedef struct{
   type_identifier_t type;
   char* name;
   int local_byte_offset;
+  int var_id;
 }variable_t;
 
 struct scope{
@@ -19,6 +20,7 @@ typedef struct{
   int scope_depth;
   struct scope* scopes;
   variable_t* variables;
+  int var_count;
 }variable_record_t;
 
 variable_record_t variable_record_init();
@@ -30,6 +32,8 @@ variable_t variable_record_push_param(variable_record_t *record, char *name, typ
 variable_t* variable_record_get(variable_record_t* record, char* name);
 
 variable_t* variable_record_get_by_index(variable_record_t* record, int index);
+
+variable_t *variable_record_get_newest(variable_record_t *record);
 
 int* variable_record_get_index(variable_record_t* record, char* name);
 

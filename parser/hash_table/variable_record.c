@@ -11,6 +11,7 @@ variable_record_t variable_record_init(){
   new.scope_depth = 0;
   new.scopes = NULL;
   new.variables = NULL;
+  new.var_count = 0;
   new.table = init_hash_table(67, 0.9);
   variable_record_scope_in(&new);
   return new;
@@ -31,8 +32,9 @@ int var_record_inc_param_byte_offset(variable_record_t* record, int byte_count){
 }
 
 variable_t variable_record_push_var(variable_record_t* record, char *name, type_identifier_t *type, int byte_offset){
-  int idx = record->table.key_count;
-  record->variables = realloc(record->variables, (idx + 1) * sizeof(variable_t));
+  int idx = record->var_count;
+  record->var_count++;
+  record->variables = realloc(record->variables, record->var_count * sizeof(variable_t));
   variable_t new = {typeid_newEmpty(), NULL};
   new.name = malloc((strlen(name) + 1) * sizeof(char));
   strcpy(new.name, name); 
@@ -40,6 +42,7 @@ variable_t variable_record_push_var(variable_record_t* record, char *name, type_
   push_key_value(&(record->table), new.name, idx);
   new.local_byte_offset = byte_offset;
   record->variables[idx] = new;
+  new.var_id = idx;
   return new;
 }
 
@@ -63,6 +66,11 @@ variable_t *variable_record_get(variable_record_t *record, char *name){
 
 variable_t *variable_record_get_by_index(variable_record_t *record, int index){
   return &(record->variables[index]);
+}
+
+variable_t* variable_record_get_newest(variable_record_t* record){
+  
+  return variable_record_get_by_index(record, record->var_count - 1);
 }
 
 int* variable_record_get_index(variable_record_t *record, char *name){
@@ -95,17 +103,19 @@ void variable_record_scope_out(variable_record_t* record){
     for(int i = 0, j = record->table.key_count - 1; i < current_scope->variable_count; i++, j--){
       remove_key_value(&(record->table), record->variables[j].name);
     }
-    record->variables = realloc(record->variables, record->table.key_count * sizeof(variable_t));
+    //record->variables = realloc(record->variables, record->table.key_count * sizeof(variable_t));
   }
   record->scopes = realloc(record->scopes, record->scope_depth * sizeof(struct scope));
 }
 
 void variable_record_destroy(variable_record_t *record){
-  for(int i = 0; i < record->table.key_count; i++){
+  for(int i = 0; i < record->var_count; i++){
     typeid_destroy(&(record->variables[i].type));
     free(record->variables[i].name);
   }
   
+  record->var_count = 0;
+
   destroy_hash_table(&(record->table));
   free(record->scopes);
   record->scopes = NULL;
@@ -123,7 +133,7 @@ void print_variable(variable_t* var){
   print_type_id(&(var->type));
 }
 void print_variable_record(variable_record_t* record){
-  for(int i = 0; i < record->table.key_count; i++){
+  for(int i = 0; i < record->var_count; i++){
     printf("#%d @ byte %d: ", i, record->variables[i].local_byte_offset);
     print_variable(&(record->variables[i]));
     printf("\n");

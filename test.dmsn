@@ -29,12 +29,14 @@ fn (a: [i]) * (b: [i]) makes [i] does {~I
 ~} priority 2;
 
 fn (a: [i]) % (b: [i]) makes [i] does {
-  return a + b;
+  return a - b;
 } priority 2;
 
 
 
 //fn -(n: [i]) makes [i] does {} priority 1;
+
+5 + 3 * 2;
 
 exit 3 % 5;
 

@@ -162,24 +162,23 @@ void attempt_read_type_declaration(int* index, parse_manager_t* manager){
   return;
 }
 
-variable_t attempt_read_variable_declaration(int* index, parse_manager_t* manager, int is_parameter){
+variable_t* attempt_read_variable_declaration(int* index, parse_manager_t* manager, int is_parameter){
   int i = *index;
   int* ip = &i;
   token_t* current_token;
-  variable_t empty = {typeid_newEmpty(), NULL};
 
   if(!match_next_type(ip, &current_token, manager, IDENTIFIER)){
-    return empty;
+    return NULL;
   }
   char* name = current_token->content;
   
   if(!match_next_content(ip, &current_token, manager, PROGRAM, ":")){
-    return empty;
+    return NULL;
   }
   
   type_identifier_t type = attempt_read_type_id(ip, manager, 1);
   if(type.type_number == -1){
-    return empty;
+    return NULL;
   }
 
   
@@ -188,7 +187,8 @@ variable_t attempt_read_variable_declaration(int* index, parse_manager_t* manage
   variable_t var = is_parameter ? 
     variable_record_push_param(manager->var_rec, name, &type) : 
     variable_record_push_new(manager->var_rec, name, &type);
-  return var;
+  
+  return variable_record_get_newest(manager->var_rec);
 }
 
 void attempt_read_function_declaration(int* index, parse_manager_t* manager){
@@ -207,14 +207,14 @@ void attempt_read_function_declaration(int* index, parse_manager_t* manager){
           peek_next_content(ip, &current_token, manager, IDENTIFIER, "priority"))){
     if(cond_peek_next_content(ip, &current_token, manager, PROGRAM, "(")){
       while(!cond_peek_next_content(ip, &current_token, manager, PROGRAM, ")")){
-        variable_t param = attempt_read_variable_declaration(ip, manager, 1);
-        if(param.name == NULL){
+        variable_t* param = attempt_read_variable_declaration(ip, manager, 1);
+        if(param == NULL){
           throw_error(manager, 9, i);
           exp_array_destroy(root);
           variable_record_scope_out(manager->var_rec);
           return;
         }
-        expression_t* exp = exp_create_var_declaration(param.type, param.name);
+        expression_t* exp = exp_create_var_declaration(param->type, param->name);
         exp_array_push_expression(&root, &matches, exp);
       }
     }
@@ -232,7 +232,7 @@ void attempt_read_function_declaration(int* index, parse_manager_t* manager){
   if(root == NULL){
     throw_error(manager, 21, i);
   }
-
+  
   int has_body = 0;
   int has_return = 0;
   int has_priority = 0;
@@ -269,6 +269,7 @@ void attempt_read_function_declaration(int* index, parse_manager_t* manager){
       }
       else{
         dimension = attempt_read_block(ip, manager);
+        print_expression(dimension);
       }
     }
     else if(cond_peek_next_content(ip, &current_token, manager, IDENTIFIER, "makes")){
@@ -341,15 +342,7 @@ exp_array_t* attempt_isolate_expression(int* index, parse_manager_t* manager){
       exp_array_push_expression(&root, &matches, exp_create_grouping(1));
     }
     else if(cond_peek_next_type(ip, &current_token, manager, IDENTIFIER) || cond_peek_next_type(ip, &current_token, manager, SYMBOLIC)){
-      
-      int* varid = variable_record_get_byte_offset(manager->var_rec, current_token->content);
-      if(varid != NULL){
-        variable_t* var = variable_record_get(manager->var_rec, current_token->content);
-        exp_array_push_expression(&root, &matches, exp_create_var_read(var->type, *varid));
-      }
-      else{
-        exp_array_push_expression(&root, &matches, exp_create_identifier(current_token->content, i));
-      }
+      exp_array_push_expression(&root, &matches, exp_create_identifier(current_token->content, i));
     }
     else if(cond_peek_next_type(ip, &current_token, manager, NUMERIC)){
       type_identifier_t int_type = type_record_get_type_id(manager->type_rec, "i");
@@ -386,17 +379,16 @@ expression_t* attempt_read_variable_assignment(int* index, parse_manager_t* mana
   int i = *index;
   int* ip = &i;
   token_t* current_token;
-  int id = manager->var_rec->table.key_count;
-  variable_t declare = attempt_read_variable_declaration(ip, manager, 0);
-  int exists = declare.type.type_number == -1;
-  if(exists){
+  int id = manager->var_rec->var_count;
+  
+  variable_t* declare = attempt_read_variable_declaration(ip, manager, 0);
+  if(declare == NULL){
     if(match_next_type(ip, &current_token, manager, IDENTIFIER)){
-      int* var_id = variable_record_get_index(manager->var_rec, current_token->content);
-      if(var_id == NULL){
+      declare = variable_record_get(manager->var_rec, current_token->content);
+      if(declare == NULL){
         return NULL;
       }
-      id = *var_id;
-      declare = *variable_record_get_by_index(manager->var_rec, *var_id);
+      id = declare->var_id;
     }
     else{
       return NULL;
@@ -406,7 +398,7 @@ expression_t* attempt_read_variable_assignment(int* index, parse_manager_t* mana
     exp_array_t* expc = attempt_isolate_expression(ip, manager);
     if(expc != NULL){
       parse_expression(&expc, manager, 0);
-      expression_t* final = exp_create_var_write(declare.type, declare.local_byte_offset, expc->expression);
+      expression_t* final = exp_create_var_write(declare->type, declare->local_byte_offset, expc->expression);
       *index = i;
       return final;
     }

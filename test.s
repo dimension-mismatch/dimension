@@ -5,13 +5,26 @@
 start:
   push rbp
   mov rbp, rsp
-  sub rsp, 32
-  mov qword ptr [rbp - 16], 5
-  mov qword ptr [rbp - 24], 3
+#1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  mov rax, 3
+
+
+  imul rax, 2
+#1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  mov rbx, 5
+
+
+  add rbx, rax
+
+  sub rsp, 40
+  mov qword ptr [rbp - 16], rbx
+  mov qword ptr [rbp - 24], 5
+  mov qword ptr [rbp - 32], 3
   lea rax, [rbp - 8]
-  mov qword ptr [rbp - 32], rax
+  mov qword ptr [rbp - 40], rax
 call function_body_4
-  add rsp, 24
+  mov rbx, qword ptr [rbp - 16]
+  add rsp, 32
 
   mov rdi, qword ptr [rbp - 8]
   mov rax, 0x2000001
@@ -21,10 +34,10 @@ function_body_4:
   push rbp
   mov rbp, rsp
 #1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-  mov rax, qword ptr [rbp + 24]
+  mov rax, qword ptr [rbp + 8]
 
 
-  add rax, qword ptr [rbp + 32]
+  sub rax, qword ptr [rbp + 8]
   mov rbx, qword ptr [rbp + 16]
   mov [rbx], rax
   pop rbp 

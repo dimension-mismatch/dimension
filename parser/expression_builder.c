@@ -68,86 +68,98 @@ void exp_span_array_push_span(exp_span_array_t* array, expression_span_t span){
   array->array[array->span_count - 1] = span;
 }
 
+void exp_span_array_replace_expression(exp_array_t* array, expression_t* new_exp){
+  exp_destroy(array->expression);
+  free(array->expression);
+  array->expression = new_exp;
+}
 
-
-expression_span_t exp_create_span(int index, exp_array_t* array, function_record_t *fn_record){
-  
-  expression_span_t new = {array, NULL, dmsn_newEmpty(), -1, 0, 0, index};
-  
-  
-  struct fn_tree* current_node = fn_record->root;
-  while(array != NULL){
-    
-    int* id = NULL;
-    new.length++;
-    switch(array->expression->type){
-      case EXP_IDENTIFIER:
-        id = get_value_from_key(&(current_node->name_table), array->expression->text);
-        break;
-      case EXP_GROUPING: 
-        break;
-      default:
-        id = get_value_from_int(&(current_node->type_table), array->expression->return_type.type_number);
-        break;
-    }
-    if(id == NULL){
-      return new;
-    }
-    
-    current_node = current_node->children + *id;
-    if(current_node->id_number != -1){
-      //printf(GREEN "*" RESET_COLOR);
-      // printf(GREEN "SUCCESSFULLY FOUND FUNCTION (#%d, consumes %d tokens): " RESET_COLOR, current_node->id_number, new.length);
-
-      // print_fn_def(fn_rec_get_by_index(fn_record, current_node->id_number));
-      // printf("\n");
-      struct function_def def = fn_rec_get_by_index(fn_record, current_node->id_number);
-      exp_array_t* match = new.begin;
-      int arg_i = 0;
-      for(int i = 0; i < new.length; i++){
-        if(match->expression->type != EXP_IDENTIFIER && match->expression->type != EXP_GROUPING){
-          if(def.parameters == NULL){
-            printf(RED "SOmething is Wrong!!\n");
-          }
-          type_identifier_t expected_type = def.parameters[arg_i].type;
-          
-          type_identifier_t input_type = match->expression->return_type;
-          
-          
-          for(int d = 0; d < input_type.dimension_count; d++){
-            if(d < expected_type.dimension_count){
-              if(input_type.dimensions[d] != expected_type.dimensions[d]){
-                printf(RED BOLD "Dimension Mismatch in parameter \"%s\": " RESET_COLOR "expected ", def.parameters[arg_i].name);
-                print_type_id(&expected_type);
-                printf(", but got ");
-                print_type_id(&input_type);
-                printf("\n");
-              }
-            }
-            else if(d - expected_type.dimension_count < new.multiplicity.dimension_count){
-              if(input_type.dimensions[d] != new.multiplicity.dimensions[d - expected_type.dimension_count]){
-                printf(RED BOLD "Dimension Mismatch in parameter \"%s\": " RESET_COLOR "value of type ", def.parameters[arg_i].name);
-                print_type_id(&input_type);
-                printf("does not match multiplicity. ");
-                printf("\n");
-              }
-            }
-            else{
-              dmsn_pushDimension(&(new.multiplicity), input_type.dimensions[d]);
-            }
-          }
-          arg_i++;
-        }
-        match = match->next;
+void populate_span_with_function_call(exp_array_t* array, parse_manager_t* manager, expression_span_t* new, int fn_id){
+  struct function_def def = fn_rec_get_by_index(manager->fn_rec, fn_id);
+  exp_array_t* match = new->begin;
+  int arg_i = 0;
+  for(int i = 0; i < new->length; i++){
+    if(match->expression->type != EXP_IDENTIFIER && match->expression->type != EXP_GROUPING){
+      if(def.parameters == NULL){
+        printf(RED "SOmething is Wrong!!\n");
       }
-      new.id = current_node->id_number;
-      new.end = array;
-      new.priority = fn_rec_get_by_index(fn_record, current_node->id_number).priority;
-      return new;
+      type_identifier_t expected_type = def.parameters[arg_i].type;
+      
+      type_identifier_t input_type = match->expression->return_type;
+      
+      
+      for(int d = 0; d < input_type.dimension_count; d++){
+        if(d < expected_type.dimension_count){
+          if(input_type.dimensions[d] != expected_type.dimensions[d]){
+            printf(RED BOLD "Dimension Mismatch in parameter \"%s\": " RESET_COLOR "expected ", def.parameters[arg_i].name);
+            print_type_id(&expected_type);
+            printf(", but got ");
+            print_type_id(&input_type);
+            printf("\n");
+          }
+        }
+        else if(d - expected_type.dimension_count < new->multiplicity.dimension_count){
+          if(input_type.dimensions[d] != new->multiplicity.dimensions[d - expected_type.dimension_count]){
+            printf(RED BOLD "Dimension Mismatch in parameter \"%s\": " RESET_COLOR "value of type ", def.parameters[arg_i].name);
+            print_type_id(&input_type);
+            printf("does not match multiplicity. ");
+            printf("\n");
+          }
+        }
+        else{
+          dmsn_pushDimension(&(new->multiplicity), input_type.dimensions[d]);
+        }
+      }
+      arg_i++;
     }
-    array = array->next;
+    match = match->next;
   }
-  return new;
+  
+  new->id = fn_id;
+  new->end = array;
+  new->priority = def.priority;
+}
+
+int exp_populate_span(expression_span_t* span, exp_array_t* array, struct fn_tree* current_node, parse_manager_t* manager){
+  if(array == NULL){
+    return -1;
+  }
+  int* id = NULL;
+  span->length++;
+  switch(array->expression->type){
+    case EXP_IDENTIFIER: {
+      variable_t* var = variable_record_get(manager->var_rec, array->expression->text);
+      if(var != NULL){
+        id = get_value_from_int(&(current_node->type_table), var->type.type_number);
+        exp_span_array_replace_expression(array, exp_create_var_read(var->type, var->var_id));
+        break;
+      }
+      id = get_value_from_key(&(current_node->name_table), array->expression->text);
+      break;
+    }
+    case EXP_GROUPING: 
+      break;
+    default:
+      id = get_value_from_int(&(current_node->type_table), array->expression->return_type.type_number);
+      break;
+  }
+  
+  if(id == NULL){
+    return -1;
+  }
+  current_node = current_node->children + *id;
+  if(current_node->id_number != -1){
+    populate_span_with_function_call(array, manager, span, current_node->id_number);
+    return current_node->id_number;
+  }
+  return exp_populate_span(span, array->next, current_node, manager);
+}
+
+expression_span_t exp_create_span(exp_array_t* array, parse_manager_t* manager, int index){
+
+  expression_span_t span = {array, NULL, dmsn_newEmpty(), -1, 0, 0, index};
+  exp_populate_span(&span, array, manager->fn_rec->root, manager);
+  return span;
 }
 
 void exp_span_array_find_best(exp_span_array_t* array){
@@ -170,7 +182,7 @@ void exp_span_array_destroy(exp_span_array_t *array){
   array->span_count = 0;
 }
 
-void exp_span_array_consume_best_span(exp_span_array_t *array, exp_array_t* matches, function_record_t* fn_record){
+void exp_span_array_consume_best_span(exp_span_array_t *array, exp_array_t* matches, parse_manager_t* manager){
   expression_span_t best = array->array[array->best_id];
   exp_array_t* begin = best.begin;
   exp_array_t* end = best.end->next;
@@ -178,7 +190,7 @@ void exp_span_array_consume_best_span(exp_span_array_t *array, exp_array_t* matc
   exp_array_t* match = best.begin;
 
 
-  type_identifier_t return_type = fn_rec_get_by_index(fn_record, best.id).return_type;
+  type_identifier_t return_type = fn_rec_get_by_index(manager->fn_rec, best.id).return_type;
   
   expression_t* new_expression = exp_init(EXP_CALL_FN, typeid_copy(&return_type));
   new_expression->function_call.fn_id = best.id;
@@ -245,7 +257,7 @@ void exp_span_array_consume_best_span(exp_span_array_t *array, exp_array_t* matc
     array->array[i].begin = NULL;
   }
   for(int i = start_index; i <= best.index; i++){
-    expression_span_t span = exp_create_span(i, match, fn_record);
+    expression_span_t span = exp_create_span(match, manager, i);
     if(span.id != -1){
       exp_span_array_push_span(&new_spans, span);
     }
@@ -340,7 +352,7 @@ exp_array_t* parse_expression(exp_array_t** start, parse_manager_t* manager, int
     if(current->expression->type == EXP_GROUPING && !current->expression->enter_group){
       break;
     }
-    expression_span_t span = exp_create_span(i, current, manager->fn_rec);
+    expression_span_t span = exp_create_span(current, manager, i);
     
     if(span.id != -1){
       exp_span_array_push_span(&spans, span);
@@ -350,12 +362,9 @@ exp_array_t* parse_expression(exp_array_t** start, parse_manager_t* manager, int
     i++;
   }
 
+
   while(spans.span_count > 0){
-    // printf(RED BOLD "Expression is now: " RESET_COLOR);
-    // print_exp_array(array);
-    // printf("\n");
-    // print_exp_span_array(&spans);
-    exp_span_array_consume_best_span(&spans, array, manager->fn_rec);
+    exp_span_array_consume_best_span(&spans, array, manager);
   }
   
 

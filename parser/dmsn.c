@@ -37,10 +37,10 @@ int main(int argc, char* argv[]){
   token_array_t* all_tokens = tokenize_file(file);
   parse_manager_t errors = parse_manager_init(all_tokens, &function_record, &variable_record, &type_record);
 
-
   expression_t* ast = parse_tokens(&errors);
 
-  //print_expression(ast);
+  // print_variable_record(&variable_record);
+  // print_expression(ast);
   
   fclose(file);
 

@@ -54,6 +54,8 @@ void fn_rec_destroy(function_record_t* record);
 
 void print_fn_def(struct function_def def);
 
+void print_fn_tree(struct fn_tree *tree, int indent);
+
 void print_fn_rec(function_record_t* record);
 
 
