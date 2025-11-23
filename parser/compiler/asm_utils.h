@@ -1,5 +1,5 @@
 #pragma once
-
+#include "../expression_utils/expression_utils.h"
 #include <stdio.h>
 
 #define NUM_REGISTERS 15
@@ -39,6 +39,8 @@ typedef struct{
 }reg_allocator_t;
 
 reg_allocator_t rega_init(int stack_depth);
+
+address_size_t expression_size(expression_t *exp);
 
 void put_text(FILE *file, char *txt);
 

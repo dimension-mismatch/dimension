@@ -74,6 +74,9 @@ unsigned int typeid_totalDimensions(type_identifier_t *typeId){
 }
 
 int typeid_bytesize(type_identifier_t* typeid){
+  if(typeid->type_number == -1){
+    return 0;
+  }
   return (typeid->bit_count + 7) / 8 * typeid_totalDimensions(typeid);
 }
 

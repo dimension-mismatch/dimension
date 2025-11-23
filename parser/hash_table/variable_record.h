@@ -29,6 +29,8 @@ variable_t variable_record_push_new(variable_record_t* record, char* name, type_
 
 variable_t variable_record_push_param(variable_record_t *record, char *name, type_identifier_t *type);
 
+variable_t variable_record_push_enum(variable_record_t *record, char *name, type_identifier_t *type);
+
 variable_t* variable_record_get(variable_record_t* record, char* name);
 
 variable_t* variable_record_get_by_index(variable_record_t* record, int index);

@@ -14,6 +14,11 @@ hashtest : hash_table/hashtest.c hash_table/function_record.o hash_table/type_re
 test : test.s
 	as  ../test.s -o ../test.o
 	gcc -o ../test ../test.o -nostdlib -static 
-
+	../test
 test.s :
 	./dmsn ../test.dmsn ../test.s
+
+assemble :
+	as  ../test.s -o ../test.o
+	gcc -o ../test ../test.o -nostdlib -static 
+	../test

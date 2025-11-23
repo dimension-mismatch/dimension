@@ -18,7 +18,7 @@ address_t compile_expression(FILE* file, reg_allocator_t* rega, expression_t* ex
     return Aliteral(expression->numeric_literal);
   }
   else if(expression->type == EXP_READ_VAR){
-    return Astack(expression->read.var_id, QWORD);
+    return Astack(expression->read.var_id, expression_size(expression));
   }
   else if (expression->type == EXP_RETURN){
     expression_t* value = expression->write.value[0];
@@ -33,7 +33,7 @@ address_t compile_expression(FILE* file, reg_allocator_t* rega, expression_t* ex
   else if(expression->type == EXP_WRITE_VAR){
     expression_t* value = expression->write.value[0];
     address_t value_addr = compile_expression(file, rega, value, fn_rec, var_rec, type_rec);
-    address_t addr = Astack(expression->write.var_id, QWORD);
+    address_t addr = Astack(expression->write.var_id, expression_size(expression));
     mov_instruction(file, rega, addr, value_addr);
     return addr;
   }
@@ -41,13 +41,17 @@ address_t compile_expression(FILE* file, reg_allocator_t* rega, expression_t* ex
     int depth = expression->block.stack_depth;
     reg_allocator_t child_rega = rega_init(depth);
     put_new_stack_frame(file);
-    if(depth > 0){
-      put_instruction(file, "sub", Areg(RSP, QWORD), Aliteral(depth));
-    }
+
+    //Expand the stack to contain any local variables that are used in this block of code
+    if(depth > 0) put_instruction(file, "sub", Areg(RSP, QWORD), Aliteral(depth));
+
     for(int i = 0; i < expression->block.arg_c; i++){
       compile_expression(file, &child_rega, expression->block.arg_v[i], fn_rec, var_rec, type_rec);
       putc('\n', file);
     }
+
+    //deallocate local stack variables when we're done
+    if(depth > 0) put_instruction(file, "add", Areg(RSP, QWORD), Aliteral(depth));
   }
   else if(expression->type == EXP_CALL_FN){
     struct function_def definition = fn_rec_get_by_index(fn_rec, expression->function_call.fn_id);
@@ -78,7 +82,7 @@ address_t compile_expression(FILE* file, reg_allocator_t* rega, expression_t* ex
             text++;
           }
           if(arg_locations[arg_i].type != ADDR_REGISTER){
-            address_t reg = Aconsume_next_free(QWORD, rega);
+            address_t reg = Aconsume_next_free(arg_locations[arg_i].size, rega);
             putc('#', file);
             for(int i = 0; i < 15; i++){
               put_number(file, rega->usage[i]);
@@ -155,7 +159,7 @@ address_t compile_expression(FILE* file, reg_allocator_t* rega, expression_t* ex
         stack_ptr += typeid_bytesize(&(expression->function_call.arg_v[i]->return_type));
 
         //move the result into the correct location on the stack
-        mov_instruction(file, rega, Astack(stack_ptr, QWORD), arg);
+        mov_instruction(file, rega, Astack(stack_ptr, expression_size(expression->function_call.arg_v[i])), arg);
 
         //Free up the register we used for this computation (if we actually used one)
         if(arg.type == ADDR_REGISTER){
@@ -163,9 +167,12 @@ address_t compile_expression(FILE* file, reg_allocator_t* rega, expression_t* ex
         }
 
       }
-      address_t reg = Aget_next_free(QWORD, rega);
-      lea_instruction(file, rega, reg, RBP, -8, QWORD);
-      mov_instruction(file, rega, Astack(stack_ptr + 8, QWORD), reg);
+      if(return_size > 0){
+        address_t reg = Aget_next_free(QWORD, rega);
+        lea_instruction(file, rega, reg, RBP, -return_size, QWORD);
+        mov_instruction(file, rega, Astack(stack_ptr + 8, QWORD), reg);
+      }
+      
       //call the function with the "call" instruction
       put_text(file, "call function_body_");
       put_number(file, expression->function_call.fn_id);

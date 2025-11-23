@@ -158,6 +158,16 @@ void attempt_read_type_declaration(int* index, parse_manager_t* manager){
     }
   i--;
   type_record_push_type(manager->type_rec, dec);
+  if(dec.type_type == ENUM_TYPE){
+    type_identifier_t enum_type_id = typeid_newEmpty();
+    enum_type_id.type_number = manager->type_rec->table.key_count - 1;
+    enum_type_id.bit_count = manager->type_rec->array[enum_type_id.type_number]->bit_count;
+
+    for(int i = 0; i < dec.enumeration.option_count; i++){
+      type_identifier_t local_copy = typeid_copy(&enum_type_id);
+      //variable_record_push_enum(manager->var_rec, dec.enumeration.options[i], &local_copy);
+    }
+  }
   *index = i;
   return;
 }

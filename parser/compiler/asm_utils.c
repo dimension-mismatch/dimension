@@ -19,6 +19,18 @@ reg_allocator_t rega_init(int stack_depth){
   return new;
 }
 
+address_size_t expression_size(expression_t* exp){
+  switch(typeid_bytesize(&exp->return_type)){
+    case 1:
+      return BYTE;
+    case 2: 
+      return WORD;
+    case 4: 
+      return DWORD;
+    default:
+      return QWORD;    
+  }
+}
 void put_text(FILE* file, char* txt){
   while(*txt != '\0'){
     putc(*txt, file);

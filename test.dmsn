@@ -14,6 +14,10 @@ fn (a: [i]) + (b: [i]) makes [i] does {~I
   add @0, ?1
 ~} priority 1;
 
+fn (a: [c]) + (b: [i]) makes [c] does {~I
+  add @0, ?1
+~} priority 1;
+
 fn (a: [i]) - (b: [i]) makes [i] does {~I
   sub @0, ?1
 ~} priority 3;
@@ -24,21 +28,52 @@ fn exit (code: [i]) does {~I
   syscall
 ~};
 
+fn printchar (char: [c]) does {~I
+  mov rdi, 1
+  lea rsi, ?0
+  mov rdx, 1
+  mov rax, 0x2000004
+  syscall
+~};
+
 fn (a: [i]) * (b: [i]) makes [i] does {~I
   imul @0, ?1
 ~} priority 2;
 
 fn (a: [i]) % (b: [i]) makes [i] does {
-  return a - b;
+  return a + b;
 } priority 2;
 
+fn print_digit(d: [c]) does {
+  char : [c] = (d + 48);
+  printchar(char);
+};
 
 
 //fn -(n: [i]) makes [i] does {} priority 1;
+d: [c] = 6;
+print_digit(d);
 
-5 + 3 * 2;
+d = 7;
+print_digit(d);
 
-exit 3 % 5;
+char: [c] = 72;
+printchar char;
+
+char = 101;
+printchar char;
+
+char = 108;
+printchar char;
+
+printchar char;
+
+char = 111;
+printchar char;
+
+
+
+exit 0;
 
 
 

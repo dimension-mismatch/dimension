@@ -44,6 +44,7 @@ variable_t variable_record_push_var(variable_record_t* record, char *name, type_
   record->variables[idx] = new;
   new.var_id = idx;
   return new;
+  
 }
 
 variable_t variable_record_push_new(variable_record_t *record, char *name, type_identifier_t *type){
@@ -53,6 +54,11 @@ variable_t variable_record_push_new(variable_record_t *record, char *name, type_
 
 variable_t variable_record_push_param(variable_record_t *record, char *name, type_identifier_t *type){
   variable_t new = variable_record_push_var(record, name, type, var_record_inc_param_byte_offset(record, typeid_bytesize(type)));
+  return new;
+}
+
+variable_t variable_record_push_enum(variable_record_t *record, char *name, type_identifier_t *type){
+  variable_t new = variable_record_push_var(record, name, type, 0);
   return new;
 }
 
@@ -96,14 +102,16 @@ void variable_record_scope_in(variable_record_t *record){
 }
 
 void variable_record_scope_out(variable_record_t* record){
+  print_variable_record(record);
   record->scope_depth--;
   struct scope* current_scope = record->scopes + record->scope_depth;
 
   if(current_scope->variable_count != 0){
-    for(int i = 0, j = record->table.key_count - 1; i < current_scope->variable_count; i++, j--){
+    for(int i = 0, j = record->var_count - 1; i < current_scope->variable_count; i++, j--){
       remove_key_value(&(record->table), record->variables[j].name);
     }
-    //record->variables = realloc(record->variables, record->table.key_count * sizeof(variable_t));
+    record->var_count -= current_scope->variable_count;
+    record->variables = realloc(record->variables, record->var_count * sizeof(variable_t));
   }
   record->scopes = realloc(record->scopes, record->scope_depth * sizeof(struct scope));
 }

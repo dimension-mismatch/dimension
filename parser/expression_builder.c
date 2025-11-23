@@ -131,7 +131,7 @@ int exp_populate_span(expression_span_t* span, exp_array_t* array, struct fn_tre
       variable_t* var = variable_record_get(manager->var_rec, array->expression->text);
       if(var != NULL){
         id = get_value_from_int(&(current_node->type_table), var->type.type_number);
-        exp_span_array_replace_expression(array, exp_create_var_read(var->type, var->var_id));
+        exp_span_array_replace_expression(array, exp_create_var_read(var->type, var->local_byte_offset));
         break;
       }
       id = get_value_from_key(&(current_node->name_table), array->expression->text);
