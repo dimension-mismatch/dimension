@@ -1,6 +1,8 @@
 #include "type_record.h"
 #include "../type_utils/type_utils.h"
 #include <stdlib.h>
+#include <stdio.h>
+#include "../colors.h"
 
 type_record_t init_type_record(){
   type_record_t new;
@@ -43,6 +45,28 @@ type_identifier_t type_record_get_type_id(type_record_t *record, char *typename)
   typeid.type_number = type_record_get_type_number(record, typename);
   typeid.bit_count = ref->bit_count;
   return typeid;
+}
+
+void print_type_id_named(type_identifier_t* typeid, type_record_t* type_rec){
+  char* typename = type_rec->array[typeid->type_number]->type_name;
+  if(typeid == NULL){
+    printf(CYAN "[NULL]" RESET_COLOR);
+    return;
+  }
+  if(typeid->dimension_count > 0){
+    printf(MAGENTA);
+    int i = 0;
+    while(i < typeid->dimension_count - 1){
+      printf("%d*",typeid->dimensions[i]);
+      i++;
+    }
+    printf("%d" CYAN "[%s]",typeid->dimensions[i], typename);
+  }
+  else{
+    printf(CYAN);
+    printf("[%s]", typename);
+  }
+  printf(RESET_COLOR);
 }
 
 void destroy_type_record(type_record_t *record){

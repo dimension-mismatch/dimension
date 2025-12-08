@@ -39,6 +39,16 @@ typedef struct type_declaration{
   };
 }type_declaration_t;
 
+typedef struct{
+  int type_number;
+  int count;   
+}serialized_type_entry_t;
+
+typedef struct{
+  int num_entries;
+  serialized_type_entry_t* entries;
+}serialized_type_array_t;
+
 
 
 type_identifier_t typeid_newEmpty();
@@ -71,6 +81,14 @@ void typedec_pushMember(type_declaration_t *typedec, type_identifier_t* member, 
 
 void typedec_destroy(type_declaration_t* typedec);
 
-void print_type(type_declaration_t* type);
+int typeid_compare(type_identifier_t *a, type_identifier_t *b);
+
+void serialize_type(type_identifier_t *typeid, serialized_type_array_t *array);
+
+int serial_type_array_compare(serialized_type_array_t *a, serialized_type_array_t *b);
+
+void serial_type_array_destroy(serialized_type_array_t *array);
+
+void print_type(type_declaration_t *type);
 
 void print_type_id(type_identifier_t *typeid);

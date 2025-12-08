@@ -14,6 +14,8 @@
 
 #include "error_handling/error_manager.h"
 
+#include "validator/validator.h"
+
 
 char* message = "  ╔═╗             DIMENSION [v0.0.1]\n╔═╝ ║╔═╗╔═════╗\n║ ║ ║║ ║║ ║ ║ ║\n╠═══╣╠═╩╩╦╬═╩═╣\n║ ═ ║║ ║ ║║ ══╣\n║ ══╣║ ║ ║╠══ ║\n╠═╦╦╩╩═╩═╣╠═══╣ \n║ ║║ ═══ ║║ ║ ║\n╚═╝╚═════╝╚═╩═╝\n";
 int main(int argc, char* argv[]){
@@ -38,6 +40,7 @@ int main(int argc, char* argv[]){
   parse_manager_t errors = parse_manager_init(all_tokens, &function_record, &variable_record, &type_record);
 
   expression_t* ast = parse_tokens(&errors);
+  validate_program(ast, &errors);
 
   // print_variable_record(&variable_record);
   // print_expression(ast);
@@ -56,6 +59,6 @@ int main(int argc, char* argv[]){
   exp_destroy(ast);
   destroy_type_record(&type_record);
   variable_record_destroy(&variable_record);
-  fn_rec_destroy(&function_record);
+  fn_rec_destroy(&function_record); 
 
 }

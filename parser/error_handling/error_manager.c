@@ -75,6 +75,7 @@ void print_error(FILE* error_src_txt, parse_manager_t* manager, int error){
   }
   printf(RESET_COLOR);
   int in_quote = 0;
+  int arg_i = 0;
   while((c = fgetc(error_src_txt)) != '\n' && c != EOF){
     if(c == '@'){
       printf("at " BLUE "(Line " BOLD "%d" UNBOLD ", Col" BOLD " %d" UNBOLD "):\n        " RESET_COLOR, token.line_number, token.start_pos - token.length + 1);
@@ -94,6 +95,14 @@ void print_error(FILE* error_src_txt, parse_manager_t* manager, int error){
       if(c == 'T'){
         printf("%s", token.content);
       }
+      if (c == 't'){
+        error_arg_t arg = err.arg_v[arg_i];
+        if(arg.type == ERR_TYPE){
+          print_type_id_named(arg.type_id, manager->type_rec);
+        }
+        arg_i++;
+      }
+      
     }
     else{
       putc(c, stdout);

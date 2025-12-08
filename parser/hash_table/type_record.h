@@ -17,4 +17,6 @@ int type_record_get_type_number(type_record_t* record, char* typename);
 
 type_identifier_t type_record_get_type_id(type_record_t *record, char *typename);
 
+void print_type_id_named(type_identifier_t *typeid, type_record_t *type_rec);
+
 void destroy_type_record(type_record_t* record);

@@ -45,3 +45,12 @@
 ~ Expression Error |@ Identifier "#T" does not match any variable or function.
 
 ~ Function Error |@ Could not find a body for this funciton. Functions must have a body defined with "does {...}"
+
+~ Type Mismatch |@ Field of type #t cannot be set to a value of type #t
+
+~ Return Type Error|@ This Function must return values of type #t
+
+~ Return Error |@ This Expression should not return anything
+
+~ Error |@ Unknown Expression
+

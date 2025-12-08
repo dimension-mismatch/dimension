@@ -131,7 +131,7 @@ int exp_populate_span(expression_span_t* span, exp_array_t* array, struct fn_tre
       variable_t* var = variable_record_get(manager->var_rec, array->expression->text);
       if(var != NULL){
         id = get_value_from_int(&(current_node->type_table), var->type.type_number);
-        exp_span_array_replace_expression(array, exp_create_var_read(var->type, var->local_byte_offset));
+        exp_span_array_replace_expression(array, exp_create_var_read(var->type, var->local_byte_offset, array->expression->token_start));
         break;
       }
       id = get_value_from_key(&(current_node->name_table), array->expression->text);
@@ -192,7 +192,7 @@ void exp_span_array_consume_best_span(exp_span_array_t *array, exp_array_t* matc
 
   type_identifier_t return_type = fn_rec_get_by_index(manager->fn_rec, best.id).return_type;
   
-  expression_t* new_expression = exp_init(EXP_CALL_FN, typeid_copy(&return_type));
+  expression_t* new_expression = exp_init(EXP_CALL_FN, typeid_copy(&return_type), begin->expression->token_start, best.end->expression->token_end);
   new_expression->function_call.fn_id = best.id;
   typeid_multiply(&(new_expression->return_type), best.multiplicity);
   new_expression->function_call.multiplicity = dmsn_copy(&(best.multiplicity));
@@ -379,7 +379,7 @@ exp_array_t* parse_expression(exp_array_t** start, parse_manager_t* manager, int
       break;
     }
     if(counter->expression->type == EXP_IDENTIFIER){
-      throw_error(manager, 22, counter->expression->token_id);
+      throw_error(manager, 22, counter->expression->token_start);
       has_err = 1;
     }
     exp_count++;
@@ -392,13 +392,14 @@ exp_array_t* parse_expression(exp_array_t** start, parse_manager_t* manager, int
   else if(exp_count > 1){
     type_identifier_t returnType = typeid_copy(&(array->expression->return_type));
     typeid_pushDimension(&returnType, exp_count);
-    new = exp_init(EXP_VECTOR_LITERAL, returnType);
+    new = exp_init(EXP_VECTOR_LITERAL, returnType, array->expression->token_start, array->expression->token_start);
     new->vector_literal.component_count = exp_count;
     new->vector_literal.components = malloc(exp_count * sizeof(expression_t*));
     int exp_i = 0;
     counter = array;
     while(counter){
       if(counter->expression->type == EXP_GROUPING){
+        new->token_end = counter->expression->token_end;
         break;
       }
       new->vector_literal.components[exp_i] = counter->expression;

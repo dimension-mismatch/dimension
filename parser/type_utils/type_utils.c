@@ -161,6 +161,66 @@ void typedec_destroy(type_declaration_t *typedec){
   typedec->bit_count = 0;
 }
 
+int typeid_compare(type_identifier_t* a, type_identifier_t* b){
+  if(a->type_number != b->type_number){
+    return 0;
+  }
+  if(a->dimension_count != b->dimension_count){
+    return 0;
+  }
+  for(int i = 0; i < a->dimension_count; i++){
+    if(a->dimensions[i] != b->dimensions[i]){
+      return 0;
+    }
+  }
+  return 1;
+}
+
+void serialize_type(type_identifier_t* typeid, serialized_type_array_t* array){
+  unsigned int dimension_count = typeid_totalDimensions(typeid);
+  array->num_entries++;
+  array->entries = realloc(array->entries, array->num_entries * sizeof(serialized_type_entry_t));
+  array->entries[array->num_entries - 1].count = dimension_count;
+  array->entries[array->num_entries - 1].type_number = typeid->type_number;
+}
+
+int serial_type_array_compare(serialized_type_array_t* a, serialized_type_array_t* b){
+  int a_i = 0;
+  int b_i = 0;
+
+  int a_entry_i;
+  int b_entry_i;
+
+  int i = 0;
+  while(a_i < a->num_entries && b_i < b->num_entries){
+    serialized_type_entry_t a_entry = a->entries[a_i];
+    serialized_type_entry_t b_entry = b->entries[b_i];
+    if(a_entry.type_number != b_entry.type_number){
+      return 0;
+    }
+    a_entry_i++;
+    b_entry_i++;
+    if(a_entry_i >= a_entry.count){
+      a_i++;
+      a_entry_i = 0;
+    }
+    if(b_entry_i >= b_entry.count){
+      b_i++;
+      b_entry_i = 0;
+    }
+  }
+  if(a_i < a->num_entries || b_i < b->num_entries){
+    return 0;
+  }
+  return 1;
+}
+
+void serial_type_array_destroy(serialized_type_array_t* array){
+  free(array->entries);
+  array->entries = NULL;
+  array->num_entries = 0;
+}
+
 void print_type(type_declaration_t* type){
   printf("Type " CYAN "[" BOLD "%s" UNBOLD "]" RESET_COLOR " is a %d-bit ", type->type_name, type->bit_count);
   switch(type->type_type){

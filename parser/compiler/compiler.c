@@ -192,7 +192,7 @@ void compile_program(char* filename, expression_t* expression, function_record_t
   FILE* file = fopen(filename, "w");
   put_text(file, header);
   
-  //put_text(file, "sub rsp, 16\n");
+  //put_text(file, "#I compilde a programme\n");
 
   compile_expression(file, NULL, expression, fn_rec, var_rec, type_rec);
 
@@ -204,7 +204,6 @@ void compile_program(char* filename, expression_t* expression, function_record_t
       put_text(file, ":\n");
       
       compile_expression(file, NULL, fn_rec->definitions[i].dmsn, fn_rec, var_rec, type_rec);
-
       return_instruction(file);
     }
     

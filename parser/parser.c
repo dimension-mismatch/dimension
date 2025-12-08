@@ -224,7 +224,7 @@ void attempt_read_function_declaration(int* index, parse_manager_t* manager){
           variable_record_scope_out(manager->var_rec);
           return;
         }
-        expression_t* exp = exp_create_var_declaration(param->type, param->name);
+        expression_t* exp = exp_create_var_declaration(param->type, param->name, i);
         exp_array_push_expression(&root, &matches, exp);
       }
     }
@@ -346,17 +346,17 @@ exp_array_t* attempt_isolate_expression(int* index, parse_manager_t* manager){
       return root;
     }
     else if(cond_peek_next_content(ip, &current_token, manager, PROGRAM, ")")){
-      exp_array_push_expression(&root, &matches, exp_create_grouping(0));
+      exp_array_push_expression(&root, &matches, exp_create_grouping(0, i));
     }
     else if(cond_peek_next_content(ip, &current_token, manager, PROGRAM, "(")){
-      exp_array_push_expression(&root, &matches, exp_create_grouping(1));
+      exp_array_push_expression(&root, &matches, exp_create_grouping(1, i));
     }
     else if(cond_peek_next_type(ip, &current_token, manager, IDENTIFIER) || cond_peek_next_type(ip, &current_token, manager, SYMBOLIC)){
       exp_array_push_expression(&root, &matches, exp_create_identifier(current_token->content, i));
     }
     else if(cond_peek_next_type(ip, &current_token, manager, NUMERIC)){
       type_identifier_t int_type = type_record_get_type_id(manager->type_rec, "i");
-      exp_array_push_expression(&root, &matches, exp_create_numeric_literal(string_to_int(current_token->content), int_type));
+      exp_array_push_expression(&root, &matches, exp_create_numeric_literal(string_to_int(current_token->content), int_type, i));
       typeid_destroy(&int_type);
     }
     else{
@@ -375,12 +375,12 @@ expression_t* attempt_read_return_statement(int* index, parse_manager_t* manager
   exp_array_t* expc = attempt_isolate_expression(ip, manager);
     if(expc != NULL){
       parse_expression(&expc, manager, 0);
-      expression_t* final = exp_create_return(0, expc->expression);
+      expression_t* final = exp_create_return(0, expc->expression, *index);
       *index = i;
       return final;
     }
     else{
-      expression_t* final = exp_create_return(0, NULL);
+      expression_t* final = exp_create_return(0, NULL, *index);
       return final;
     }
 }
@@ -408,7 +408,7 @@ expression_t* attempt_read_variable_assignment(int* index, parse_manager_t* mana
     exp_array_t* expc = attempt_isolate_expression(ip, manager);
     if(expc != NULL){
       parse_expression(&expc, manager, 0);
-      expression_t* final = exp_create_var_write(declare->type, declare->local_byte_offset, expc->expression);
+      expression_t* final = exp_create_var_write(declare->type, declare->local_byte_offset, expc->expression, i);
       *index = i;
       return final;
     }

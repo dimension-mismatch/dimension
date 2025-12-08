@@ -20,6 +20,8 @@ typedef struct expression{
   expression_type_t type;
   type_identifier_t return_type;
   char* text;
+  int token_start;
+  int token_end;
   union{
     struct{
       int var_id;
@@ -45,7 +47,6 @@ typedef struct expression{
     } vector_literal;
     int enter_group;
     int numeric_literal;
-    int token_id;
   };
 }expression_t;
 
@@ -55,21 +56,22 @@ typedef struct linked_expression{
   expression_t* expression;
 }exp_array_t;
 
-expression_t *exp_init(expression_type_t type, type_identifier_t returnType);
+
+expression_t *exp_init(expression_type_t type, type_identifier_t returnType, int token_start, int token_end);
 
 expression_t *exp_create_identifier(char *content, int token_id);
 
-expression_t *exp_create_var_declaration(type_identifier_t returnType, char *name);
+expression_t *exp_create_var_declaration(type_identifier_t returnType, char *name, int token_id);
 
-expression_t *exp_create_var_read(type_identifier_t returnType, int varid);
+expression_t *exp_create_var_read(type_identifier_t returnType, int varid, int token_id);
 
-expression_t *exp_create_var_write(type_identifier_t returnType, int varid, expression_t *value);
+expression_t *exp_create_var_write(type_identifier_t returnType, int varid, expression_t *value, int token_id);
 
-expression_t *exp_create_return(int byte_offset, expression_t *value);
+expression_t *exp_create_return(int byte_offset, expression_t *value, int token_id);
 
-expression_t *exp_create_grouping(int enter_group);
+expression_t *exp_create_grouping(int enter_group, int token_id);
 
-expression_t *exp_create_numeric_literal(int value, type_identifier_t returnType);
+expression_t *exp_create_numeric_literal(int value, type_identifier_t returnType, int token_id);
 
 expression_t *exp_create_block();
 

@@ -6,74 +6,75 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-expression_t* exp_init(expression_type_t type, type_identifier_t returnType){
+expression_t* exp_init(expression_type_t type, type_identifier_t returnType, int token_start, int token_end){
   expression_t* new = calloc(1, sizeof(expression_t));
   new->type = type;
   new->return_type = returnType;
   new->text = NULL;
+  new->token_start = token_start;
+  new->token_end = token_end;
   return new;
 }
 
 expression_t* exp_create_identifier(char* content, int token_id){
-  expression_t* new = exp_init(EXP_IDENTIFIER, typeid_newEmpty());
+  expression_t* new = exp_init(EXP_IDENTIFIER, typeid_newEmpty(), token_id, token_id);
   new->text = malloc((strlen(content) + 1) * sizeof(char));
-  new->token_id = token_id;
   strcpy(new->text, content);
   return new;
 }
 
-expression_t* exp_create_var_declaration(type_identifier_t returnType, char* name){
-  expression_t* new = exp_init(EXP_DECLARE_VAR, typeid_copy(&returnType));
+expression_t* exp_create_var_declaration(type_identifier_t returnType, char* name, int token_id){
+  expression_t* new = exp_init(EXP_DECLARE_VAR, typeid_copy(&returnType), token_id, token_id);
   new->text = malloc((strlen(name) + 1) * sizeof(char));
   strcpy(new->text, name);
   
   return new;
 }
 
-expression_t* exp_create_var_read(type_identifier_t returnType, int varid){
-  expression_t* new = exp_init(EXP_READ_VAR, typeid_copy(&returnType));
+expression_t* exp_create_var_read(type_identifier_t returnType, int varid, int token_id){
+  expression_t* new = exp_init(EXP_READ_VAR, typeid_copy(&returnType), token_id, token_id);
   new->read.var_id = varid;
   return new;
 }
 
-expression_t* exp_create_var_write(type_identifier_t returnType, int varid, expression_t* value){
-  expression_t* new = exp_init(EXP_WRITE_VAR, typeid_copy(&returnType));
+expression_t* exp_create_var_write(type_identifier_t returnType, int varid, expression_t* value, int token_id){
+  expression_t* new = exp_init(EXP_WRITE_VAR, typeid_copy(&returnType), token_id, value->token_end);
   new->write.var_id = varid;
   new->write.value = malloc(sizeof(expression_t*));
   new->write.value[0] = value;
   return new;
 }
 
-expression_t* exp_create_return(int byte_offset, expression_t* value){
+expression_t* exp_create_return(int byte_offset, expression_t* value, int token_id){
   expression_t* new;
   if(value != NULL){
-    new = exp_init(EXP_RETURN, typeid_copy(&(value->return_type)));
+    new = exp_init(EXP_RETURN, typeid_copy(&(value->return_type)), token_id, value->token_end);
     new->write.var_id = byte_offset;
     new->write.value = malloc(sizeof(expression_t*));
     new->write.value[0] = value;
   }
   else{
-    new = exp_init(EXP_RETURN, typeid_newEmpty());
+    new = exp_init(EXP_RETURN, typeid_newEmpty(), token_id, token_id);
     new->write.var_id = byte_offset;
   }
  
   return new;
 }
 
-expression_t* exp_create_grouping(int enter_group){
-  expression_t* new = exp_init(EXP_GROUPING, typeid_newEmpty());
+expression_t* exp_create_grouping(int enter_group, int token_id){
+  expression_t* new = exp_init(EXP_GROUPING, typeid_newEmpty(), token_id, token_id);
   new->enter_group = enter_group;
   return new;
 }
 
-expression_t* exp_create_numeric_literal(int value, type_identifier_t returnType){
-  expression_t* new = exp_init(EXP_SINGLE_LITERAL, typeid_copy(&returnType));
+expression_t* exp_create_numeric_literal(int value, type_identifier_t returnType, int token_id){
+  expression_t* new = exp_init(EXP_SINGLE_LITERAL, typeid_copy(&returnType), token_id, token_id);
   new->numeric_literal = value;
   return new;
 }
 
 expression_t* exp_create_block(){
-  expression_t* new = exp_init(EXP_BLOCK, typeid_newEmpty());
+  expression_t* new = exp_init(EXP_BLOCK, typeid_newEmpty(), 0, 0);
   new->function_call.arg_c = 0;
   new->function_call.arg_v = NULL;
   return new;
@@ -86,10 +87,16 @@ void exp_block_push_line(expression_t* block, expression_t* line){
   block->block.arg_c++;
   block->block.arg_v = realloc(block->block.arg_v, block->block.arg_c * sizeof(expression_t*));
   block->block.arg_v[block->block.arg_c - 1] = line;
+  if(line->token_start < block->token_start){
+    block->token_start = line->token_start;
+  }
+  if(line->token_end > block->token_end){
+    block->token_end = line->token_end;
+  }
 }
 
 expression_t* exp_create_error(){
-  expression_t* new = exp_init(EXP_ERROR, typeid_newEmpty());
+  expression_t* new = exp_init(EXP_ERROR, typeid_newEmpty(), 0, 0);
   return new;
 }
 
