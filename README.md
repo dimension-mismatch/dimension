@@ -2,7 +2,7 @@
 This is my first attempt at making my dream language. I am taking my favorite features from languages I've tried, and creating my ideal programming language.
 
 ## Dimension is a compiled language
-Hopefully I will make it compile all the way to machine code like C does but I'm not entirely sure how to do that yet...
+It currently compiles to x86_64 assembly for macOS, but I will hopefully make it compile to other architectures and OS's in the future
 
 ## The Type System
 One of the core features that makes Dimension unique is its type system. Dimension is a statically typed language, so each piece of data has a type that is predetermined at compile time. Types in Dimension are notated in square brackets:
@@ -15,7 +15,7 @@ Nothing special yet...
 
 There will be a set of *base types* that are predefined in the language: `[i]`, `[u]`,`[f]`,`[c]` are integer, unsigned integer, floating point, and char respectively.
 
-Additionally, the `[type]` type is the data type for types themselves.
+Additionally, the `[t]` type is the data type for types themselves.
 
 ### Dimensions
 Any type in Dimension can be given a 'dimension' to turn it into a vector. For example, `3[u]` represents the type of a vector with three unsigned integer components. These 'dimensions' can be stacked, so `3*3[f]` represents a three component vector whose components are each a three component vector of floats (basically a 3x3 matrix).
@@ -87,9 +87,9 @@ These predefined indices only give access to the first four components of vector
 
  my_vector@0; //3
 
- my_vector@(1 2); // <7 -1>  
+ my_vector@(1 2); // (7 -1)  
 
- my_vector@(2 1 0); //<-1 7 3>;
+ my_vector@(2 1 0); //(-1 7 3);
 
  my_vector@(3); //undefined behavior, probably garbage data of some kind
 
@@ -166,7 +166,7 @@ Then, when we go to use this HashMap type, we can input the types we need for ou
 Functions can also have type parameters. For example, this function takes a value of any type, and returns a value of the same type, but with a dimension of 2.
 
 ```Dimension
-fn {double-ify(V: [t ::: [type]])} makes 2*t does {
+fn double-ify(V: [t ::: [type]]) makes 2*t does {
   return (V V);
 }
 ``` 
@@ -183,9 +183,9 @@ my_empty_array.resize(20); //the array now contains 20 elements. The first is st
 Composite types can also contain dynamic members. Dynamic members allow for creating recursive data structures like trees, graphs, and linked lists.
 
 ```Dimension
-type [Tree(t ::: [type])] is <value: t, branches: [Tree]+>
+type [Tree(t ::: [type])] is (value: t, branches: [Tree]+)
 
-type [LinkedList(t ::: [type])] is <value: t, next: [LinkedList]+>
+type [LinkedList(t ::: [type])] is (value: t, next: [LinkedList]+)
 ```
 
 
@@ -244,7 +244,6 @@ But wait... Doing a recursive deep copy every time you use an assignment operato
 This is where pointers would be really useful, but also where memory safety becomes an issue. If I allow pointers, it would be possible for a program to hold onto a reference to a piece of data after it goes out of scope.
 
 
-4
 To fix this issue, we would need some kind of garbage collection to detect that we still have a pointer to the array and keep the array around. Many languages have very fancy garbage collection algorithms that handle this behind the scenes, but I don't feel confident in my ability to code a top tier GC.
 
 So my solution is to pretty much ban the use of pointers alltogether. 
@@ -264,9 +263,13 @@ The swap operators allow for moving data without copying, while also preserving 
 
 ### Pointers
 
-Although Dimension does not have pointers, passing a parameter to a function can serve the same purpose. 
+Although Dimension does not have pointers, passing a parameter to a function can serve the same purpose. Function argments are passed to functions as pointers, which means that calling a function can be used to create a reference to a piece of data. This forces the code to be memory safe, since all "pointers" (function parameters) only exist for the lifetime of the function body, and are destroyed when they go out of scope. 
 
+Iterative operations on dynamic memory such as traversing trees or linked lists can be achived with recursion. The Dimension compiler will have tail call optimization so that the recursion does not slow down these kinds of processes.
 
+### Circular data
+
+This memory management strategy makes it impossible to create circular or self referential data. THis makes certain data structures such as the doubly linked list impossible to construct. I hope to come up with a workaround for this particular issue. 
 
 
 
