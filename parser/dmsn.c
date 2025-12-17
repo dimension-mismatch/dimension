@@ -3,10 +3,8 @@
 #include <string.h>
 
 #include "tokenizer.h"
-#include "parser.h"
 #include "string_utils.h"
 #include "colors.h"
-#include "compiler/compiler.h"
 
 #include "hash_table/type_record.h"
 #include "hash_table/function_record.h"
@@ -37,26 +35,28 @@ int main(int argc, char* argv[]){
   function_record_t function_record = fn_rec_init();
   
   token_array_t* all_tokens = tokenize_file(file);
-  parse_manager_t errors = parse_manager_init(all_tokens, &function_record, &variable_record, &type_record);
+  print_token_array(all_tokens);
 
-  expression_t* ast = parse_tokens(&errors);
-  validate_program(ast, &errors);
+  // parse_manager_t errors = parse_manager_init(all_tokens, &function_record, &variable_record, &type_record);
+
+  // expression_t* ast = parse_tokens(&errors);
+  // validate_program(ast, &errors);
 
   // print_variable_record(&variable_record);
   // print_expression(ast);
   
   fclose(file);
 
-  error_printout(&errors);
-  if(errors.error_count > 0){
-    exit(1);
-  }
-  if(argc == 3 && errors.error_count == 0){
-    compile_program(argv[2], ast, &function_record, &variable_record, &type_record);
-  }
+  // error_printout(&errors);
+  // if(errors.error_count > 0){
+  //   exit(1);
+  // }
+  // if(argc == 3 && errors.error_count == 0){
+  //   compile_program(argv[2], ast, &function_record, &variable_record, &type_record);
+  // }
 
-  destroy_token_array(all_tokens);
-  exp_destroy(ast);
+  // destroy_token_array(all_tokens);
+  // exp_destroy(ast);
   destroy_type_record(&type_record);
   variable_record_destroy(&variable_record);
   fn_rec_destroy(&function_record); 

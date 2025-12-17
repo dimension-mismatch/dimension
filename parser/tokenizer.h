@@ -1,13 +1,29 @@
 #include <stdio.h>
+#include <stdbool.h>
 #pragma once
 
 typedef enum{
-  NONE,
-  NUMERIC,
-  IDENTIFIER,
-  SYMBOLIC,
-  PROGRAM,
-  ASSEMBLY,
+  TK_NONE,
+  TK_NUMERIC,
+  TK_IDENTIFIER,
+
+  TK_KEYWORD,
+  
+  TK_DECL,
+
+  TK_TYPE,
+
+  TK_VECTOR,
+
+  TK_BLOCK,
+
+  TK_FORCE_EXP_END,
+  TK_ENDLINE,
+
+  TK_DMSN_IR,
+
+  TK_CHAR,
+  TK_STRING,
 }token_type_t;
 
 typedef struct token{
@@ -16,6 +32,12 @@ typedef struct token{
   int length;
   token_type_t type;
   char* content;
+  union{
+    bool is_open;
+    int decl_const_lvl;
+    int keyword_id;
+    bool is_symbolic_identifier;
+  };
 }token_t;
 
 token_t new_empty_token();
@@ -36,8 +58,6 @@ token_array_t* init_token_array();
 void push_token_to_array(token_array_t* array, token_t token);
 
 void destroy_token_array(token_array_t* array);
-
-void finish_token_and_push_to_array(token_array_t* array, token_t* token, int col, int line);
 
 void print_token(token_t* token);
 
