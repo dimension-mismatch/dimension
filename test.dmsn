@@ -7,6 +7,15 @@ type [Card] is ([Rank][Suit]);
 
 type [Deck] is 52[Card]; 
 
+pi :: [f] = 3.14159;
+
+Kb :: [f] = 1.38e-23;
+
+five :: [i] = 0b1101;
+
+red :: [i] = 0xff0000;
+
+octal :: [i] = 0o31;
 
 //my_matrix : 3*3[i];
 
@@ -44,8 +53,8 @@ fn (a: [i]) % (b: [i]) makes [i] does {
   return a + b;
 } priority 2;
 
-fn print_digit(d: [c]) does {
-  char : [c] = (d + 48);
+fn print_digit(d: [i]) does {
+  char :: [c] = (d + 48);
   printchar(char);
 };
 

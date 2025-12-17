@@ -8,7 +8,7 @@ typedef enum{
   TK_IDENTIFIER,
 
   TK_KEYWORD,
-  
+
   TK_DECL,
 
   TK_TYPE,
@@ -26,6 +26,16 @@ typedef enum{
   TK_STRING,
 }token_type_t;
 
+typedef enum{
+  NUM_HEX_INT,
+  NUM_DECIMAL_INT,
+  NUM_OCTAL_INT,
+  NUM_BINARY_INT,
+  NUM_FLOAT,
+  NUM_SCI_FLOAT
+
+}numeric_literal_type_t;
+
 typedef struct token{
   int line_number;
   int start_pos;
@@ -37,6 +47,7 @@ typedef struct token{
     int decl_const_lvl;
     int keyword_id;
     bool is_symbolic_identifier;
+    numeric_literal_type_t number_type;
   };
 }token_t;
 

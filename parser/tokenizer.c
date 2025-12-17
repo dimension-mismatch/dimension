@@ -16,7 +16,7 @@ int is_numeric(char c){
 }
 
 int is_alphanumeric(char c){
-  return 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || c == '_' || c == '-' || is_numeric(c);
+  return 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || c == '_' || is_numeric(c);
 }
 
 void push_char(token_t* token, char next){
@@ -69,55 +69,16 @@ void finish_token_and_push_to_array(token_array_t* array, token_t* token, hash_t
   }
   push_char(token, '\0');
   if(token->type == TK_IDENTIFIER){
-    if(token->is_symbolic_identifier){
-      if(token->length == 2){
-        char c = token->content[0];
-        switch(c){
-          case '{':
-          case '}':
-            token->type = TK_BLOCK;
-            break;
-          case '(':
-          case ')':
-            token->type = TK_VECTOR;
-            break;
-          case '[':
-          case ']':
-            token->type = TK_TYPE;
-            break;
-          case ':':
-            token->type = TK_DECL;
-            token->decl_const_lvl = 0;
-            break;
-          case ';':
-            token->type = TK_ENDLINE;
-            break;
-          case ',':
-            token->type = TK_FORCE_EXP_END;
-            break;
-          default:
-            break;
-        }
-        
-      }
-      else if(token->content[0] == ':' && token->content[1] == ':'){
-        if(token->length == 3){
-          token->type = TK_DECL;
-          token->decl_const_lvl = 1;
-        }
-        else if(token->length == 4 && token->content[2] == ':'){
-          token->type = TK_DECL;
-          token->decl_const_lvl = 2;
-        }
-      }
-    }
-    else {
+    if(!token->is_symbolic_identifier){
       int* keyword = get_value_from_key(keyword_table, token->content);
       if(keyword){
         token->type = TK_KEYWORD;
         token->keyword_id = *keyword;
       }
     }
+  }
+  else if(token->type == TK_DECL){
+    token->decl_const_lvl = token->length - 2;
   }
   push_token_to_array(array, *token);
   *token = new_empty_token();
@@ -209,6 +170,7 @@ token_array_t* tokenize_file(FILE* file){
   bool in_asm = false;
   bool in_char = false;
   bool in_string = false;
+  bool has_e = false;
 
   char ch;
   while((ch = fgetc(file)) != EOF){
@@ -236,6 +198,53 @@ token_array_t* tokenize_file(FILE* file){
     if(current_token.length == 0){
       current_token.line_number = line;
       current_token.start_pos = col;
+    }
+
+    //Handle interpretation of different numeric literals:
+    // plain digits (e.g. 12345) are NUM_DECIMAL_INT
+    // binary, octal and hex (e.g. 0b1101, 0o31, 0xff0f3) are NUM_BINARY_INT, NUM_OCTAL_INT, NUM_HEX_INT
+    // floats (e.g. 3.14159) are NUM_FLOAT
+    // scientific notation (e.g. 6.022e23) is NUM_SCI_FLOAT
+    if(current_token.type == TK_NUMERIC){
+      if(current_token.number_type == NUM_DECIMAL_INT && current_token.length == 1){
+        if(current_token.content[0] == '0'){
+          if(ch == 'x' || ch == 'o' || ch == 'b'){
+            switch(ch){
+              case 'x' :
+                current_token.number_type = NUM_HEX_INT;
+                break;
+              case 'o':
+                current_token.number_type = NUM_OCTAL_INT;
+                break;
+              case 'b':
+                current_token.number_type = NUM_BINARY_INT;
+                break;
+            }
+            push_char(&current_token, ch);
+            continue;
+          }
+        }
+        if(ch == '.'){
+          push_char(&current_token, ch);
+          current_token.number_type = NUM_FLOAT;
+          continue;
+        }
+      }
+      if(current_token.number_type == NUM_DECIMAL_INT || current_token.number_type == NUM_FLOAT){
+        if(ch == 'e'){
+          current_token.number_type = NUM_SCI_FLOAT;
+          push_char(&current_token, ch);
+          continue;
+        }
+      }
+      if(current_token.number_type == NUM_SCI_FLOAT && current_token.content[current_token.length - 1] == 'e' && ch == '-'){
+        push_char(&current_token, ch);
+        continue;
+      }
+      if(current_token.number_type == NUM_HEX_INT && 'a' <= ch && ch <= 'f'){
+        push_char(&current_token, ch);
+        continue;
+      } 
     }
 
     if(current_token.type == TK_NUMERIC && !is_numeric(ch)){
@@ -314,6 +323,8 @@ token_array_t* tokenize_file(FILE* file){
     if(current_token.length == 0){
       if(is_numeric(ch)){
         current_token.type = TK_NUMERIC;
+        current_token.number_type = NUM_DECIMAL_INT;
+        has_e = false;
       }
       else{
         current_token.type = TK_IDENTIFIER;
