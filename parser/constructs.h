@@ -29,7 +29,7 @@ typedef struct expression{
   union{
     struct {
       int num_params;
-      struct expression** params;
+      struct expression* params;
       int fn_id;
     } function_call;
     struct type_identifier* type_literal;
@@ -45,7 +45,7 @@ typedef struct expression{
     } value_literal;
     struct{
       int num_params;
-      struct expression** params;
+      struct expression* params;
     } vector;
     int read_var_id;
   };
@@ -54,16 +54,16 @@ typedef struct expression{
 
 typedef struct block{
   int line_count;
-  expression_t** lines;
+  expression_t* lines;
 }block_t;
 
 
 typedef struct type_identifier{
   int type_id;
   int num_params;
-  expression_t** params;
+  expression_t* params;
   int dimension_count;
-  expression_t** dimensions;
+  expression_t* dimensions;
 }type_identifier_t;
 
 
