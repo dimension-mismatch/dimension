@@ -2,14 +2,16 @@ CC := clang
 
 all := dmsn
 
-dmsn : dmsn.c tokenizer.o string_utils.o type_utils/type_utils.o hash_table/type_record.o hash_table/hash_table.o hash_table/variable_record.o hash_table/function_record.o expression_utils/expression_utils.o error_handling/error_manager.o validator/validator.o
+dmsn : dmsn.c tokenizer.o parser.o token_cursor.o hash_table/hash_table.o construct_utils.o
 	$(CC) -g -fsanitize=address -O0 -o $@ $^
 
 %.o : %.c %.h
 	$(CC) -g -c $< -o $@
 
+another : 
+	./dmsn ../another_test.dmsn
 
-test : test.s
+test :
 	as  ../test.s -o ../test.o
 	gcc -o ../test ../test.o -nostdlib -static 
 	../test

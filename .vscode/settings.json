@@ -4,6 +4,11 @@
     "*.vsh": "glsl",
     "type_utils.h": "c",
     "function_record.h": "c",
-    "variable_record.h": "c"
-  }
+    "variable_record.h": "c",
+    "typeinfo": "c",
+    "__locale": "c",
+    "string.h": "c",
+    "token_cursor.h": "c"
+  },
+  "C_Cpp.errorSquiggles": "enabled"
 }

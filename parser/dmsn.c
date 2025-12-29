@@ -3,16 +3,10 @@
 #include <string.h>
 
 #include "tokenizer.h"
-#include "string_utils.h"
 #include "colors.h"
+#include "parser.h"
 
-#include "hash_table/type_record.h"
-#include "hash_table/function_record.h"
-#include "hash_table/variable_record.h"
 
-#include "error_handling/error_manager.h"
-
-#include "validator/validator.h"
 
 
 char* message = "  ╔═╗             DIMENSION [v0.0.1]\n╔═╝ ║╔═╗╔═════╗\n║ ║ ║║ ║║ ║ ║ ║\n╠═══╣╠═╩╩╦╬═╩═╣\n║ ═ ║║ ║ ║║ ══╣\n║ ══╣║ ║ ║╠══ ║\n╠═╦╦╩╩═╩═╣╠═══╣ \n║ ║║ ═══ ║║ ║ ║\n╚═╝╚═════╝╚═╩═╝\n";
@@ -30,12 +24,10 @@ int main(int argc, char* argv[]){
     exit(1);
   }
   
-  variable_record_t variable_record = variable_record_init();
-  type_record_t type_record = init_type_record();
-  function_record_t function_record = fn_rec_init();
   
   token_array_t* all_tokens = tokenize_file(file);
   print_token_array(all_tokens);
+  parse_tokens(all_tokens);
 
   // parse_manager_t errors = parse_manager_init(all_tokens, &function_record, &variable_record, &type_record);
 
@@ -57,8 +49,5 @@ int main(int argc, char* argv[]){
 
   // destroy_token_array(all_tokens);
   // exp_destroy(ast);
-  destroy_type_record(&type_record);
-  variable_record_destroy(&variable_record);
-  fn_rec_destroy(&function_record); 
 
 }

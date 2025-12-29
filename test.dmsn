@@ -7,15 +7,12 @@ type [Card] is ([Rank][Suit]);
 
 type [Deck] is 52[Card]; 
 
-pi :: [f] = 3.14159;
 
-Kb :: [f] = 1.38e-23;
+type [grid] is 2[c]
 
-five :: [i] = 0b1101;
 
-red :: [i] = 0xff0000;
 
-octal :: [i] = 0o31;
+velocity :: [divide [m]/[s]] = 5;
 
 //my_matrix : 3*3[i];
 
@@ -66,7 +63,7 @@ print_digit(d);
 d = 7;
 print_digit(d);
 
-char: [c] = 72;
+char: [c] = 72; 
 printchar char;
 
 char = 101;

@@ -6,8 +6,8 @@
 #include "hash_table/hash_table.h"
 #include "colors.h"
 
-token_t new_empty_token(){
-  token_t new = {.line_number = 0, .start_pos = 0, .length = 0, .content = NULL, .type = TK_NONE};
+token_t new_empty_token(int line, int col){
+  token_t new = {.line_number = line, .start_pos = col, .length = 0, .content = NULL, .type = TK_NONE};
   return new;
 }
 
@@ -63,7 +63,7 @@ void destroy_token_array(token_array_t* array){
   free(array);
 }
 
-void finish_token_and_push_to_array(token_array_t* array, token_t* token, hash_table_t* keyword_table){
+void finish_token_and_push_to_array(token_array_t* array, token_t* token, hash_table_t* keyword_table, int line, int col){
   if(token->length <= 0){
     return;
   }
@@ -81,7 +81,7 @@ void finish_token_and_push_to_array(token_array_t* array, token_t* token, hash_t
     token->decl_const_lvl = token->length - 2;
   }
   push_token_to_array(array, *token);
-  *token = new_empty_token();
+  *token = new_empty_token(line, col);
 }
 
 void print_token(token_t* token){
@@ -160,17 +160,16 @@ token_array_t* tokenize_file(FILE* file){
 
   token_array_t* all_tokens = init_token_array();
 
-  token_t current_token = new_empty_token();
-
-
   int line = 1;
   int col = 0;
+
+
+  token_t current_token = new_empty_token(line, col);
 
   int in_comment = 0;
   bool in_asm = false;
   bool in_char = false;
   bool in_string = false;
-  bool has_e = false;
 
   char ch;
   while((ch = fgetc(file)) != EOF){
@@ -195,10 +194,6 @@ token_array_t* tokenize_file(FILE* file){
       in_comment = 0;
     }
 
-    if(current_token.length == 0){
-      current_token.line_number = line;
-      current_token.start_pos = col;
-    }
 
     //Handle interpretation of different numeric literals:
     // plain digits (e.g. 12345) are NUM_DECIMAL_INT
@@ -247,24 +242,56 @@ token_array_t* tokenize_file(FILE* file){
       } 
     }
 
+
     if(current_token.type == TK_NUMERIC && !is_numeric(ch)){
-      finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table);
+      finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table, line, col);
     }
     else if(current_token.type == TK_IDENTIFIER && !current_token.is_symbolic_identifier && !is_alphanumeric(ch)){
-      finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table);
+      finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table, line, col);
     }
     else if(current_token.type == TK_IDENTIFIER && current_token.is_symbolic_identifier && is_alphanumeric(ch)){
-      finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table);
+      finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table, line, col);
     }
-    else if(current_token.type == TK_DECL && (ch != ':' || current_token.length >= 4)){
-      finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table);
+    else if(current_token.type == TK_DECL){
+      if(ch != ':' || current_token.length >= 4){
+        finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table, line, col);
+      }
+      else if(ch == ':'){
+        push_char(&current_token, ch);
+        continue;
+      }
     }
 
+    
+    char symbol[] = {ch, '\0'};
+    int* symbol_type = get_value_from_key(&symbol_table, symbol);
+    if(symbol_type){
+      finish_token_and_push_to_array(all_tokens,&current_token, &keyword_table, line, col);
+      current_token.type = *symbol_type;
+      switch(ch){
+        case '(':
+        case '{':
+        case '[':
+          current_token.is_open = true;
+          break;
+        case ')':
+        case '}':
+        case ']':
+          current_token.is_open = false;
+        default:
+          break;
+      }
+      push_char(&current_token, ch);
+      if(current_token.type != TK_DECL){
+        finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table, line, col);
+      }
+      continue;
+    }
 
 
     if(in_asm){
       if(ch == '~'){
-        finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table);
+        finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table, line, col);
         in_asm = false;
       }
       else{
@@ -274,7 +301,7 @@ token_array_t* tokenize_file(FILE* file){
     }
     if(in_char){
       if(ch == '\''){
-        finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table);
+        finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table, line, col);
         in_char = false;
       }
       else{
@@ -284,7 +311,7 @@ token_array_t* tokenize_file(FILE* file){
     }
     if(in_string){
       if(ch == '"'){
-        finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table);
+        finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table, line, col);
         in_string = false;
       }
       else{
@@ -295,26 +322,26 @@ token_array_t* tokenize_file(FILE* file){
 
     
     if(ch == '~'){
-      finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table);
+      finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table, line, col);
       current_token.type = TK_DMSN_IR;
       in_asm = true;
       continue;
     }
     if(ch == '\''){
-      finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table);
+      finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table, line, col);
       current_token.type = TK_CHAR;
       in_char = true;
       continue;
     }
     if(ch == '"'){
-      finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table);
+      finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table, line, col);
       current_token.type = TK_STRING;
       in_string = true;
       continue;
     }
 
     if(ch == '\n' || ch == '\t' || ch == ' '){
-      finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table);
+      finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table, line, col);
       continue;
     }
 
@@ -324,7 +351,6 @@ token_array_t* tokenize_file(FILE* file){
       if(is_numeric(ch)){
         current_token.type = TK_NUMERIC;
         current_token.number_type = NUM_DECIMAL_INT;
-        has_e = false;
       }
       else{
         current_token.type = TK_IDENTIFIER;
@@ -332,36 +358,12 @@ token_array_t* tokenize_file(FILE* file){
       } 
     }
     push_char(&current_token, ch);
-    if(current_token.type == TK_IDENTIFIER && current_token.is_symbolic_identifier){
-      push_char(&current_token, '\0');
-      int* symbol_type = get_value_from_key(&symbol_table, current_token.content);
-      if(symbol_type){
-        current_token.type = *symbol_type;
-        switch(ch){
-          case '(':
-          case '{':
-          case '[':
-            current_token.is_open = true;
-            break;
-          case ')':
-          case '}':
-          case ']':
-            current_token.is_open = false;
-          default:
-            break;
-        }
-        if(current_token.type != TK_DECL){
-          finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table);
-        }
-        pop_char(&current_token);
-      }
-    }
   }
 
-  finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table);
+  finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table, line, col);
   push_char(&current_token, '\0');
   current_token.type = TK_NONE;
-  finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table);
+  finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table, line, col);
   destroy_hash_table(&keyword_table);
   return all_tokens;
 }
