@@ -1,6 +1,7 @@
 #include "construct_utils.h"
 #include "constructs.h"
 #include "colors.h"
+#include "tokenizer.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,6 +60,9 @@ void print_expression(expression_t* exp){
       break;
     case EXP_READ_VAR:
       printf(GREEN "READ #%i", exp->read_var_id);
+      break;
+    case EXP_RAW_TOKEN:
+      print_token(&exp->raw_token);
       break;
   }
 }
@@ -218,6 +222,7 @@ void destroy_expression(expression_t* exp){
         exp->vector.num_params = 0;
       }
       break;
+    case EXP_RAW_TOKEN:
     case EXP_READ_VAR:
       break;
   }

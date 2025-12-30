@@ -1,4 +1,5 @@
 #pragma once
+#include "tokenizer.h"
 #include <stdbool.h>
 
 struct type_identifier;
@@ -11,6 +12,7 @@ typedef enum expression_type{
   EXP_VALUE_LITERAL,
   EXP_VECTOR,
   EXP_READ_VAR,
+  EXP_RAW_TOKEN,
 }expression_type_t;
 
 typedef enum value_type{
@@ -48,6 +50,7 @@ typedef struct expression{
       struct expression* params;
     } vector;
     int read_var_id;
+    token_t raw_token;
   };
 
 }expression_t;
