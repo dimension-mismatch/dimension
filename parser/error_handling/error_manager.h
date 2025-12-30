@@ -37,14 +37,14 @@ typedef struct{
   int err_id_count;
   int* index;
 
-  function_record_t* fn_rec;
+  pattern_trie_t* fn_rec;
   type_record_t* type_rec;
   variable_record_t* var_rec;
 
   token_array_t* tokens;
 } parse_manager_t;
 
-parse_manager_t parse_manager_init(token_array_t* tokens, function_record_t *fn_rec, variable_record_t *var_rec, type_record_t *type_rec);
+parse_manager_t parse_manager_init(token_array_t* tokens, pattern_trie_t *fn_rec, variable_record_t *var_rec, type_record_t *type_rec);
 
 void throw_error(parse_manager_t *errors, int error_num, int token_idx);
 

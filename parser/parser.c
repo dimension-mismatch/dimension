@@ -2,6 +2,7 @@
 #include "constructs.h"
 #include "token_cursor.h"
 #include "colors.h"
+#include "expression_builder.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -236,41 +237,37 @@ bool parse_pattern(token_cursor_t* base_tc, token_type_t end_type, pattern_t* re
 //* 1
 bool parse_expression(token_cursor_t* base_tc, token_type_t end_type, expression_t* result){
   token_cursor_t tc = *base_tc;
+
+  expression_array_t root;
+  expression_array_t* prev = &root;
+ 
   while(true){
-    if(tc.tk.type == TK_IDENTIFIER){
-      printf(GREEN BOLD);
-      print_token(&tc.tk);
-      printf(RESET_COLOR);
-    }
-    else if(tc.tk.type == TK_NUMERIC || tc.tk.type == TK_CHAR || tc.tk.type == TK_STRING){
-      printf(MAGENTA);
-      print_token(&tc.tk);
-      printf(RESET_COLOR);
+    expression_t new;
+    if(tc.tk.type == TK_IDENTIFIER || tc.tk.type == TK_NUMERIC || tc.tk.type == TK_CHAR || tc.tk.type == TK_STRING || tc.tk.type == TK_FORCE_EXP_END){
+      expression_t exp = {.type = EXP_RAW_TOKEN, .raw_token = tc.tk};
+      new = exp;
     }
     else if(tc.tk.type == TK_VECTOR && tc.tk.is_open){
       tc_inc(&tc);
-      expression_t result;
-      parse_expression(&tc, TK_VECTOR, &result);
-
-      tc_inc(&tc);
-      continue;
+      if(!parse_expression(&tc, TK_VECTOR, &new)){
+        return false;
+      }
     }
     else if(tc.tk.type == TK_TYPE && tc.tk.is_open){
-      printf(RED BOLD "[" RESET_COLOR);
       tc_inc(&tc);
-      expression_t result;
-      parse_expression(&tc, TK_TYPE, &result);
-
-      tc_inc(&tc);
-      printf(RED BOLD "]" RESET_COLOR);
-      continue;
-    }
-    else if(tc.tk.type == TK_STRING){
-      printf("\"" WHITE);
-      print_token(&tc.tk);
-      printf("\"" RESET_COLOR);
+      if(!parse_expression(&tc, TK_TYPE, &new)){
+        return false;
+      }
     }
     else if(tc.tk.type == end_type){
+      printf("\n");
+      printf(RED);
+      print_expression_array(&root);
+      printf(RESET_COLOR);
+
+      result->type = EXP_VALUE_LITERAL;
+      result->value_literal.type = VAL_INT;
+      result->value_literal.i = 67;
       *base_tc = tc;
       return true;
     }
@@ -279,6 +276,12 @@ bool parse_expression(token_cursor_t* base_tc, token_type_t end_type, expression
       return false;
     }
     tc_inc(&tc);
+    expression_array_t* next = malloc(sizeof(expression_array_t));
+    next->prev = prev;
+    next->next = NULL;
+    next->exp = new;
+    prev->next = next;
+    prev = next;
   };
   
 }

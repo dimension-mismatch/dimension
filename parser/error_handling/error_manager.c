@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-parse_manager_t parse_manager_init(token_array_t* tokens, function_record_t* fn_rec, variable_record_t* var_rec, type_record_t* type_rec){
+parse_manager_t parse_manager_init(token_array_t* tokens, pattern_trie_t* fn_rec, variable_record_t* var_rec, type_record_t* type_rec){
   parse_manager_t new = {0, NULL, 0, NULL, fn_rec, type_rec, var_rec, tokens};
   FILE* file = fopen("error_handling/dmsn_errors.txt", "r");
   if(file == NULL){
