@@ -87,23 +87,29 @@ typedef struct variable_declaration{
   type;
 }variable_declaration_t;
 
+typedef struct pattern_value{
+  bool is_param;
+  union{
+    expression_t* base_value;
+    variable_declaration_t param_value;
+  };
+}pattern_value_t;
 
 
 typedef struct pattern_type{
   bool is_param;
   union{
-    type_identifier_t* base_type;
+    struct{
+      int base_type_id;
+      int param_count;
+      pattern_value_t* parameters;
+    };
     variable_declaration_t param_type;
   };
-
   int dimension_count;
-  struct{
-    bool is_param;
-    union{
-      expression_t* base_dimension;
-      variable_declaration_t param_dimension;
-    };
-  }* dimensions;
+  pattern_value_t* dimensions;
+
+  
 }pattern_type_t;
 
 
@@ -128,11 +134,11 @@ typedef struct pattern{
 
 typedef struct function_definition{
   pattern_t match;
-  expression_t* return_type;
+  type_identifier_t* return_type;
   int priority;
   bool is_IR;
   union{
-    block_t* body;
+    block_t body;
     char* ir;
   };
 }function_definition_t;
