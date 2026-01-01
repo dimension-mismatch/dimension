@@ -23,16 +23,17 @@ typedef struct{
 
 
 typedef struct pattern_trie_node{
+  pattern_entry_t pattern;
   hash_table_t next_parameters;
   hash_table_t next_identifiers;
   int children_count;
   struct pattern_trie_node* children;
   int match_index;
+  
   int max_child_priority;
 }pattern_trie_node_t;
 
 typedef struct{
-  pattern_entry_t pattern;
   pattern_trie_node_t* root;
   int match_count;
   trie_match_result_t* matches;
@@ -54,6 +55,6 @@ void print_trie_match_result(trie_match_result_t* result);
 
 void print_trie_node(pattern_trie_node_t* node, int indent);
 
-void print_fn_rec(pattern_trie_t* record);
+void print_pattern_trie(pattern_trie_t* record);
 
 
