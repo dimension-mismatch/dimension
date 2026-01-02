@@ -447,6 +447,7 @@ void copy_pattern_type(pattern_type_t* new, pattern_type_t* ptype){
   else{
     new->param_count = ptype->param_count;
     new->parameters = malloc(ptype->param_count * sizeof(pattern_value_t));
+    new->base_type_id = ptype->base_type_id;
     for(int i = 0; i < new->param_count; i++){
       copy_pattern_value(new->parameters + i, ptype->parameters + i);
     }

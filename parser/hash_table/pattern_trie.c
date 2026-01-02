@@ -21,6 +21,76 @@ pattern_trie_t pattern_trie_init(){
   return new;
 }
 
+pattern_trie_node_t* pattern_trie_node_match_pattern(pattern_trie_node_t* node, pattern_t* pattern, int* entry_index){
+  while(*entry_index < pattern->entry_count){
+    pattern_entry_t entry = pattern->entries[*entry_index];
+    int* child_index;
+    if(entry.is_identifier){
+      child_index = get_value_from_key(&node->next_identifiers, entry.identifier);
+    }
+    else{
+      if(entry.variable.type.is_param){
+        
+      }
+      else{
+        child_index = get_value_from_int(&node->next_parameters, entry.variable.type.base_type_id);
+      }
+    }
+    if(child_index == NULL){
+      return node;
+    }
+    node = node->children + *child_index;
+    (*entry_index)++;
+  }
+  return node;
+}
+
+void pattern_trie_node_push_pattern(pattern_trie_node_t** root, pattern_t* pattern){
+  int entry_index = 0;
+  pattern_trie_node_t* node = *root;
+  if(node != NULL){
+    node = pattern_trie_node_match_pattern(node, pattern, &entry_index);
+  }
+  while(entry_index < pattern->entry_count){
+    pattern_entry_t* entry = pattern->entries + entry_index;
+    if(entry->is_identifier){
+      push_key_value(&node->next_identifiers, entry->identifier, node->children_count);
+    }
+    else{
+      if(entry->variable.type.is_param){
+
+      }
+      else{
+        push_int_value(&node->next_parameters, entry->variable.type.base_type_id, node->children_count);
+      }
+    }
+    node->children_count++;
+    node->children = realloc(node->children, node->children_count * sizeof(pattern_trie_node_t));
+    pattern_trie_node_t* new_node = node->children + node->children_count - 1;
+    new_node->children = NULL;
+    new_node->children_count = 0;
+    new_node->match_index = NO_MATCH;
+    new_node->max_child_priority = 0;
+    new_node->next_identifiers = init_hash_table(67, 0.9);
+    new_node->next_parameters = init_hash_table(67, 0.9);
+    copy_pattern_entry(&new_node->pattern, pattern->entries + entry_index);
+   
+    
+ 
+    // printf(YELLOW BOLD "\n new output:\n" RESET_COLOR);
+    // print_trie_node(node, 0);
+    if(node == NULL){
+      *root = new_node;
+    }
+    node = new_node;
+    entry_index++;
+  }
+}
+
+void pattern_trie_push_type(pattern_trie_t *trie, type_declaration_t *type){
+  pattern_trie_node_push_pattern(&trie->root, type->match_pattern);
+}
+
 void print_trie_match_result(trie_match_result_t* result){
   printf(CYAN "MATCH RESULT: " RESET_COLOR);
   switch(result->type){
@@ -37,42 +107,19 @@ void print_trie_match_result(trie_match_result_t* result){
 }
 
 void print_trie_node(pattern_trie_node_t* node, int indent){
+  print_pattern_entry(&node->pattern);
   if(node->match_index != NO_MATCH){
-    for(int i = 0; i < indent; i++) printf(" ");
-    printf("(MATCH #%d)\n", node->match_index);
+    printf(" (MATCH #%d)\n", node->match_index);
     return;
   }
-  if(node->next_identifiers.key_count > 0){
-    for(int i = 0; i < indent; i++) printf(" ");
-    printf("MATCH TEXT:\n");
-    for(int i = 0; i < node->next_identifiers.array_size; i++){
-      struct hash_entry* entry = node->next_identifiers.array[i];
-      while(entry != NULL){
-        for(int i = 0; i < indent; i++) printf(" ");
-        printf("  * text: %s\n", entry->name);
-        print_trie_node(node->children  + entry->value, indent + 3);
-        entry = entry->next;
-      }
-      
-    }
+  if(node->children_count == 0){
+    return;
   }
-  if(node->next_parameters.key_count > 0){
-    for(int i = 0; i < indent; i++) printf(" ");
-    printf("MATCH TYPES:\n");
-    for(int i = 0; i < node->next_parameters.array_size; i++){
-      struct hash_entry* entry = node->next_parameters.array[i];
-      if(entry == NULL){
-        continue;
-      }
-      while(entry != NULL){
-        pattern_trie_node_t* child = node->children + entry->value;
-        for(int i = 0; i < indent; i++) printf(" ");
-        print_pattern_variable(&node->pattern.variable);
-        printf("  :");
-        print_trie_node(child, indent + 3);
-        entry = entry->next;
-      }
-    }
+  for(int i = 0; i < node->children_count; i++){
+    printf("\n");
+    for(int k = 0; k < indent; k++) printf("  ║  ");
+    printf("  ╚═> ");
+    print_trie_node(node->children + i, indent + 1);
   }
 }
 
@@ -81,7 +128,7 @@ void print_pattern_trie(pattern_trie_t *trie){
   for(int i = 0; i < trie->match_count; i++){
     print_trie_match_result(trie->matches + i);
   }
-  
+  printf("\n");
   print_trie_node(trie->root, 0);
 }
 

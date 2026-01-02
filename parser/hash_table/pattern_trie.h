@@ -49,7 +49,7 @@ void pattern_trie_push_function(pattern_trie_t* trie, function_definition_t* fn)
 void pattern_trie_push_variable(pattern_trie_t* trie, variable_declaration_t* var);
 
 
-void pattern_trie_destroy(pattern_trie_t* trie);
+void destroy_pattern_trie(pattern_trie_t* trie);
 
 void print_trie_match_result(trie_match_result_t* result);
 
