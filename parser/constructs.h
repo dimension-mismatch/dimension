@@ -91,7 +91,7 @@ typedef struct pattern_value{
   bool is_param;
   union{
     expression_t* base_value;
-    variable_declaration_t param_value;
+    type_identifier_t param_value;
   };
 }pattern_value_t;
 
@@ -104,7 +104,7 @@ typedef struct pattern_type{
       int param_count;
       pattern_value_t* parameters;
     };
-    variable_declaration_t param_type;
+    type_identifier_t param_type;
   };
   int dimension_count;
   pattern_value_t* dimensions;
@@ -114,7 +114,6 @@ typedef struct pattern_type{
 
 
 typedef struct pattern_variable{
-  char* name;
   int constant_lvl;
   pattern_type_t type;
 }pattern_variable_t;

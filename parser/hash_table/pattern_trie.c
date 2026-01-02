@@ -77,8 +77,6 @@ void pattern_trie_node_push_pattern(pattern_trie_node_t** root, pattern_t* patte
    
     
  
-    // printf(YELLOW BOLD "\n new output:\n" RESET_COLOR);
-    // print_trie_node(node, 0);
     if(node == NULL){
       *root = new_node;
     }
@@ -115,12 +113,16 @@ void print_trie_node(pattern_trie_node_t* node, int indent){
   if(node->children_count == 0){
     return;
   }
+  printf("\n");
+  for(int k = 0; k < indent + 1; k++) printf("  ║  ");
   for(int i = 0; i < node->children_count; i++){
     printf("\n");
     for(int k = 0; k < indent; k++) printf("  ║  ");
     printf("  ╚═> ");
     print_trie_node(node->children + i, indent + 1);
   }
+  printf("\n");
+  for(int k = 0; k < indent; k++) printf("  ║  ");
 }
 
 void print_pattern_trie(pattern_trie_t *trie){

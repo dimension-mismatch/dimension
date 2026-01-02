@@ -119,7 +119,7 @@ void print_pattern_value(pattern_value_t* pval){
   printf("(");
   if(pval->is_param){
     
-    print_variable_declaration(&pval->param_value);
+    print_type_identifier(&pval->param_value);
   }
   else{
     print_expression(pval->base_value);
@@ -134,7 +134,7 @@ void print_pattern_type(pattern_type_t* ptype){
     printf(MAGENTA "*" RESET_COLOR);
   }
   if(ptype->is_param){
-    print_variable_declaration(&ptype->param_type);
+    print_type_identifier(&ptype->param_type);
   }
   else{
     printf("[" GREEN BOLD "#%i" RESET_COLOR, ptype->base_type_id);
@@ -153,13 +153,18 @@ void print_pattern_type(pattern_type_t* ptype){
 }
 void print_pattern_variable(pattern_variable_t* pvar){
   if(!pvar) return;
-  if(pvar->name){
-    printf(MAGENTA "%s " BLUE, pvar->name);
-    for(int i = 0; i < pvar->constant_lvl; i++){
-      printf(":");
-    }
-    printf(RESET_COLOR " ");
+  // if(pvar->name){
+  //   printf(MAGENTA "%s " BLUE, pvar->name);
+  //   for(int i = 0; i < pvar->constant_lvl; i++){
+  //     printf(":");
+  //   }
+  //   printf(RESET_COLOR " ");
+  // }
+  printf(BLUE);
+  for(int i = 0; i < pvar->constant_lvl; i++){
+    printf(":");
   }
+  printf(RESET_COLOR);
   print_pattern_type(&pvar->type);
 }
 void print_pattern_entry(pattern_entry_t* pentry){
@@ -282,7 +287,7 @@ void destroy_variable_declaration(variable_declaration_t* vardec){
 }
 void destroy_pattern_value(pattern_value_t* pval){
   if(pval->is_param){
-    destroy_variable_declaration(&pval->param_value);
+    destroy_type_identifier(&pval->param_value);
   }
   else{
     destroy_expression(pval->base_value);
@@ -297,7 +302,7 @@ void destroy_pattern_type(pattern_type_t* ptype){
   }
 
   if(ptype->is_param){
-    destroy_variable_declaration(&ptype->param_type);
+    destroy_type_identifier(&ptype->param_type);
   }
   else{
     for(int i = 0; i < ptype->param_count; i++){
@@ -307,8 +312,8 @@ void destroy_pattern_type(pattern_type_t* ptype){
 }
 void destroy_pattern_variable(pattern_variable_t* pvar){
   if(!pvar) return;
-  free(pvar->name);
-  pvar->name = NULL;
+  // free(pvar->name);
+  // pvar->name = NULL;
   destroy_pattern_type(&pvar->type);
 }
 void destroy_pattern_entry(pattern_entry_t* pentry){
@@ -426,7 +431,7 @@ void copy_variable_declaration(variable_declaration_t *new, variable_declaration
 void copy_pattern_value(pattern_value_t* new, pattern_value_t* pval){
   new->is_param = pval->is_param;
   if(new->is_param){
-    copy_variable_declaration(&new->param_value, &pval->param_value);
+    copy_type_identifier(&new->param_value, &pval->param_value);
   }
   else{
     new->base_value = malloc(sizeof(expression_t));
@@ -438,11 +443,12 @@ void copy_pattern_type(pattern_type_t* new, pattern_type_t* ptype){
   new->is_param = ptype->is_param;
   new->dimension_count = ptype->dimension_count;
   new->dimensions = malloc(ptype->dimension_count * sizeof(pattern_value_t));
-  for(int i = 0; i < new->dimension_count; i++){
+  printf(YELLOW BOLD "%d" RESET_COLOR, new->dimension_count);
+  for(int i = 0; i < ptype->dimension_count; i++){
     copy_pattern_value(ptype->dimensions + i, new->dimensions + i);
   }
   if(new->is_param){
-    copy_variable_declaration(&new->param_type, &ptype->param_type);
+    copy_type_identifier(&new->param_type, &ptype->param_type);
   }
   else{
     new->param_count = ptype->param_count;
@@ -456,9 +462,9 @@ void copy_pattern_type(pattern_type_t* new, pattern_type_t* ptype){
 
 void copy_pattern_variable(pattern_variable_t* new, pattern_variable_t* pvar){
   new->constant_lvl = pvar->constant_lvl;
-  new->name = malloc((1 + strlen(pvar->name)) * sizeof(char));
+  //new->name = malloc((1 + strlen(pvar->name)) * sizeof(char));
   copy_pattern_type(&new->type, &pvar->type);
-  strcpy(new->name, pvar->name);
+  //strcpy(new->name, pvar->name);
 }
 
 void copy_pattern_entry(pattern_entry_t* new, pattern_entry_t* pattern){

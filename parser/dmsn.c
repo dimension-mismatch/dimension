@@ -33,12 +33,13 @@ int main(int argc, char* argv[]){
 
   pattern_trie_t trie = pattern_trie_init();
   pattern_entry_t test_entry = {.is_identifier = true, .identifier = "test"};
-  pattern_entry_t test_entry2 = {.is_identifier = false, .variable = {.constant_lvl = 2, .name = "my_var", .type = {.base_type_id = 0, .dimension_count = 0, .dimensions = NULL, .is_param = false}}};
+  pattern_entry_t test_entry2 = {.is_identifier = false, .variable = {.constant_lvl = 3, .type = {.base_type_id = 0, .dimension_count = 0, .dimensions = NULL, .is_param = false}}};
   pattern_entry_t test_entry3 = {.is_identifier = true, .identifier = "*.a"};
   pattern_entry_t test_entries[] = {test_entry, test_entry2, test_entry3};
-  pattern_entry_t test_entriesII[] = {test_entry, test_entry3};
+  pattern_entry_t test_entriesII[] = {test_entry, test_entry2, test_entry};
   pattern_t test_pattern = {.entry_count = 3, .entries = test_entries};
-  pattern_t test_patternII = {.entry_count = 2, .entries = test_entriesII};
+
+  pattern_t test_patternII = {.entry_count = 3, .entries = test_entriesII};
   type_declaration_t test_type = {.component_count = 0, .components = NULL, .is_enum = false, .is_is = false, .match_pattern = &test_pattern};
   type_declaration_t test_typeII = {.component_count = 0, .components = NULL, .is_enum = false, .is_is = false, .match_pattern = &test_patternII};
   print_type_declaration(&test_type);
