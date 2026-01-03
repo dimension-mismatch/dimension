@@ -33,8 +33,8 @@ int main(int argc, char* argv[]){
 
   pattern_trie_t trie = pattern_trie_init();
   pattern_entry_t test_entry = {.is_identifier = true, .identifier = "test"};
-  pattern_entry_t test_entry2 = {.is_identifier = false, .variable = {.constant_lvl = 3, .type = {.base_type_id = 0, .dimension_count = 0, .dimensions = NULL, .is_param = false}}};
-  pattern_entry_t test_entry3 = {.is_identifier = false, .variable = {.constant_lvl = 1, .type = {.base_type_id = 0, .dimension_count = 0, .dimensions = NULL, .is_param = false}}};
+  pattern_entry_t test_entry2 = {.is_identifier = false, .variable = {.constant_lvl = 3, .type = {.base_type_id = 0, .dimension_count = 0, .dimensions = NULL, .is_param = false, .param_count = 0, .parameters = NULL}}};
+  pattern_entry_t test_entry3 = {.is_identifier = false, .variable = {.constant_lvl = 3, .type = {.base_type_id = 0, .dimension_count = 0, .dimensions = NULL, .is_param = false, .param_count = 0, .parameters = NULL}}};
   pattern_entry_t test_entries[] = {test_entry, test_entry2, test_entry3};
   pattern_entry_t test_entriesII[] = {test_entry, test_entry3, test_entry};
   pattern_t test_pattern = {.entry_count = 3, .entries = test_entries};
@@ -44,6 +44,8 @@ int main(int argc, char* argv[]){
   type_declaration_t test_typeII = {.component_count = 0, .components = NULL, .is_enum = false, .is_is = false, .match_pattern = &test_patternII};
   print_type_declaration(&test_type);
   pattern_trie_push_type(&trie, &test_type);
+  printf("\n");
+  print_pattern_trie(&trie);
   pattern_trie_push_type(&trie, &test_typeII);
   printf("\n");
   print_pattern_trie(&trie);

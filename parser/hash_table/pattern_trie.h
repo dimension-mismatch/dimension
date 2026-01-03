@@ -21,6 +21,10 @@ typedef struct{
   };
 }trie_match_result_t;
 
+typedef struct possible_type_matches{
+  int num_possibilities;
+  int* possible_matches;
+}possible_type_matches_t;
 
 typedef struct pattern_trie_node{
   pattern_entry_t pattern;
@@ -31,6 +35,7 @@ typedef struct pattern_trie_node{
   int match_index;
   
   int max_child_priority;
+  possible_type_matches_t* type_matches;
 }pattern_trie_node_t;
 
 typedef struct{
@@ -52,8 +57,6 @@ void pattern_trie_push_variable(pattern_trie_t* trie, variable_declaration_t* va
 void destroy_pattern_trie(pattern_trie_t* trie);
 
 void print_trie_match_result(trie_match_result_t* result);
-
-void print_trie_node(pattern_trie_node_t* node, int indent);
 
 void print_pattern_trie(pattern_trie_t* record);
 
