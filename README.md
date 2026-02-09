@@ -271,8 +271,49 @@ Iterative operations on dynamic memory such as traversing trees or linked lists 
 
 This memory management strategy makes it impossible to create circular or self referential data. THis makes certain data structures such as the doubly linked list impossible to construct. I hope to come up with a workaround for this particular issue. 
 
+## Links: another memory management idea
+
+If I can make this technique work, it will most likely be used along with the previous method to create structures like doubly linked lists or circular linked lists that could not be created with the other method.
+
+The idea is to introduce a new construct called a "link", which connects  
+
+
+
+```
+
+type [Node(type: [t])] is (
+  value: [(type)], 
+  previous: ->[Node(type)], 
+  next ->[Node(type)]
+);
+
+type [Texture] is (
+  width: [i],
+  height: [i],
+  img_src: ->[Image]
+);
+
+
+type [Image] is (
+  pixels: 128*128[RGB];
+  references: ->[Texture]+;
+)
+
+my_node: [Node[i]]
+
+my_other_node: [Node[i]]
+
+my_node.previous >-< my_other_node.next;
+
+my_node.previous >-;
 
 
 
 
+```
+
+
+2*([i][f]) = [i][f][i][f]
+
+2$2*([i][f]) = [i][i][f][f]
 

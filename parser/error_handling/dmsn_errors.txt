@@ -1,56 +1,9 @@
-~ Type Name Error |@ Invalid Type Name. Type names should start with letters and contain only letters and numbers.
+~ in Variable Declaration |@ Expected an identifier for the name of a variable.
 
-~ Type Error |@ Type "#T" is not defined
+~ in Variable Declaration |@ Expected either :, ::, or ::: to indicate variable declaration
 
-~ Syntax Error |@ Expected a "]" to end Type Identifer, but instead found "#T".
+~ Syntax Error |@ Unexpected token "#T"
 
-~ Syntax Error |@ Expected a type name, but instead found #T
+~ in Dimension |@ Dimension must be a value of type [u] (Unsigned Integer)
 
-~ Syntax Error |@ Expected "is" after type identifier, but found #T
-
-~ Syntax Error |@ Type Declaration expects type fields in parentheses "()", but instead found #T
-
-~ Syntax Error |@ Type field list is missing closing parenthesis ")"
-
-~ Syntax Error |@ Composite type fields expect a ":", but instead found #T
-
-~ Syntax Error |@ Expected a semicolon ";", but found #T
-
-~ Syntax Error |@ Cannot declare #T as a parameter of a function
-
-~ Syntax Error |@ Function Declarations may only consist of identifiers and parameters in parentheses, but this one had "#T"
-
-~ Syntax Error |@ Found duplicate function body. Functions can only have one body, defined with "does {...}"
-
-~ Syntax Error |@ "{" expected after "does" keyword, but this one had "#T"
-
-~ Syntax Error |@ "}" expected, but found "#T"; Inline Assembly functions must only contain Assembly code.
-
-~ Syntax Error |@ Found duplicate "makes" keyword. Functions may only return one type.
-
-~ Syntax Error |@ Found duplicate "priority" keyword. Functions may only specify one priority value.
-
-~ Syntax Error |@ Function priority must be an integer literal.
-
-~ Syntax Error |@ Unexpected "#T" token in function declaration. Expected "makes", "does", or "priority"
-
-~ Syntax Error |@ Expression expected after the "=" sign
-
-~ Dimension Error |@ Dimension prefix expected a number, but found "#T"
-
-~ Dimension Error |@ Dimension prefix expected "*", but found "#T"
-
-~ Syntax Error |@ Function name cannot be empty.
-
-~ Expression Error |@ Identifier "#T" does not match any variable or function.
-
-~ Function Error |@ Could not find a body for this funciton. Functions must have a body defined with "does {...}"
-
-~ Type Mismatch |@ Field of type #t cannot be set to a value of type #t
-
-~ Return Type Error|@ This Function must return values of type #t
-
-~ Return Error |@ This Expression should not return anything
-
-~ Error |@ Unknown Expression
-
+~ in Type Identifier |@ Expected either asterisk ("*") or beginning of type label ("["), but found "#T"

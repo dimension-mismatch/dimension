@@ -7,6 +7,8 @@
 #include "parser.h"
 #include "hash_table/pattern_trie.h"
 #include "construct_utils.h"
+#include "error_handling/error_manager.h"
+#include "token_cursor.h"
 
 
 
@@ -28,29 +30,22 @@ int main(int argc, char* argv[]){
   
   
   token_array_t* all_tokens = tokenize_file(file);
-  //print_token_array(all_tokens);
-  //parse_tokens(all_tokens);
+  
 
-  pattern_trie_t trie = pattern_trie_init();
-  pattern_entry_t test_entry = {.is_identifier = true, .identifier = "test"};
-  pattern_entry_t test_entry2 = {.is_identifier = false, .variable = {.constant_lvl = 3, .type = {.base_type_id = 0, .dimension_count = 0, .dimensions = NULL, .is_param = false, .param_count = 0, .parameters = NULL}}};
-  pattern_entry_t test_entry3 = {.is_identifier = false, .variable = {.constant_lvl = 3, .type = {.base_type_id = 0, .dimension_count = 0, .dimensions = NULL, .is_param = false, .param_count = 0, .parameters = NULL}}};
-  pattern_entry_t test_entries[] = {test_entry, test_entry2, test_entry3};
-  pattern_entry_t test_entriesII[] = {test_entry, test_entry3, test_entry};
-  pattern_t test_pattern = {.entry_count = 3, .entries = test_entries};
+  pattern_trie_t type_trie = pattern_trie_init();
+  pattern_trie_t fn_trie = pattern_trie_init();
 
-  pattern_t test_patternII = {.entry_count = 3, .entries = test_entriesII};
-  type_declaration_t test_type = {.component_count = 0, .components = NULL, .is_enum = false, .is_is = false, .match_pattern = &test_pattern};
-  type_declaration_t test_typeII = {.component_count = 0, .components = NULL, .is_enum = false, .is_is = false, .match_pattern = &test_patternII};
-  print_type_declaration(&test_type);
-  pattern_trie_push_type(&trie, &test_type);
+  print_token_array(all_tokens);
+  error_manager_t errors = error_manager_init(all_tokens);
+
+  token_cursor_t tc = tc_init(all_tokens, &fn_trie, &type_trie, &errors);
+  parse_tokens(&tc);
+
+  print_pattern_trie(&type_trie);
+
   printf("\n");
-  print_pattern_trie(&trie);
-  pattern_trie_push_type(&trie, &test_typeII);
-  printf("\n");
-  print_pattern_trie(&trie);
 
-  // parse_manager_t errors = parse_manager_init(all_tokens, &function_record, &variable_record, &type_record);
+  // error_manager_t errors = error_manager_init(all_tokens, &function_record, &variable_record, &type_record);
 
   // expression_t* ast = parse_tokens(&errors);
   // validate_program(ast, &errors);
@@ -60,7 +55,7 @@ int main(int argc, char* argv[]){
   
   fclose(file);
 
-  // error_printout(&errors);
+  error_printout(&errors);
   // if(errors.error_count > 0){
   //   exit(1);
   // }

@@ -12,3 +12,4 @@ typedef struct expression_array{
 
 void print_expression_array(expression_array_t *array);
 
+expression_t *build_expression(pattern_trie_t *trie, expression_array_t *array);

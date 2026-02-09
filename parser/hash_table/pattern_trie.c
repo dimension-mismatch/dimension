@@ -8,6 +8,27 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+bool compare_expressions(expression_t* a, expression_t* b){
+  if(a->type != EXP_VALUE_LITERAL || b->type != EXP_VALUE_LITERAL){
+    return false;
+  }
+  if(a->value_literal.type != b->value_literal.type){
+    return false;
+  }
+  switch(a->value_literal.type){
+    case VAL_CHAR:
+      return a->value_literal.c == b->value_literal.c;
+    case VAL_FLOAT:
+      return a->value_literal.f == b->value_literal.f;
+    case VAL_INT:
+      return a->value_literal.i == b->value_literal.i;
+    case VAL_STRING:
+      return !strcmp(a->value_literal.s, b->value_literal.s);
+    case VAL_UNSIGNED:
+      return a->value_literal.u == b->value_literal.u;
+  }
+}
+
 bool type_identifier_compare(type_identifier_t* a, type_identifier_t* b){
   if(a->type_id != b->type_id){
     return false;
@@ -18,6 +39,11 @@ bool type_identifier_compare(type_identifier_t* a, type_identifier_t* b){
   if(a->num_params != b->num_params){
     return false;
   }
+  for(int i = 0; i < a->dimension_count; i++){
+    if(!compare_expressions(a->dimensions + i, b->dimensions + i)){
+      return false;
+    }
+  }
   for(int i = 0; i < a->num_params; i++){
     if(!type_identifier_compare(a->params[i].return_type, b->params[i].return_type)){
       return false;
@@ -27,21 +53,17 @@ bool type_identifier_compare(type_identifier_t* a, type_identifier_t* b){
 }
 bool pattern_entry_compare(pattern_entry_t* a, pattern_entry_t* b){
   if(a->is_identifier != b->is_identifier){
-    printf(RED BOLD "is identifier failed" RESET_COLOR);
     return false;
   }
 
   if(a->is_identifier){
-    printf(RED BOLD "strings don't match" RESET_COLOR);
     return !strcmp(a->identifier, b->identifier);
   }
  
   if(a->variable.constant_lvl != b->variable.constant_lvl){
-    printf(RED BOLD "const lvls don't match" RESET_COLOR);
     return false;
   }
   if(a->variable.type.is_param != b->variable.type.is_param){
-    printf(RED BOLD "is_params don't match" RESET_COLOR);
     return false;
   }
   if(a->variable.type.is_param){
@@ -51,17 +73,14 @@ bool pattern_entry_compare(pattern_entry_t* a, pattern_entry_t* b){
   pattern_type_t* b_type = &b->variable.type;
 
   if(a_type->base_type_id != b_type->base_type_id){
-    printf(RED BOLD "different base types" RESET_COLOR);
     return false;
   }
 
   if(a_type->dimension_count != b_type->dimension_count){
-    printf(RED BOLD "different dimension counts" RESET_COLOR);
     return false;
   }
 
   if(a_type->param_count != b_type->param_count){
-    printf(RED BOLD "different param counts" RESET_COLOR);
     return false;
   }
   for(int i = 0; i < a_type->dimension_count; i++){
@@ -70,10 +89,8 @@ bool pattern_entry_compare(pattern_entry_t* a, pattern_entry_t* b){
     }
 
     if(!a_type->dimensions[i].is_param){
-      if(a_type->dimensions[i].base_value->type == EXP_VALUE_LITERAL && b_type->dimensions[i].base_value->type == EXP_VALUE_LITERAL){
-        if(a_type->dimensions[i].base_value->value_literal.u != a_type->dimensions[i].base_value->value_literal.u){
-          return false;
-        }
+      if(!compare_expressions(a_type->dimensions[i].base_value, b_type->dimensions[i].base_value)){
+        return false;
       }
     }
   }
@@ -88,9 +105,42 @@ bool pattern_entry_compare(pattern_entry_t* a, pattern_entry_t* b){
       }
     }
     else{
-
+      if(!compare_expressions(a_type->parameters[i].base_value, b_type->parameters[i].base_value)){
+        return false;
+      }
     }
     
+  }
+  return true;
+}
+
+
+bool test_pattern_type(pattern_type_t* test, type_identifier_t* subject){
+  if(test->is_param){
+    return false; //TODO: handle matching for parameter types
+  }
+  if(test->base_type_id != subject->type_id){
+    return false;
+  }
+  if(test->dimension_count != subject->dimension_count){
+    return false; //TODO: handle multiplicity 
+  }
+  if(test->param_count != subject->num_params){
+    return false; //shouldn't ever get here
+  }
+  for(int i = 0; i < test->dimension_count; i++){
+    if(!test->dimensions[i].is_param){
+      if(!compare_expressions(test->dimensions[i].base_value, subject->dimensions + i)){
+        return false;
+      }
+    }
+  }
+  for(int i = 0; i < test->param_count; i++){
+    if(!test->parameters[i].is_param){
+      if(!compare_expressions(test->parameters[i].base_value, subject->params + i)){
+        return false;
+      }
+    }
   }
   return true;
 }
@@ -206,7 +256,25 @@ void pattern_trie_push_type(pattern_trie_t *trie, type_declaration_t *type){
   pattern_trie_node_push_pattern(&trie->root, type->match_pattern, trie->match_count);
   trie->match_count++;
   trie->matches = realloc(trie->matches, trie->match_count * sizeof(trie_match_result_t));
-  trie_match_result_t new = {.type = MATCH_TYPE, .priority = 0, .typedec = *type};
+  trie_match_result_t new = {.type = MATCH_TYPE, .priority = 0, .typedec = *type, .length = type->match_pattern->entry_count};
+  trie->matches[trie->match_count - 1] = new;
+}
+
+void pattern_trie_push_variable(pattern_trie_t* trie, variable_declaration_t* var){
+  pattern_entry_t entry = {.is_identifier = true, .identifier = var->var_name};
+  pattern_t pattern = {.entries = &entry, .entry_count = 1};
+  pattern_trie_node_push_pattern(&trie->root, &pattern, trie->match_count);
+  trie->match_count++;
+  trie->matches = realloc(trie->matches, trie->match_count * sizeof(trie_match_result_t));
+  trie_match_result_t new = {.type = MATCH_VARIABLE, .priority = 0, .vardec = *var, .length = 1};
+  trie->matches[trie->match_count - 1] = new;
+}
+
+void pattern_trie_push_function(pattern_trie_t* trie, function_definition_t* fn){
+  pattern_trie_node_push_pattern(&trie->root, &fn->match, trie->match_count);
+  trie->match_count++;
+  trie->matches = realloc(trie->matches, trie->match_count * sizeof(trie_match_result_t));
+  trie_match_result_t new = {.type = MATCH_FUNCTION, .priority = fn->priority, .fndec = *fn, .length = fn->match.entry_count};
   trie->matches[trie->match_count - 1] = new;
 }
 

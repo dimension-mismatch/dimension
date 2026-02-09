@@ -1,6 +1,7 @@
-frac :: value*4*3[stuff [d] / stuff [f]]
+type [i j] holds 8;
+type [i k] holds 4;
 
-
+my_int : 123*2*n[i j];
 
 
 

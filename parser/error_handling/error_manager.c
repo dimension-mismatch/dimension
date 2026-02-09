@@ -1,12 +1,13 @@
 #include "error_manager.h"
 
 #include "../colors.h"
+#include "../construct_utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 
-parse_manager_t parse_manager_init(token_array_t* tokens, pattern_trie_t* fn_rec, variable_record_t* var_rec, type_record_t* type_rec){
-  parse_manager_t new = {0, NULL, 0, NULL, fn_rec, type_rec, var_rec, tokens};
+error_manager_t error_manager_init(token_array_t* tokens){
+  error_manager_t new = {0, NULL, 0, NULL, tokens};
   FILE* file = fopen("error_handling/dmsn_errors.txt", "r");
   if(file == NULL){
     printf(RED BOLD "Failed to load error handling\n" RESET_COLOR);
@@ -28,14 +29,14 @@ parse_manager_t parse_manager_init(token_array_t* tokens, pattern_trie_t* fn_rec
   return new;
 }
 
-void throw_error(parse_manager_t* errors, int error_num, int token_idx){
+void throw_error(error_manager_t* errors, int error_num, int token_idx){
   errors->error_count++;
   errors->errors = realloc(errors->errors, errors->error_count * sizeof(error_t));
   error_t err = {error_num, 0, NULL, token_idx};
   errors->errors[errors->error_count - 1] = err;
 }
 
-void err_arg(parse_manager_t* errors, error_arg_t arg){
+void err_arg(error_manager_t* errors, error_arg_t arg){
   error_t* err = errors->errors + errors->error_count - 1;
 
   err->arg_c++;
@@ -43,28 +44,28 @@ void err_arg(parse_manager_t* errors, error_arg_t arg){
   err->arg_v[err->arg_c - 1] = arg;
 }
 
-void err_expression_arg(parse_manager_t* errors, expression_t* exp){
+void err_expression_arg(error_manager_t* errors, expression_t* exp){
   error_arg_t arg = {.type = ERR_EXPRESSION, .exp = exp};
   err_arg(errors, arg);
 }
 
-void err_token_arg(parse_manager_t* errors, token_t* token){
+void err_token_arg(error_manager_t* errors, token_t* token){
   error_arg_t arg = {.type = ERR_TOKEN, .token = token};
   err_arg(errors, arg);
 }
 
-void err_type_arg(parse_manager_t* errors, type_identifier_t* type){
+void err_type_arg(error_manager_t* errors, type_identifier_t* type){
   error_arg_t arg = {.type = ERR_TYPE, .type_id = type};
   err_arg(errors, arg);
 }
 
-void err_function_arg(parse_manager_t* errors, int fn_id){
+void err_function_arg(error_manager_t* errors, int fn_id){
   error_arg_t arg = {.type = ERR_FUNCTION, .function_id = fn_id};
   err_arg(errors, arg);
 }
 
 
-void print_error(FILE* error_src_txt, parse_manager_t* manager, int error){
+void print_error(FILE* error_src_txt, error_manager_t* manager, int error){
   error_t err = manager->errors[error];
   token_t token = manager->tokens->tokens[err.token_idx];
   fseek(error_src_txt, manager->index[err.err_num], SEEK_SET);
@@ -78,7 +79,7 @@ void print_error(FILE* error_src_txt, parse_manager_t* manager, int error){
   int arg_i = 0;
   while((c = fgetc(error_src_txt)) != '\n' && c != EOF){
     if(c == '@'){
-      printf("at " BLUE "(Line " BOLD "%d" UNBOLD ", Col" BOLD " %d" UNBOLD "):\n        " RESET_COLOR, token.line_number, token.start_pos - token.length + 1);
+      printf("at " BLUE "(Line " BOLD "%d" UNBOLD ", Col" BOLD " %d" UNBOLD " #%d):\n        " RESET_COLOR, token.line_number, token.start_pos, err.token_idx);
     }
     else if(c == '\''){
       in_quote = 1 - in_quote;
@@ -98,7 +99,7 @@ void print_error(FILE* error_src_txt, parse_manager_t* manager, int error){
       if (c == 't'){
         error_arg_t arg = err.arg_v[arg_i];
         if(arg.type == ERR_TYPE){
-          print_type_id_named(arg.type_id, manager->type_rec);
+          print_type_identifier(arg.type_id);
         }
         arg_i++;
       }
@@ -112,7 +113,7 @@ void print_error(FILE* error_src_txt, parse_manager_t* manager, int error){
   printf("\n\n");
 }
 
-void error_printout(parse_manager_t* manager){
+void error_printout(error_manager_t* manager){
   if(manager->error_count == 0){
     printf(GREEN BOLD "Compile Successful! :)\n" RESET_COLOR);
     return;

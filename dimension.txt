@@ -131,7 +131,6 @@ fn |(a: [C])| does sqrt(a.r * a.r + a.i * a.i) makes [f];
 
 
 
-
 a.sample(0.1)*b+7
 
               _-_             ______

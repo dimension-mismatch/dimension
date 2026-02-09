@@ -1,13 +1,13 @@
 #include "token_cursor.h"
 #include "tokenizer.h"
-#include "parser.h"
 #include "constructs.h"
-
+#include "hash_table/pattern_trie.h"
+#include "error_handling/error_manager.h"
 #include <stdbool.h>
 #include <stdlib.h>
 
-token_cursor_t tc_init(token_array_t* array){
-  token_cursor_t cursor = {array, 0, array->tokens[0]};
+token_cursor_t tc_init(token_array_t* array, pattern_trie_t* fn_trie, pattern_trie_t* type_trie, error_manager_t* error_manager){
+  token_cursor_t cursor = {.array = array,.index = 0, .tk = array->tokens[0], .fn_trie = fn_trie, .type_trie = type_trie, .error_manager = error_manager};
   return cursor;
 }
 
@@ -31,7 +31,7 @@ bool tc_is_asterisk(token_cursor_t* tc){
 //expands the array of dimensions by one and returns a pointer to the newly created expression
 expression_t* add_dimension(type_identifier_t* typeid){
   typeid->dimension_count++;
-  typeid->dimensions = realloc(typeid->dimensions, typeid->dimension_count * sizeof(expression_t*));
+  typeid->dimensions = realloc(typeid->dimensions, typeid->dimension_count * sizeof(expression_t));
   return typeid->dimensions + typeid->dimension_count - 1;
 }
 

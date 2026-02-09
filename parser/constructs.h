@@ -72,11 +72,16 @@ typedef struct type_identifier{
 
 typedef struct type_declaration{
   struct pattern* match_pattern;
-  bool is_is;
-  bool is_enum;
-  int component_count;
-  struct variable_declaration* components;
- 
+  bool is_builtin;
+  union{
+    struct{
+      bool is_is;
+      bool is_enum;
+      int component_count;
+      struct variable_declaration* components;
+    };
+    int byte_count;
+  };
 }type_declaration_t;
 
 

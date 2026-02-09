@@ -94,6 +94,10 @@ void print_type_declaration(type_declaration_t* typedec){
   if(!typedec) return;
   printf(CYAN "TYPE [" RESET_COLOR);
   print_pattern(typedec->match_pattern);
+  if(typedec->is_builtin){
+    printf(CYAN "] holds %d" RESET_COLOR, typedec->byte_count);
+    return;
+  }
   printf(CYAN "] %s %s", typedec->is_is ? "is" : "has", typedec->is_enum ? "oneof" : "");
   printf("(");
   for(int i = 0; i < typedec->component_count; i++){
@@ -108,7 +112,7 @@ void print_variable_declaration(variable_declaration_t* vardec){
   if(!vardec) return;
   if(vardec->var_name){
     printf(MAGENTA "%s " RESET_COLOR BLUE, vardec->var_name);
-    for(int i = 0; i < vardec->constant_lvl; i++){
+    for(int i = 0; i < vardec->constant_lvl + 1; i++){
       printf(":");
     }
     printf(RESET_COLOR);
@@ -160,8 +164,8 @@ void print_pattern_variable(pattern_variable_t* pvar){
   //   }
   //   printf(RESET_COLOR " ");
   // }
-  printf(BLUE);
-  for(int i = 0; i < pvar->constant_lvl; i++){
+  
+  for(int i = 0; i < pvar->constant_lvl + 1; i++){
     printf(":");
   }
   printf(RESET_COLOR);
@@ -269,6 +273,9 @@ void destroy_type_declaration(type_declaration_t* typedec){
   destroy_pattern(typedec->match_pattern);
   free(typedec->match_pattern);
   typedec->match_pattern = NULL;
+  if(typedec->is_builtin){
+    return;
+  }
 
   for(int i = 0; i < typedec->component_count; i++){
     destroy_variable_declaration(typedec->components + i);
@@ -414,9 +421,14 @@ void copy_type_identifier(type_identifier_t *new, type_identifier_t *type){
 void copy_type_declaration(type_declaration_t *new, type_declaration_t *typedec){
     new->component_count = typedec->component_count;
     new->components = malloc(typedec->component_count * sizeof(type_declaration_t));
+    new->is_builtin = typedec->is_builtin;
+    if(new->is_builtin){
+      new->byte_count = typedec->byte_count;
+      return;
+    }
     new->is_enum = typedec->is_enum;
     new->is_is = typedec->is_is;
-    new->match_pattern = malloc(sizeof(expression_t));
+    new->match_pattern = malloc(sizeof(pattern_t));
   copy_pattern(new->match_pattern, typedec->match_pattern);
   for(int i = 0; i < typedec->component_count; i++){
     copy_variable_declaration(new->components + i, typedec->components + i);

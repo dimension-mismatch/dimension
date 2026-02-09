@@ -12,7 +12,7 @@ type [grid] is 2[c]
 
 
 
-velocity :: [divide [m]/[s]] = 5;
+velocity :: [m/s] = 5;
 
 //my_matrix : 3*3[i];
 

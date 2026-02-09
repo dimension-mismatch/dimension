@@ -14,6 +14,7 @@ typedef enum{
 typedef struct{
   trie_match_type_t type;
   int priority;
+  int length;
   union{
     variable_declaration_t vardec;
     type_declaration_t typedec;
@@ -44,8 +45,9 @@ typedef struct{
   trie_match_result_t* matches;
 }pattern_trie_t;
 
-pattern_trie_t pattern_trie_init();
+bool test_pattern_type(pattern_type_t *test, type_identifier_t *subject);
 
+pattern_trie_t pattern_trie_init();
 
 void pattern_trie_push_type(pattern_trie_t* trie,  type_declaration_t* type);
 
