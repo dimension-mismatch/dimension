@@ -10,7 +10,8 @@
     "string.h": "c",
     "token_cursor.h": "c",
     "string": "cpp",
-    "string_view": "cpp"
+    "string_view": "cpp",
+    "locale": "c"
   },
   "C_Cpp.errorSquiggles": "enabled"
 }
