@@ -1,7 +1,9 @@
-type [i j] holds 8;
-type [i k] holds 4;
+type [i] holds 8;
+type [j k] holds 4;
 
-my_int : 123*2*n[i j];
+type [u] holds 8; 
+
+my_int : 123*2*n[i k u];
 
 
 

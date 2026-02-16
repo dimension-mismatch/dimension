@@ -26,6 +26,7 @@ void print_expression(expression_t* exp){
         }
         print_expression(&exp->function_call.params[i]);
       }
+      printf(")");
       break;
     case EXP_TYPE_LITERAL:
       print_type_identifier(exp->type_literal);

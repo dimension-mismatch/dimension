@@ -13,6 +13,7 @@ typedef enum{
 
 typedef struct{
   trie_match_type_t type;
+  int index;
   int priority;
   int length;
   union{

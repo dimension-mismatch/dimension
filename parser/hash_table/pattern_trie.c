@@ -256,7 +256,7 @@ void pattern_trie_push_type(pattern_trie_t *trie, type_declaration_t *type){
   pattern_trie_node_push_pattern(&trie->root, type->match_pattern, trie->match_count);
   trie->match_count++;
   trie->matches = realloc(trie->matches, trie->match_count * sizeof(trie_match_result_t));
-  trie_match_result_t new = {.type = MATCH_TYPE, .priority = 0, .typedec = *type, .length = type->match_pattern->entry_count};
+  trie_match_result_t new = {.type = MATCH_TYPE, .priority = 0, .typedec = *type, .length = type->match_pattern->entry_count, .index = trie->match_count - 1};
   trie->matches[trie->match_count - 1] = new;
 }
 
@@ -266,7 +266,7 @@ void pattern_trie_push_variable(pattern_trie_t* trie, variable_declaration_t* va
   pattern_trie_node_push_pattern(&trie->root, &pattern, trie->match_count);
   trie->match_count++;
   trie->matches = realloc(trie->matches, trie->match_count * sizeof(trie_match_result_t));
-  trie_match_result_t new = {.type = MATCH_VARIABLE, .priority = 0, .vardec = *var, .length = 1};
+  trie_match_result_t new = {.type = MATCH_VARIABLE, .priority = 0, .vardec = *var, .length = 1, .index = trie->match_count - 1};
   trie->matches[trie->match_count - 1] = new;
 }
 
@@ -274,11 +274,12 @@ void pattern_trie_push_function(pattern_trie_t* trie, function_definition_t* fn)
   pattern_trie_node_push_pattern(&trie->root, &fn->match, trie->match_count);
   trie->match_count++;
   trie->matches = realloc(trie->matches, trie->match_count * sizeof(trie_match_result_t));
-  trie_match_result_t new = {.type = MATCH_FUNCTION, .priority = fn->priority, .fndec = *fn, .length = fn->match.entry_count};
+  trie_match_result_t new = {.type = MATCH_FUNCTION, .priority = fn->priority, .fndec = *fn, .length = fn->match.entry_count, .index = trie->match_count - 1};
   trie->matches[trie->match_count - 1] = new;
 }
 
 void print_trie_match_result(trie_match_result_t* result){
+  if(!result) return;
   switch(result->type){
     case MATCH_FUNCTION:
       print_function_definition(&result->fndec);
