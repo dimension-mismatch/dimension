@@ -61,7 +61,7 @@ void print_expression(expression_t* exp){
       printf(")");
       break;
     case EXP_READ_VAR:
-      printf(GREEN "READ #%i", exp->read_var_id);
+      printf(GREEN "READ #%i" RESET_COLOR, exp->read_var_id);
       break;
     case EXP_RAW_TOKEN:
       print_token(&exp->raw_token);
@@ -123,8 +123,7 @@ void print_variable_declaration(variable_declaration_t* vardec){
 void print_pattern_value(pattern_value_t* pval){
   printf("(");
   if(pval->is_param){
-    
-    print_type_identifier(&pval->param_value);
+    print_pattern_type(pval->param);
   }
   else{
     print_expression(pval->base_value);
@@ -174,11 +173,16 @@ void print_pattern_variable(pattern_variable_t* pvar){
 }
 void print_pattern_entry(pattern_entry_t* pentry){
   if(!pentry) return;
-  if(pentry->is_identifier){
-    printf(WHITE "\"%s\"" RESET_COLOR, pentry->identifier);
-  }
-  else{
-    print_pattern_variable(&pentry->variable);
+  switch(pentry->type){
+    case PATTERN_IDENTIFIER:
+      printf(WHITE "\"%s\"" RESET_COLOR, pentry->identifier);
+      break;
+    case PATTERN_VARIABLE:
+      print_pattern_variable(&pentry->variable);
+      break;
+    case PATTERN_TYPE: 
+      print_pattern_type(&pentry->pattern_type);
+      break;
   }
 }
 void print_pattern(pattern_t* pattern){
@@ -295,7 +299,7 @@ void destroy_variable_declaration(variable_declaration_t* vardec){
 }
 void destroy_pattern_value(pattern_value_t* pval){
   if(pval->is_param){
-    destroy_type_identifier(&pval->param_value);
+    destroy_pattern_type(pval->param);
   }
   else{
     destroy_expression(pval->base_value);
@@ -326,12 +330,18 @@ void destroy_pattern_variable(pattern_variable_t* pvar){
 }
 void destroy_pattern_entry(pattern_entry_t* pentry){
   if(!pentry) return;
-  if(pentry->is_identifier){
-    free(pentry->identifier);
-    pentry->identifier = NULL;
-  }
-  else{
-    destroy_pattern_variable(&pentry->variable);
+
+  switch(pentry->type){
+    case PATTERN_IDENTIFIER:
+      free(pentry->identifier);
+      pentry->identifier = NULL;
+    break;
+    case PATTERN_VARIABLE:
+      destroy_pattern_variable(&pentry->variable);
+    break;
+    case PATTERN_TYPE:
+      destroy_pattern_type(&pentry->pattern_type);
+    break;
   }
 }
 void destroy_pattern(pattern_t* pattern){
@@ -444,7 +454,7 @@ void copy_variable_declaration(variable_declaration_t *new, variable_declaration
 void copy_pattern_value(pattern_value_t* new, pattern_value_t* pval){
   new->is_param = pval->is_param;
   if(new->is_param){
-    copy_type_identifier(&new->param_value, &pval->param_value);
+    copy_pattern_type(new->param, pval->param);
   }
   else{
     new->base_value = malloc(sizeof(expression_t));
@@ -481,13 +491,18 @@ void copy_pattern_variable(pattern_variable_t* new, pattern_variable_t* pvar){
 }
 
 void copy_pattern_entry(pattern_entry_t* new, pattern_entry_t* pattern){
-  new->is_identifier = pattern->is_identifier;
-  if(new->is_identifier){
-    new->identifier = malloc((1 + strlen(pattern->identifier)) * sizeof(char));
-    strcpy(new->identifier, pattern->identifier);
-  }
-  else{
-    copy_pattern_variable(&new->variable, &pattern->variable);
+  new->type = pattern->type;
+  switch(new->type){
+    case PATTERN_IDENTIFIER:
+      new->identifier = malloc((1 + strlen(pattern->identifier)) * sizeof(char));
+      strcpy(new->identifier, pattern->identifier);
+      break;
+    case PATTERN_VARIABLE:
+      copy_pattern_variable(&new->variable, &pattern->variable);
+      break;
+    case PATTERN_TYPE:
+      copy_pattern_type(&new->pattern_type, &pattern->pattern_type);
+      break;
   }
 }
 

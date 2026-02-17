@@ -72,17 +72,14 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
   if(!parse_expression(&tc, TK_TYPE, &contents)){
     return false;
   }
-  // if(contents.type != EXP_FUNCTION_CALL){
-  //   throw_error(tc.error_manager, 2, tc.index);
-  //   return false;
-  // }
-  result->num_params = 0;//contents.function_call.num_params;
-  result->params = NULL;//contents.function_call.params;
-  result->type_id = 67;
+  if(contents.type != EXP_TYPE_LITERAL){
+    throw_error(tc.error_manager, 2, tc.index);
+    return false;
+  }
+  *result = *(contents.type_literal);
   
   tc_inc(&tc);
 
-  printf(GREEN " (%d-dimensions)" RESET_COLOR, result->dimension_count);
   *base_tc = tc;
   return true;
 }
@@ -120,7 +117,7 @@ bool parse_pattern_type(token_cursor_t* base_tc, pattern_type_t* result){
   result->dimensions = NULL;
   result->param_count = 0;
   result->parameters = NULL;
-  result->base_type_id = 69420;
+  result->base_type_id = 0;
   token_cursor_t tc = *base_tc;
   //read dimensions for this type
   while(true){
@@ -167,14 +164,21 @@ bool parse_pattern_type(token_cursor_t* base_tc, pattern_type_t* result){
   if(tc.tk.type == TK_VECTOR && tc.tk.is_open){
     tc_inc(&tc);
     variable_declaration_t vardec;
-    parse_vardec(&tc, &vardec);
+    if(!parse_vardec(&tc, &vardec)){
+      return false;
+    }
+    result->param_type = vardec.type;
+    result->is_param = true;
     //found a variable declaration
   }
   else if(tc.tk.type == TK_TYPE && tc.tk.is_open){
     tc_inc(&tc);
     expression_t exp;
-    parse_expression(&tc, TK_TYPE, &exp);
-
+    if(!parse_expression(&tc, TK_TYPE, &exp)){
+      return false;
+    }
+    result->is_param = false;
+    
     //found a type literal
   }
   else{
@@ -225,12 +229,8 @@ bool parse_pattern(token_cursor_t* base_tc, token_type_t end_type, pattern_t* re
     
 
     if(tc.tk.type == TK_IDENTIFIER){
-      pattern_entry_t new_entry = {.is_identifier = true, .identifier = malloc((1 + strlen(tc.tk.content)) * sizeof(char))};
+      pattern_entry_t new_entry = {.type = PATTERN_IDENTIFIER, .identifier = malloc((1 + strlen(tc.tk.content)) * sizeof(char))};
       strcpy(new_entry.identifier, tc.tk.content);
-
-      printf(CYAN);
-      print_token(&tc.tk);
-      printf(RESET_COLOR);
       pattern_push_entry(result, new_entry);
     }
     else if(tc.tk.type == TK_VECTOR && tc.tk.is_open){
@@ -241,7 +241,7 @@ bool parse_pattern(token_cursor_t* base_tc, token_type_t end_type, pattern_t* re
         if(!parse_pattern_vardec(&tc, &variable)){
           return false;
         }
-        pattern_entry_t new_entry = {.is_identifier = false, .variable = variable};
+        pattern_entry_t new_entry = {.type = PATTERN_VARIABLE, .variable = variable};
         pattern_push_entry(result, new_entry);
         if(tc.tk.type == TK_FORCE_EXP_END){
 
@@ -256,6 +256,10 @@ bool parse_pattern(token_cursor_t* base_tc, token_type_t end_type, pattern_t* re
       }
     }
     else if(tc.tk.type == end_type){
+      if(result->entry_count == 0){
+        throw_error(tc.error_manager, 6, tc.index);
+        return false;
+      }
       *base_tc = tc;
       return true;
     }
@@ -292,14 +296,10 @@ bool parse_expression(token_cursor_t* base_tc, token_type_t end_type, expression
       }
     }
     else if(tc.tk.type == end_type){
-      printf("\n");
-      printf(RED);
-      print_expression_array(&root);
-      printf(RESET_COLOR);
-      build_expression(tc.type_trie, &root);
-      result->type = EXP_VALUE_LITERAL;
-      result->value_literal.type = VAL_INT;
-      result->value_literal.i = 67;
+      pattern_trie_t* trie = (end_type == TK_TYPE)? tc.type_trie : tc.fn_trie;
+      if(!build_expression(trie, &root, result)){
+        return false;
+      }
       *base_tc = tc;
       return true;
     }
@@ -327,6 +327,7 @@ bool parse_type_declaration(token_cursor_t* base_tc, type_declaration_t* result)
   }
   tc_inc(&tc);
   if(tc.tk.type != TK_TYPE || !tc.tk.is_open){
+    throw_error(tc.error_manager, 5, tc.index);
     return false;
   }
   tc_inc(&tc);
@@ -336,25 +337,29 @@ bool parse_type_declaration(token_cursor_t* base_tc, type_declaration_t* result)
   }
 
   tc_inc(&tc);
-  if(tc.tk.type == TK_KEYWORD && tc.tk.keyword_id == 9){
+  if(tc.tk.type == TK_KEYWORD && tc.tk.keyword_id == 9){ //Handle "holds" keyword
     tc_inc(&tc);
     if(tc.tk.type == TK_NUMERIC){
-      if(tc.tk.number_type == NUM_FLOAT || tc.tk.number_type == NUM_SCI_FLOAT){
-        return false; //TODO: Throw error (non-integer size value)
+      if(tc.tk.number_type != NUM_FLOAT && tc.tk.number_type != NUM_SCI_FLOAT){
+        result->is_builtin = true;
+        result->byte_count = atoi(tc.tk.content);
+        *base_tc = tc;
+        return true;
       }
-      result->is_builtin = true;
-      result->byte_count = atoi(tc.tk.content);
-
-      return true;
+      throw_error(tc.error_manager, 9, tc.index);
+      return false;
     }
+    throw_error(tc.error_manager, 8, tc.index);
     return false;
   }
   result->is_builtin = false;
 
+  //Handle "is" and "has" keywords
   if(tc.tk.type != TK_KEYWORD || !(tc.tk.keyword_id == 1 || tc.tk.keyword_id == 2)){
+    throw_error(tc.error_manager, 7, tc.index);
     return false;
   }
-  result->is_is = (tc.tk.keyword_id == 1);
+  result->is_is = (tc.tk.keyword_id == 1); 
   tc_inc(&tc);
 
   result->is_enum = (tc.tk.type == TK_KEYWORD && tc.tk.keyword_id == 3);
@@ -388,6 +393,7 @@ bool parse_type_declaration(token_cursor_t* base_tc, type_declaration_t* result)
         return true;
       }
       else{
+        throw_error(tc.error_manager, 2, tc.index);
         return false;
       }
     }
@@ -398,18 +404,20 @@ bool parse_type_declaration(token_cursor_t* base_tc, type_declaration_t* result)
 
 void parse_tokens(token_cursor_t* tc){
   do{
+    type_declaration_t typedec;
     variable_declaration_t vardec;
-    if(parse_vardec(tc, &vardec)){
-      print_variable_declaration(&vardec);
-    }
-
-    type_declaration_t typedec ;
     if(parse_type_declaration(tc, &typedec)){
-      printf("\n");
-      print_type_declaration(&typedec);
       type_declaration_t* typedecptr = malloc(sizeof(type_declaration_t));
       *typedecptr = typedec;
       pattern_trie_push_type(tc->type_trie, typedecptr);
+    }
+    else if(parse_vardec(tc, &vardec)){
+      pattern_trie_push_variable(tc->fn_trie, &vardec);
+      print_variable_declaration(&vardec);
+      printf("\n");
+    }
+    else{
+      tc_inc(tc);
     }
 
     // type_identifier_t typeid;
@@ -420,5 +428,5 @@ void parse_tokens(token_cursor_t* tc){
     // if(parse_expression(tc, TK_ENDLINE, &exp)){
     //   printf(GREEN BOLD " EXP" RESET_COLOR);
     // }
-  }while(tc_inc(tc));
+  }while(tc->tk.type != TK_NONE);
 }

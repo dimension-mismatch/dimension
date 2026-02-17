@@ -32,6 +32,7 @@ typedef struct pattern_trie_node{
   pattern_entry_t pattern;
   hash_table_t next_parameters;
   hash_table_t next_identifiers;
+  hash_table_t next_pattern_types;
   int children_count;
   struct pattern_trie_node* children;
   int match_index;

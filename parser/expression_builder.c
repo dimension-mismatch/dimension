@@ -98,15 +98,26 @@ expression_t* construct_fn_call(match_t match){
   printf("\n");
   for(int i = 0; i < match.content->length; i++){
     curr = next;
-    if(match.content->fndec.match.entries[i].is_identifier){
-      destroy_expression(&curr->exp);
+    switch(match.content->fndec.match.entries[i].type){
+      case PATTERN_IDENTIFIER:
+        destroy_expression(&curr->exp);
+        break;
+      case PATTERN_VARIABLE: {
+        int new_c = ++fn_call.function_call.num_params;
+        fn_call.function_call.params = realloc(fn_call.function_call.params, new_c * sizeof(expression_t));
+        fn_call.function_call.params[new_c - 1] = curr->exp;
+        break;
+      }
+      case PATTERN_TYPE: {
+        int new_c = fn_call.function_call.num_params + curr->exp.type_literal->num_params;
+        fn_call.function_call.params = realloc(fn_call.function_call.params, new_c * sizeof(expression_t));
+        for (unsigned int i = fn_call.function_call.num_params, j = 0; i < new_c; i++, j++){
+          fn_call.function_call.params[i] = curr->exp.type_literal->params[j];
+        }        
+        fn_call.function_call.num_params = new_c;
+      }
+      break;
     }
-    else{
-      int new_c = ++fn_call.function_call.num_params;
-      fn_call.function_call.params = realloc(fn_call.function_call.params, new_c * sizeof(expression_t));
-      fn_call.function_call.params[new_c - 1] = curr->exp;
-    }
-
     next = curr->next;
     free(curr);
   }
@@ -139,15 +150,26 @@ expression_t* construct_type_call(match_t match){
   printf("\n");
   for(int i = 0; i < match.content->length; i++){
     curr = next;
-    if(match.content->typedec.match_pattern->entries[i].is_identifier){
-      destroy_expression(&curr->exp);
+    switch(match.content->typedec.match_pattern->entries[i].type){
+      case PATTERN_IDENTIFIER:
+        destroy_expression(&curr->exp);
+        break;
+      case PATTERN_VARIABLE:{
+        int new_c = ++type_id->num_params;
+        type_id->params = realloc(type_id->params, new_c * sizeof(expression_t));
+        type_id->params[new_c - 1] = curr->exp;
+        break;
+      }
+      case PATTERN_TYPE: {
+        int new_c = type_id->num_params + curr->exp.type_literal->num_params;
+        type_id->params = realloc(type_id->params, new_c * sizeof(expression_t));
+        for (unsigned int i = type_id->num_params, j = 0; i < new_c; i++, j++){
+          type_id->params[i] = curr->exp.type_literal->params[j];
+        }        
+        type_id->num_params = new_c;
+      }
+      break;
     }
-    else{
-      int new_c = ++type_id->num_params;
-      type_id->params = realloc(type_id->params, new_c * sizeof(expression_t));
-      type_id->params[new_c - 1] = curr->exp;
-    }
-
     next = curr->next;
     free(curr);
   }
@@ -163,15 +185,16 @@ expression_t* construct_type_call(match_t match){
 }
 
 expression_t* construct_variable_read(match_t match){
-  expression_t var_read = {.type = EXP_READ_VAR, .read_var_id = match.content->index};
+  expression_t var_read = {.type = EXP_READ_VAR, .read_var_id = match.content->index, .return_type = malloc(sizeof(type_identifier_t))};
+
+  copy_type_identifier(var_read.return_type, &match.content->vardec.type);
 
   expression_array_t* start = match.location;
-  expression_array_t* next = start->next;
+  expression_array_t* next = start->next->next;
   printf("Var Read: ");
   print_variable_declaration(&match.content->vardec);
   printf("\n");
-  destroy_expression(&match.location->exp);
-  free(match.location);
+  free(start->next);
   expression_array_t* new = malloc(sizeof(expression_array_t));
   start->next = new;
   new->prev = start;
@@ -223,16 +246,40 @@ expression_array_t* collapse_exp_array(pattern_trie_t* trie, expression_array_t*
       }
     }
     construct_match(best);
-    printf(YELLOW BOLD "Current Expression Array: \n" RESET_COLOR);
-    print_expression_array(start);
-    printf("\n");
   }
   return NULL;
 }
 
-expression_t* build_expression(pattern_trie_t* trie, expression_array_t* array){
+bool build_expression(pattern_trie_t* trie, expression_array_t* array, expression_t* result){
+  if (!array || !array->next){
+    return NULL;
+  }
   collapse_exp_array(trie, array);
-  return NULL;
+  expression_array_t* ptr = array->next;
+  unsigned int count = 0;
+  while(ptr){
+    count++;
+    if(ptr->exp.type == EXP_RAW_TOKEN){
+      printf(RED BOLD "Failed to match token \"%s\"" RESET_COLOR, ptr->exp.raw_token.content);
+      return false;
+    }
+    ptr = ptr->next;
+  }
+
+  if(count > 1){
+    result->type = EXP_VECTOR;
+    result->vector.num_params = count;
+    result->vector.params = malloc(count * sizeof(expression_t));
+    ptr = array->next;
+    for(int i = 0; i < count; i++){
+      result->vector.params[i] = ptr->exp;
+      ptr = ptr->next;
+    }
+  }
+  else{
+    *result = array->next->exp;
+  }
+  return true;
 }
 
 //[i] + [f] * [f] ^ [f]

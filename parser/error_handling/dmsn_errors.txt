@@ -7,3 +7,13 @@
 ~ in Dimension |@ Dimension must be a value of type [u] (Unsigned Integer)
 
 ~ in Type Identifier |@ Expected either asterisk ("*") or beginning of type label ("["), but found "#T"
+
+~ in Type Declaration |@ Expected type label in [Square Brackets] after "type" keyword, but instead found "#T"
+
+~ Empty Pattern |@ Pattern must contain at least one entry: either an identifier, parameter, or sub-pattern
+
+~ in Type Declaration |@ Expected either "is", "has", or "holds" keyword after type label, but instead found "#T"
+
+~ Missing Number |@ Expected an integer literal (e.g. "67"), but instead found "#T"
+
+~ Incorrect Number Type |@ Expected an integer value, but instead found floating point value "#T"

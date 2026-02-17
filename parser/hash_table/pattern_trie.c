@@ -51,13 +51,58 @@ bool type_identifier_compare(type_identifier_t* a, type_identifier_t* b){
   }
   return true;
 }
-bool pattern_entry_compare(pattern_entry_t* a, pattern_entry_t* b){
-  if(a->is_identifier != b->is_identifier){
+bool pattern_type_compare(pattern_type_t* a, pattern_type_t* b);
+
+bool pattern_value_compare(pattern_value_t* a, pattern_value_t* b){
+  if(a->is_param != b->is_param){
+    return false;
+  }
+  if(a->is_param){
+    return pattern_type_compare(a->param, b->param);
+  }
+  else{
+    return compare_expressions(a->base_value, b->base_value);
+  }
+}
+bool pattern_type_compare(pattern_type_t* a, pattern_type_t* b){
+  if(a->is_param != b->is_param){
     return false;
   }
 
-  if(a->is_identifier){
+  if(a->dimension_count != b->dimension_count){
+    return false;
+  }
+  
+  if(!a->is_param && a->param_count != b->param_count){
+    return false;
+  }
+  for(int i = 0; i < a->dimension_count; i++){
+    if(!pattern_value_compare(a->dimensions + i, b->dimensions + i)){
+      return false;
+    }
+  }
+  if(a->is_param){
+    return true;
+  }
+  for(int i = 0; i < a->param_count; i++){
+    if(!pattern_value_compare(a->parameters + i, b->parameters + i)){
+      return false;
+    }
+  }
+  return true;
+
+}
+bool pattern_entry_compare(pattern_entry_t* a, pattern_entry_t* b){
+  if(a->type != b->type){
+    return false;
+  }
+
+  if(a->type == PATTERN_IDENTIFIER){
     return !strcmp(a->identifier, b->identifier);
+  }
+
+  if(a->type == PATTERN_TYPE){
+    return pattern_type_compare(&a->pattern_type, &b->pattern_type);
   }
  
   if(a->variable.constant_lvl != b->variable.constant_lvl){
@@ -71,47 +116,7 @@ bool pattern_entry_compare(pattern_entry_t* a, pattern_entry_t* b){
   }
   pattern_type_t* a_type = &a->variable.type;
   pattern_type_t* b_type = &b->variable.type;
-
-  if(a_type->base_type_id != b_type->base_type_id){
-    return false;
-  }
-
-  if(a_type->dimension_count != b_type->dimension_count){
-    return false;
-  }
-
-  if(a_type->param_count != b_type->param_count){
-    return false;
-  }
-  for(int i = 0; i < a_type->dimension_count; i++){
-    if(a_type->dimensions[i].is_param != b_type->dimensions[i].is_param){
-      return false;
-    }
-
-    if(!a_type->dimensions[i].is_param){
-      if(!compare_expressions(a_type->dimensions[i].base_value, b_type->dimensions[i].base_value)){
-        return false;
-      }
-    }
-  }
-
-  for(int i = 0; i < a_type->param_count; i++){
-    if(a_type->parameters[i].is_param != b_type->parameters[i].is_param){
-      return false;
-    }
-    if(a_type->parameters[i].is_param){
-      if(!type_identifier_compare(&a_type->parameters[i].param_value, &b_type->parameters[i].param_value)){
-        return false;
-      }
-    }
-    else{
-      if(!compare_expressions(a_type->parameters[i].base_value, b_type->parameters[i].base_value)){
-        return false;
-      }
-    }
-    
-  }
-  return true;
+  return pattern_type_compare(a_type, b_type);
 }
 
 
@@ -146,7 +151,7 @@ bool test_pattern_type(pattern_type_t* test, type_identifier_t* subject){
 }
 
 pattern_trie_node_t trie_node_init(){
-  pattern_trie_node_t new = {{.is_identifier = true, .identifier = NULL}, init_hash_table(67, 0.9), init_hash_table(67, 0.9), 0, NULL, NO_MATCH, 0};
+  pattern_trie_node_t new = {{.type = PATTERN_IDENTIFIER, .identifier = NULL}, init_hash_table(67, 0.9), init_hash_table(67, 0.9), init_hash_table(67, 0.9), 0, NULL, NO_MATCH, 0};
   return new;
 }
 
@@ -161,29 +166,35 @@ pattern_trie_node_t* pattern_trie_node_match_pattern(pattern_trie_node_t* node, 
   while(*entry_index < pattern->entry_count){
     pattern_entry_t entry = pattern->entries[*entry_index];
     int* child_index = NULL;
-    if(entry.is_identifier){
-      child_index = get_value_from_key(&node->next_identifiers, entry.identifier);
-    }
-    else{
-      if(entry.variable.type.is_param){
-        
-      }
-      else{
-        int* match_index = get_value_from_int(&node->next_parameters, entry.variable.type.base_type_id);
-        if(match_index == NULL){
-          return node;
+
+    switch(entry.type){
+      case PATTERN_IDENTIFIER:
+        child_index = get_value_from_key(&node->next_identifiers, entry.identifier);
+        break;
+      case PATTERN_VARIABLE:
+        if(entry.variable.type.is_param){
+          
         }
-        possible_type_matches_t possible_indices = node->type_matches[*match_index];
-        child_index = NULL;
-        printf(GREEN "%i possibilities" RESET_COLOR, possible_indices.num_possibilities);
-        for(int i = 0; i < possible_indices.num_possibilities; i++){
-          pattern_entry_t* compareto = &node->children[possible_indices.possible_matches[i]].pattern;
-          if(pattern_entry_compare(compareto, &entry)){
-            child_index = &possible_indices.possible_matches[i];
-            break;
+        else{
+          int* match_index = get_value_from_int(&node->next_parameters, entry.variable.type.base_type_id);
+          if(match_index == NULL){
+            return node;
+          }
+          possible_type_matches_t possible_indices = node->type_matches[*match_index];
+          child_index = NULL;
+          printf(GREEN "%i possibilities" RESET_COLOR, possible_indices.num_possibilities);
+          for(int i = 0; i < possible_indices.num_possibilities; i++){
+            pattern_entry_t* compareto = &node->children[possible_indices.possible_matches[i]].pattern;
+            if(pattern_entry_compare(compareto, &entry)){
+              child_index = &possible_indices.possible_matches[i];
+              break;
+            }
           }
         }
-      }
+        break;
+      case PATTERN_TYPE:
+
+      break;
     }
     if(child_index == NULL){
       return node;
@@ -202,32 +213,37 @@ void pattern_trie_node_push_pattern(pattern_trie_node_t** root, pattern_t* patte
   }
   while(entry_index < pattern->entry_count){
     pattern_entry_t* entry = pattern->entries + entry_index;
-    if(entry->is_identifier){
-      push_key_value(&node->next_identifiers, entry->identifier, node->children_count);
-    }
-    else{
-      if(entry->variable.type.is_param){
+    switch(entry->type){
+      case PATTERN_IDENTIFIER:
+        push_key_value(&node->next_identifiers, entry->identifier, node->children_count);
+        break;
+      case PATTERN_VARIABLE:
+        if(entry->variable.type.is_param){
 
-      }
-      else{
-        int* mip = get_value_from_int(&node->next_parameters, entry->variable.type.base_type_id);
-        int match_index;
-        if(mip == NULL){
-          int len = node->next_parameters.key_count;
-          node->type_matches = realloc(node->type_matches, (len + 1) * sizeof(possible_type_matches_t));
-          possible_type_matches_t new = {.num_possibilities = 0,.possible_matches = NULL};
-          node->type_matches[len] = new;
-          match_index = len; 
-          push_int_value(&node->next_parameters, entry->variable.type.base_type_id, match_index);
         }
         else{
-          match_index = *mip;
+          int* mip = get_value_from_int(&node->next_parameters, entry->variable.type.base_type_id);
+          int match_index;
+          if(mip == NULL){
+            int len = node->next_parameters.key_count;
+            node->type_matches = realloc(node->type_matches, (len + 1) * sizeof(possible_type_matches_t));
+            possible_type_matches_t new = {.num_possibilities = 0,.possible_matches = NULL};
+            node->type_matches[len] = new;
+            match_index = len; 
+            push_int_value(&node->next_parameters, entry->variable.type.base_type_id, match_index);
+          }
+          else{
+            match_index = *mip;
+          }
+          possible_type_matches_t* possible_indices = node->type_matches + match_index;
+          possible_indices->num_possibilities++;
+          possible_indices->possible_matches = realloc(possible_indices->possible_matches, possible_indices->num_possibilities * sizeof(int));
+          possible_indices->possible_matches[possible_indices->num_possibilities - 1] = node->children_count;
         }
-        possible_type_matches_t* possible_indices = node->type_matches + match_index;
-        possible_indices->num_possibilities++;
-        possible_indices->possible_matches = realloc(possible_indices->possible_matches, possible_indices->num_possibilities * sizeof(int));
-        possible_indices->possible_matches[possible_indices->num_possibilities - 1] = node->children_count;
-      }
+        break;
+      case PATTERN_TYPE:
+
+        break;
     }
     node->children_count++;
     node->children = realloc(node->children, node->children_count * sizeof(pattern_trie_node_t));
@@ -261,8 +277,9 @@ void pattern_trie_push_type(pattern_trie_t *trie, type_declaration_t *type){
 }
 
 void pattern_trie_push_variable(pattern_trie_t* trie, variable_declaration_t* var){
-  pattern_entry_t entry = {.is_identifier = true, .identifier = var->var_name};
+  pattern_entry_t entry = {.type = PATTERN_IDENTIFIER, .identifier = var->var_name};
   pattern_t pattern = {.entries = &entry, .entry_count = 1};
+
   pattern_trie_node_push_pattern(&trie->root, &pattern, trie->match_count);
   trie->match_count++;
   trie->matches = realloc(trie->matches, trie->match_count * sizeof(trie_match_result_t));
@@ -302,7 +319,7 @@ void print_trie_node(pattern_trie_node_t* node, int indent, int** levels){
     return;
   }
   *levels = realloc(*levels, (indent + 1) * sizeof(int));
-  (*levels)[indent] = (indent > 0? 3 : 1) + (node->pattern.is_identifier? (node->pattern.identifier? (2 + strlen(node->pattern.identifier)) : 8) : (4 + node->pattern.variable.constant_lvl));
+  (*levels)[indent] = (indent > 0? 3 : 1) + (node->pattern.type == PATTERN_IDENTIFIER? (node->pattern.identifier? (2 + strlen(node->pattern.identifier)) : 8) : (4 + node->pattern.variable.constant_lvl));
   printf(" ═> ");
   print_trie_node(node->children, indent + 1, levels);
   printf("\n");

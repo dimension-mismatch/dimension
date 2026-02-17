@@ -41,7 +41,10 @@ int main(int argc, char* argv[]){
   token_cursor_t tc = tc_init(all_tokens, &fn_trie, &type_trie, &errors);
   parse_tokens(&tc);
 
+  printf(MAGENTA BOLD "\nType Trie:\n" RESET_COLOR);
   print_pattern_trie(&type_trie);
+  printf(MAGENTA BOLD "\nFunction Trie:\n" RESET_COLOR);
+  print_pattern_trie(&fn_trie);
 
   printf("\n");
 

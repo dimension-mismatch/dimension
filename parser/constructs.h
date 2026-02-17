@@ -5,6 +5,7 @@
 struct type_identifier;
 struct variable_declaration;
 struct pattern;
+struct pattern_type;
 
 typedef enum expression_type{
   EXP_TYPE_LITERAL,
@@ -96,7 +97,7 @@ typedef struct pattern_value{
   bool is_param;
   union{
     expression_t* base_value;
-    type_identifier_t param_value;
+    struct pattern_type* param;
   };
 }pattern_value_t;
 
@@ -123,11 +124,18 @@ typedef struct pattern_variable{
   pattern_type_t type;
 }pattern_variable_t;
 
+typedef enum pattern_entry_type{
+  PATTERN_VARIABLE,
+  PATTERN_IDENTIFIER,
+  PATTERN_TYPE
+} pattern_entry_type_t;
+
 typedef struct pattern_entry{
-  bool is_identifier;
+  pattern_entry_type_t type;
   union{
     pattern_variable_t variable;
     char* identifier;
+    pattern_type_t pattern_type;
   };
 }pattern_entry_t;
 
