@@ -61,13 +61,16 @@ typedef struct block{
   expression_t* lines;
 }block_t;
 
+typedef struct dimension_array{
+  unsigned int dimension_count;
+  expression_t* dimensions;
+}dimension_array_t;
 
 typedef struct type_identifier{
   int type_id;
   int num_params;
   expression_t* params;
-  int dimension_count;
-  expression_t* dimensions;
+  dimension_array_t dimensions;
 }type_identifier_t;
 
 
@@ -101,6 +104,10 @@ typedef struct pattern_value{
   };
 }pattern_value_t;
 
+typedef struct pattern_dimension_array{
+  unsigned int dimension_count;
+  pattern_value_t* dimensions;
+}pattern_dimension_array_t;
 
 typedef struct pattern_type{
   bool is_param;
@@ -112,10 +119,7 @@ typedef struct pattern_type{
     };
     type_identifier_t param_type;
   };
-  int dimension_count;
-  pattern_value_t* dimensions;
-
-  
+  pattern_dimension_array_t dimensions;
 }pattern_type_t;
 
 

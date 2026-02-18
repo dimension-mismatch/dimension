@@ -1,13 +1,11 @@
 type [i] holds 8;
-type [j (val ::: [i])] holds 4;
+type [j (val ::: (2)*[i])] holds 4;
 
 type [k [i]] holds 6;
 
-my_int : [i];
+my_int : 2[i];
 
 my_var : [j(my_int)];
-
-
 
 
 

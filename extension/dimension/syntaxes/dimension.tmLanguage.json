@@ -13,7 +13,7 @@
 	],
 	"repository": {
 		"keywords" : {
-			"match" : "fn|makes|does|priority|type|is|oneof|return",
+			"match" : "fn|makes|does|priority|type|is|has|holds|oneof|return",
 			"name" : "keyword.control.dmsn"
 		},
 		"function_definition" : {
@@ -65,7 +65,7 @@
 			"patterns" : [
 				{"include":  "#dimensioned_type"},
 				{"include": "#type"},
-				{"match": "is", "name": "keyword.control"},
+				{"match": "is|has|holds", "name": "keyword.control"},
 				{"match": "oneof", "name": "keyword.control"},
 				{"include":  "#parameter_list"}
 			]

@@ -21,7 +21,3 @@ void tc_update(token_cursor_t *tc);
 bool tc_inc(token_cursor_t *tc);
 
 bool tc_is_asterisk(token_cursor_t *tc);
-
-expression_t* add_dimension(type_identifier_t *typeid);
-
-void pattern_push_entry(pattern_t *pattern, pattern_entry_t entry);

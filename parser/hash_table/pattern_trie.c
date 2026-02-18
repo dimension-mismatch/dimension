@@ -29,18 +29,19 @@ bool compare_expressions(expression_t* a, expression_t* b){
   }
 }
 
+
 bool type_identifier_compare(type_identifier_t* a, type_identifier_t* b){
   if(a->type_id != b->type_id){
     return false;
   }
-  if(a->dimension_count != b->dimension_count){
+  if(a->dimensions.dimension_count != b->dimensions.dimension_count){
     return false;
   }
   if(a->num_params != b->num_params){
     return false;
   }
-  for(int i = 0; i < a->dimension_count; i++){
-    if(!compare_expressions(a->dimensions + i, b->dimensions + i)){
+  for(int i = 0; i < a->dimensions.dimension_count; i++){
+    if(!compare_expressions(a->dimensions.dimensions + i, b->dimensions.dimensions + i)){
       return false;
     }
   }
@@ -69,15 +70,15 @@ bool pattern_type_compare(pattern_type_t* a, pattern_type_t* b){
     return false;
   }
 
-  if(a->dimension_count != b->dimension_count){
+  if(a->dimensions.dimension_count != b->dimensions.dimension_count){
     return false;
   }
   
   if(!a->is_param && a->param_count != b->param_count){
     return false;
   }
-  for(int i = 0; i < a->dimension_count; i++){
-    if(!pattern_value_compare(a->dimensions + i, b->dimensions + i)){
+  for(int i = 0; i < a->dimensions.dimension_count; i++){
+    if(!pattern_value_compare(a->dimensions.dimensions + i, b->dimensions.dimensions + i)){
       return false;
     }
   }
@@ -127,15 +128,15 @@ bool test_pattern_type(pattern_type_t* test, type_identifier_t* subject){
   if(test->base_type_id != subject->type_id){
     return false;
   }
-  if(test->dimension_count != subject->dimension_count){
+  if(test->dimensions.dimension_count != subject->dimensions.dimension_count){
     return false; //TODO: handle multiplicity 
   }
   if(test->param_count != subject->num_params){
     return false; //shouldn't ever get here
   }
-  for(int i = 0; i < test->dimension_count; i++){
-    if(!test->dimensions[i].is_param){
-      if(!compare_expressions(test->dimensions[i].base_value, subject->dimensions + i)){
+  for(int i = 0; i < test->dimensions.dimension_count; i++){
+    if(!test->dimensions.dimensions[i].is_param){
+      if(!compare_expressions(test->dimensions.dimensions[i].base_value, subject->dimensions.dimensions + i)){
         return false;
       }
     }

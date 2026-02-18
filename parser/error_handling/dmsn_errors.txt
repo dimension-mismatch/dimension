@@ -17,3 +17,7 @@
 ~ Missing Number |@ Expected an integer literal (e.g. "67"), but instead found "#T"
 
 ~ Incorrect Number Type |@ Expected an integer value, but instead found floating point value "#T"
+
+~ in Pattern Parameter |@ Dimension parameter must be unsigned integer
+
+~ in Pattern Parameter |@ Pattern Parameters must be knowable at compile time,  super-constant ":::" required

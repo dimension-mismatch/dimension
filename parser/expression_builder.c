@@ -51,6 +51,7 @@ int* node_match_expression_array(pattern_trie_node_t* node, expression_array_t* 
       //TODO : handle null typeid as the 'type' type;
       return NULL;
     }
+    
     int* type_index = get_value_from_int(&node->next_parameters, array->exp.return_type->type_id);
     if(type_index == NULL){
       //no pattern has any form of this type at this position
@@ -136,8 +137,8 @@ expression_t* construct_type_call(match_t match){
   expression_t type_call = {.type = EXP_TYPE_LITERAL};
   type_identifier_t* type_id = malloc(sizeof(type_identifier_t));
   type_call.type_literal = type_id;
-  type_id->dimension_count = 0;
-  type_id->dimensions = NULL;
+  type_id->dimensions.dimension_count = 0;
+  type_id->dimensions.dimensions = NULL;
   type_id->num_params = 0;
   type_id->params = NULL;
   type_id->type_id = match.content->index; //TODO generate actual function ids

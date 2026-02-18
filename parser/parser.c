@@ -14,10 +14,8 @@ bool parse_expression(token_cursor_t* base_tc, token_type_t end_type, expression
 
 //* 2
 bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
-  result->dimension_count = 0;
-  result->dimensions = NULL;
   token_cursor_t tc = *base_tc;
-
+  dimension_array_t dimensions = {.dimension_count = 0, .dimensions = NULL};
   while(true){
     if(tc.tk.type == TK_TYPE && tc.tk.is_open){
       // we've reached the end of the dimensions, move on to the type itself
@@ -25,14 +23,14 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
     }
     else if(tc.tk.type == TK_VECTOR){
       tc_inc(&tc);
-      if(!parse_expression(&tc, TK_VECTOR, add_dimension(result))){
+      if(!parse_expression(&tc, TK_VECTOR, add_dimension(&dimensions))){
         return false;
       }
       tc_inc(&tc);
       continue;
     }
     else if(tc.tk.type == TK_IDENTIFIER){
-      expression_t* new = add_dimension(result);
+      expression_t* new = add_dimension(&dimensions);
       
       //found a variable
     }
@@ -41,7 +39,7 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
         throw_error(tc.error_manager, 3, tc.index);
         return false;
       }
-      expression_t* new = add_dimension(result);
+      expression_t* new = add_dimension(&dimensions);
       new->type = EXP_VALUE_LITERAL;
       new->value_literal.type = VAL_UNSIGNED;
       new->value_literal.u = atoi(tc.tk.content);
@@ -66,7 +64,7 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
     }
   }
   tc_inc(&tc);
-
+  result->dimensions = dimensions;
   //read the contents of the [square brackets] to get the type expression
   expression_t contents;
   if(!parse_expression(&tc, TK_TYPE, &contents)){
@@ -76,8 +74,9 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
     throw_error(tc.error_manager, 2, tc.index);
     return false;
   }
-  *result = *(contents.type_literal);
-  
+  result->type_id = contents.type_literal->type_id;
+  result->num_params = contents.type_literal->num_params;
+  result->params = contents.type_literal->params;
   tc_inc(&tc);
 
   *base_tc = tc;
@@ -104,8 +103,6 @@ bool parse_vardec(token_cursor_t* base_tc, variable_declaration_t* result){
   result->var_name = malloc((1 + strlen(name) * sizeof(char)));
   strcpy(result->var_name, name);
 
-
-  tc_inc(&tc);
   *base_tc = tc;
   return true;
 
@@ -113,32 +110,63 @@ bool parse_vardec(token_cursor_t* base_tc, variable_declaration_t* result){
 
 //* 5
 bool parse_pattern_type(token_cursor_t* base_tc, pattern_type_t* result){
-  result->dimension_count = 0;
-  result->dimensions = NULL;
+  result->dimensions.dimension_count = 0;
+  result->dimensions.dimensions = NULL;
   result->param_count = 0;
   result->parameters = NULL;
   result->base_type_id = 0;
+  result->is_param = true;
   token_cursor_t tc = *base_tc;
+  pattern_dimension_array_t dimensions = {.dimension_count = 0, .dimensions = NULL};
   //read dimensions for this type
   while(true){
+    
     //dimensions may be defined with an expression or declared as a pattern variable
     if(tc.tk.type == TK_VECTOR && tc.tk.is_open){
       variable_declaration_t vardec;
-      expression_t exp;
+      expression_t* exp = malloc(sizeof(expression_t));
       tc_inc(&tc);
+      
+      
       //try reading a pattern variable
       if(parse_vardec(&tc, &vardec)){
+        printf(BLUE BOLD);
+        print_token(&tc.tk);
+        printf(RESET_COLOR);
         tc_inc(&tc);
         if(!tc_is_asterisk(&tc)){
           //if we found a variable declaration but no asterisk then this is a dimensionless pattern type
           //e.g. variable :: (t ::: [t])
+          result->is_param = true;
           *base_tc = tc;
           return true;
         }
+        if(vardec.type.dimensions.dimension_count > 0){
+          throw_error(tc.error_manager, 10, tc.index);
+          return false;
+        }
+        if(vardec.type.num_params > 0){
+          throw_error(tc.error_manager, 10, tc.index);
+          return false;
+        }
+        if(vardec.constant_lvl != 2){
+          throw_error(tc.error_manager, 11, tc.index);
+          return false;
+        }
+        pattern_value_t* value = add_pattern_dimension(&dimensions);
+        value->is_param = true;
+        pattern_type_t ptype = {.is_param = true, .dimensions = {.dimension_count = 0, .dimensions = NULL}, .param_count = 0, .parameters = NULL};
+        ptype.base_type_id = vardec.type.type_id;
+        
+        value->param = malloc(sizeof(pattern_type_t));
+        *value->param = ptype;
+        
       }
       //if that fails, try reading an expression
-      else if(parse_expression(&tc, TK_VECTOR, &exp)){
-
+      else if(parse_expression(&tc, TK_VECTOR, exp)){
+        pattern_value_t* value = add_pattern_dimension(&dimensions);
+        value->is_param = false;
+        value->base_value = exp;
       }
       else{
         //not an expression or pattern variable, throw an error!!
@@ -159,7 +187,7 @@ bool parse_pattern_type(token_cursor_t* base_tc, pattern_type_t* result){
     tc_inc(&tc);
   }
 
-  
+  result->dimensions = dimensions;
   
   if(tc.tk.type == TK_VECTOR && tc.tk.is_open){
     tc_inc(&tc);
@@ -177,8 +205,10 @@ bool parse_pattern_type(token_cursor_t* base_tc, pattern_type_t* result){
     if(!parse_expression(&tc, TK_TYPE, &exp)){
       return false;
     }
+    if(exp.type != EXP_TYPE_LITERAL){
+      return false;
+    }
     result->is_param = false;
-    
     //found a type literal
   }
   else{
@@ -279,9 +309,41 @@ bool parse_expression(token_cursor_t* base_tc, token_type_t end_type, expression
  
   while(true){
     expression_t new;
-    if(tc.tk.type == TK_IDENTIFIER || tc.tk.type == TK_NUMERIC || tc.tk.type == TK_CHAR || tc.tk.type == TK_STRING || tc.tk.type == TK_FORCE_EXP_END){
+    if(tc.tk.type == TK_IDENTIFIER || tc.tk.type == TK_FORCE_EXP_END){
       expression_t exp = {.type = EXP_RAW_TOKEN, .raw_token = tc.tk};
       new = exp;
+    }
+    else if(tc.tk.type == TK_NUMERIC || tc.tk.type == TK_CHAR || tc.tk.type == TK_STRING){
+      new.type = EXP_VALUE_LITERAL;
+      new.return_type = NULL;
+      switch(tc.tk.type){
+        case TK_NUMERIC:
+          switch(tc.tk.number_type){
+            case NUM_BINARY_INT:
+            case NUM_DECIMAL_INT:
+            case NUM_HEX_INT:
+            case NUM_OCTAL_INT:
+              new.value_literal.type = VAL_UNSIGNED;
+              new.value_literal.u = 6769420;
+              break;
+            case NUM_FLOAT:
+            case NUM_SCI_FLOAT:
+              new.value_literal.type = VAL_FLOAT;
+              new.value_literal.f = 6.7;
+              break;
+          }
+        break;
+        case TK_CHAR:
+          new.value_literal.type = VAL_CHAR;
+          new.value_literal.c = tc.tk.content[0];
+        break;
+        case TK_STRING:
+          new.value_literal.type = VAL_STRING;
+          strcpy(new.value_literal.s, tc.tk.content);
+        break;
+        default:
+        break;
+      }
     }
     else if(tc.tk.type == TK_VECTOR && tc.tk.is_open){
       tc_inc(&tc);
@@ -409,6 +471,7 @@ void parse_tokens(token_cursor_t* tc){
     if(parse_type_declaration(tc, &typedec)){
       type_declaration_t* typedecptr = malloc(sizeof(type_declaration_t));
       *typedecptr = typedec;
+      print_type_declaration(typedecptr);
       pattern_trie_push_type(tc->type_trie, typedecptr);
     }
     else if(parse_vardec(tc, &vardec)){
