@@ -49,6 +49,8 @@ typedef struct{
 
 bool test_pattern_type(pattern_type_t *test, type_identifier_t *subject);
 
+trie_match_result_t* pattern_trie_validate_pattern(pattern_trie_t* trie, pattern_t* pattern);
+
 pattern_trie_t pattern_trie_init();
 
 void pattern_trie_push_type(pattern_trie_t* trie,  type_declaration_t* type);

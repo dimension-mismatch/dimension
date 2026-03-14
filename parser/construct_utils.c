@@ -79,7 +79,6 @@ void print_dimension_array(dimension_array_t* array){
 
 void print_type_identifier(type_identifier_t* type){
   if(!type) return;
-  printf(GREEN "TYPE" RESET_COLOR);
   print_dimension_array(&type->dimensions);
   printf("[" GREEN BOLD "#%i" RESET_COLOR, type->type_id);
   if(type->num_params > 0){

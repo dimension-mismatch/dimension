@@ -15,6 +15,7 @@ bool compare_expressions(expression_t* a, expression_t* b){
   if(a->value_literal.type != b->value_literal.type){
     return false;
   }
+  return true;
   switch(a->value_literal.type){
     case VAL_CHAR:
       return a->value_literal.c == b->value_literal.c;
@@ -205,6 +206,20 @@ pattern_trie_node_t* pattern_trie_node_match_pattern(pattern_trie_node_t* node, 
   }
   return node;
 }
+
+trie_match_result_t* pattern_trie_validate_pattern(pattern_trie_t* trie, pattern_t* pattern){
+  int entry_index = 0;
+  pattern_trie_node_t* node = pattern_trie_node_match_pattern(trie->root, pattern, &entry_index);
+  if(entry_index < pattern->entry_count){
+    return NULL;
+  }
+  if(node->match_index == NO_MATCH){
+    return NULL;
+  }
+  return trie->matches + node->match_index;
+}
+
+
 
 void pattern_trie_node_push_pattern(pattern_trie_node_t** root, pattern_t* pattern, int result_id){
   int entry_index = 0;

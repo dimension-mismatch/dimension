@@ -21,3 +21,11 @@
 ~ in Pattern Parameter |@ Dimension parameter must be unsigned integer
 
 ~ in Pattern Parameter |@ Pattern Parameters must be knowable at compile time,  super-constant ":::" required
+
+~ in Function Declaration |@ Expected a "makes", "does", or "priority" statement, but found "#T"
+
+~ in Function Declaration |@ Duplicate 'makes' statement. Functions may only make one type
+
+~ in Function Declaration |@ Duplicate 'priority' statement. Functions may only have one priority
+
+~ in Function Declaration |@ Duplicate 'does' clause. Functions may only do one thing
