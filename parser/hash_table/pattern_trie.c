@@ -153,7 +153,17 @@ bool test_pattern_type(pattern_type_t* test, type_identifier_t* subject){
 }
 
 pattern_trie_node_t trie_node_init(){
-  pattern_trie_node_t new = {{.type = PATTERN_IDENTIFIER, .identifier = NULL}, init_hash_table(67, 0.9), init_hash_table(67, 0.9), init_hash_table(67, 0.9), 0, NULL, NO_MATCH, 0};
+  pattern_trie_node_t new = {
+    .pattern = {.type = PATTERN_IDENTIFIER, .identifier = NULL}, 
+    .next_identifiers = init_hash_table(67, 0.9), 
+    .next_parameters =  init_hash_table(67, 0.9), 
+    .next_pattern_types = init_hash_table(67, 0.9), 
+    .children_count = 0, 
+    .children = NULL, 
+    .match_index = NO_MATCH, 
+    .max_child_priority = 0,
+    .num_matches = 0,
+    .type_matches = NULL};
   return new;
 }
 
@@ -175,28 +185,28 @@ pattern_trie_node_t* pattern_trie_node_match_pattern(pattern_trie_node_t* node, 
         break;
       case PATTERN_VARIABLE:
         if(entry.variable.type.is_param){
-          
+          break;
         }
-        else{
-          int* match_index = get_value_from_int(&node->next_parameters, entry.variable.type.base_type_id);
-          if(match_index == NULL){
-            return node;
-          }
-          possible_type_matches_t possible_indices = node->type_matches[*match_index];
-          child_index = NULL;
-          printf(GREEN "%i possibilities" RESET_COLOR, possible_indices.num_possibilities);
-          for(int i = 0; i < possible_indices.num_possibilities; i++){
-            pattern_entry_t* compareto = &node->children[possible_indices.possible_matches[i]].pattern;
-            if(pattern_entry_compare(compareto, &entry)){
-              child_index = &possible_indices.possible_matches[i];
-              break;
-            }
-          }
-        }
-        break;
-      case PATTERN_TYPE:
+        //Fall through is intentional here, both pattern types and variables need to compare to existing possibilities
+      case PATTERN_TYPE: {
+        int* match_index = (entry.type == PATTERN_TYPE)? 
+        get_value_from_int(&node->next_pattern_types, entry.pattern_type.base_type_id):
+        get_value_from_int(&node->next_parameters, entry.variable.type.base_type_id);
 
-      break;
+        if(match_index == NULL){
+          return node;
+        }
+        possible_type_matches_t possible_indices = node->type_matches[*match_index];
+        child_index = NULL;
+        printf(GREEN "%i possibilities" RESET_COLOR, possible_indices.num_possibilities);
+        for(int i = 0; i < possible_indices.num_possibilities; i++){
+          pattern_entry_t* compareto = &node->children[possible_indices.possible_matches[i]].pattern;
+          if(pattern_entry_compare(compareto, &entry)){
+            child_index = &possible_indices.possible_matches[i];
+            break;
+          }
+        }
+      }
     }
     if(child_index == NULL){
       return node;
@@ -235,42 +245,43 @@ void pattern_trie_node_push_pattern(pattern_trie_node_t** root, pattern_t* patte
         break;
       case PATTERN_VARIABLE:
         if(entry->variable.type.is_param){
-
+          break;
         }
-        else{
-          int* mip = get_value_from_int(&node->next_parameters, entry->variable.type.base_type_id);
-          int match_index;
-          if(mip == NULL){
-            int len = node->next_parameters.key_count;
-            node->type_matches = realloc(node->type_matches, (len + 1) * sizeof(possible_type_matches_t));
-            possible_type_matches_t new = {.num_possibilities = 0,.possible_matches = NULL};
-            node->type_matches[len] = new;
-            match_index = len; 
-            push_int_value(&node->next_parameters, entry->variable.type.base_type_id, match_index);
+      //Fall through to handle the type of this variable as a pattern type
+      case PATTERN_TYPE: {
+        
+        int* mip = entry->type == PATTERN_TYPE?
+        get_value_from_int(&node->next_pattern_types, entry->pattern_type.base_type_id):
+        get_value_from_int(&node->next_parameters, entry->variable.type.base_type_id);
+        int match_index;
+        if(mip == NULL){
+          node->num_matches++;
+          printf("num matches: %i", node->num_matches);
+          node->type_matches = realloc(node->type_matches, (node->num_matches) * sizeof(possible_type_matches_t));
+          possible_type_matches_t new = {.num_possibilities = 0,.possible_matches = NULL};
+          node->type_matches[node->num_matches - 1] = new;
+          match_index = node->num_matches - 1; 
+          if(entry->type == PATTERN_TYPE){
+            push_int_value(&node->next_pattern_types, entry->pattern_type.base_type_id, match_index);
           }
           else{
-            match_index = *mip;
+            push_int_value(&node->next_parameters, entry->variable.type.base_type_id, match_index);
           }
-          possible_type_matches_t* possible_indices = node->type_matches + match_index;
-          possible_indices->num_possibilities++;
-          possible_indices->possible_matches = realloc(possible_indices->possible_matches, possible_indices->num_possibilities * sizeof(int));
-          possible_indices->possible_matches[possible_indices->num_possibilities - 1] = node->children_count;
         }
+        else{
+          match_index = *mip;
+        }
+        possible_type_matches_t* possible_indices = node->type_matches + match_index;
+        possible_indices->num_possibilities++;
+        possible_indices->possible_matches = realloc(possible_indices->possible_matches, possible_indices->num_possibilities * sizeof(int));
+        possible_indices->possible_matches[possible_indices->num_possibilities - 1] = node->children_count;
         break;
-      case PATTERN_TYPE:
-
-        break;
+      }
     }
     node->children_count++;
     node->children = realloc(node->children, node->children_count * sizeof(pattern_trie_node_t));
     pattern_trie_node_t* new_node = node->children + node->children_count - 1;
-    new_node->children = NULL;
-    new_node->children_count = 0;
-    new_node->match_index = NO_MATCH;
-    new_node->max_child_priority = 0;
-    new_node->next_identifiers = init_hash_table(67, 0.9);
-    new_node->next_parameters = init_hash_table(67, 0.9);
-    new_node->type_matches = NULL;
+    *new_node = trie_node_init();
     copy_pattern_entry(&new_node->pattern, pattern->entries + entry_index);
    
     

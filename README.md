@@ -57,7 +57,7 @@ Variables are declared with `{name} : [type]` and are mutable by default. Immuta
 ```
 
 ## Vector Literals
-Assigning a value to a variable can be done by putting data in `(` `)` brackets. Data members can be separated by either spaces or commas.
+Assigning a value to a variable can be done by putting data in `(` `)` brackets. Data members can be separated by either spaces or commas. 
 ```Dimension
   point : 2[f] = (5.4, -6.3);
 
@@ -70,26 +70,26 @@ Assigning a value to a variable can be done by putting data in `(` `)` brackets.
 ## Vector Indexing
 Vector data types in Dimension can be indexed into using `@xyzw` notation. Similarly to GLSL, these letter indices can be chained together to create new vectors:
 ```Dimension
- my_vector : 3[i] = (3 7 -1);
+ my_vector : 3[i] = (3, 7, -1);
 
  my_vector@x; //3
 
- my_vector@yz; // (7 -1)  
+ my_vector@yz; // (7, -1)  
 
- my_vector@zyx; //(-1 7 3);
+ my_vector@zyx; //(-1, 7, 3);
 
  my_vector@w; //undefined behavior, probably garbage data of some kind
 
 ```
 These predefined indices only give access to the first four components of vectors, but any components can be retrieved using the `@` function: 
 ```Dimension
- my_vector : 3[i] = (3 7 -1);
+ my_vector : 3[i] = (3, 7, -1);
 
  my_vector@0; //3
 
- my_vector@(1 2); // (7 -1)  
+ my_vector@(1 2); // (7, -1)  
 
- my_vector@(2 1 0); //(-1 7 3);
+ my_vector@(2 1 0); //(-1, 7, 3);
 
  my_vector@(3); //undefined behavior, probably garbage data of some kind
 
@@ -103,17 +103,19 @@ the `@` syntax can be stacked for variables with multiple dimensions:
  my_matrix@(1 0); //((3 4)(1 2))
 ```
 
+
+
 ## Functions
 Functions in Dimension can take on many forms. Classic C-style functions, operator overloads, and OOP method-style functions can all be defined with the same syntax. Function definitions are notated with  the `fn` keyword. In definitions, parameters are written in parentheses, labeled with types, and separated by commas.
 
-* `fn print_number(n: [i]) ...` 
-* `fn (a: [R]) + (b: [R]) ...`
-* `fn (B: [Shape]).display() ...`
+* `fn print_number(n :: [i]) ...` 
+* `fn (a :: [R]) + (b :: [R]) ...`
+* `fn (B :: [Shape]).display() ...`
 
 Functions must also declare the type they return using the `makes` keyword. Functions that do not return anything may omit the `makes` statement.
 
-* `fn print_number(n: [i])` (doesn't return anything)
-* `fn (a: [R]) + (b: [R]) makes [R]` (returns data of type `[R]`)
+* `fn print_number(n :: [i])` (doesn't return anything)
+* `fn (a :: [R]) + (b :: [R]) makes [R]` (returns data of type `[R]`)
 
 The body of the function is defined after the `does` keyword. The order of the keywords after `fn` does not matter.
 
@@ -155,7 +157,7 @@ This feature is similar to Generics in lanugages like TypeScript and Java.
 To make code as reusable as possible, functions and type declarations can take parameters that are themselves types or dimensions. For example, let's say we are making a hashMap type, and we want to be able to reuse its code to map between any two data types. These parameters are evaluated at compile time, so they can only be populated by superconstant values. These "super constant" parameters are again indicated with the `:::` syntax. We can declare the type as something like this:
 
 ```Dimension
-  type [HashMap(t1 ::: [type], t2 ::: [type])] is ...
+  type [HashMap(t1 ::: [t], t2 ::: [t])] is ...
 ``` 
 Then, when we go to use this HashMap type, we can input the types we need for our specific use case. This example is a map from integers to chars.
 
@@ -166,7 +168,7 @@ Then, when we go to use this HashMap type, we can input the types we need for ou
 Functions can also have type parameters. For example, this function takes a value of any type, and returns a value of the same type, but with a dimension of 2.
 
 ```Dimension
-fn double-ify(V: [t ::: [type]]) makes 2*t does {
+fn double-ify(V: [t ::: [type]]) makes 2*[(t)] does {
   return (V V);
 }
 ``` 
@@ -204,7 +206,7 @@ Here's what I've thought so far:
 Whatever system I end up using, I definitely want to design the language so that it encourages minimal dynamic memory allocation.
 
 ## Potential Memory Management Concept
-This feature is still a work in progress, and I may end up just going with one of the other methods I listed before. It is very similar to rust's memory rules, but my hope is that the rules are more embedded into the language's syntax, so it is literally impossible to write unsafe code.
+This feature is still a work in progress, and I may end up just going with one of the other methods I listed before. It is very similar to rust's memory rules, and my hope is that the rules are embedded into the language's syntax, so it is literally impossible to write unsafe code.
 
 ### Syntax
 In this system, there are no pointers (at least that the programmer will interact with, the implementation will obviously need to use pointers under the hood). To create dynamic memory, we introduce a special type for dynamic arrays. It will be declared using the `[]+` syntax. An initial size can also be specified before the `+` sign

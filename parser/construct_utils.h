@@ -49,3 +49,5 @@ expression_t *add_dimension(dimension_array_t *array);
 pattern_value_t *add_pattern_dimension(pattern_dimension_array_t *array);
 
 void pattern_push_entry(pattern_t *pattern, pattern_entry_t entry);
+
+bool compatible_const_levels(const_lvl_t slot, const_lvl_t input);

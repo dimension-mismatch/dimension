@@ -24,11 +24,18 @@ typedef enum value_type{
   VAL_STRING
 }value_type_t;
 
+typedef enum constant_level{
+  CL_MUTABLE,
+  CL_CONST,
+  CL_SUPERCONST,
+}const_lvl_t;
+
 
 
 typedef struct expression{
   expression_type_t type;
   struct type_identifier* return_type;
+  const_lvl_t const_lvl;
   union{
     struct {
       int num_params;
@@ -91,7 +98,7 @@ typedef struct type_declaration{
 
 typedef struct variable_declaration{
   char* var_name;
-  int constant_lvl;
+  const_lvl_t constant_lvl;
   type_identifier_t 
   type;
 }variable_declaration_t;

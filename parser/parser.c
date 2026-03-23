@@ -386,10 +386,10 @@ bool parse_expression(token_cursor_t* base_tc, token_type_t end_type, expression
       if(!parse_expression(&tc, TK_TYPE, &new)){
         return false;
       }
-    }
+    } 
     else if(tc.tk.type == end_type || tc.tk.type == TK_FORCE_EXP_END || tc.tk.type == TK_ENDLINE){
       pattern_trie_t* trie = (end_type == TK_TYPE)? tc.type_trie : tc.fn_trie;
-      if(!build_expression(trie, &root, result)){
+      if(!build_expression(trie, &root, result, end_type == TK_VECTOR, tc.error_manager)){
         return false;
       }
       *base_tc = tc;
@@ -400,13 +400,16 @@ bool parse_expression(token_cursor_t* base_tc, token_type_t end_type, expression
       throw_error(tc.error_manager, 2, tc.index);
       return false;
     }
-    tc_inc(&tc);
+    
     expression_array_t* next = malloc(sizeof(expression_array_t));
     next->prev = prev;
     next->next = NULL;
     next->exp = new;
+    next->tk_begin = tc.index;
+    next->tk_end = tc.index;
     prev->next = next;
     prev = next;
+    tc_inc(&tc);
   };
   
 }

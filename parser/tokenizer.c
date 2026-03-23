@@ -161,7 +161,7 @@ token_array_t* tokenize_file(FILE* file){
   token_array_t* all_tokens = init_token_array();
 
   int line = 1;
-  int col = 0;
+  int col = 1;
 
 
   token_t current_token = new_empty_token(line, col);
@@ -176,7 +176,7 @@ token_array_t* tokenize_file(FILE* file){
     
     col++;
     if(ch == '\n'){
-      col = 0;
+      col = 1;
       line++;
     }
 

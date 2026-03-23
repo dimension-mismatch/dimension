@@ -3,7 +3,7 @@ CC := clang
 all := dmsn
 
 dmsn : dmsn.c tokenizer.o parser.o token_cursor.o hash_table/hash_table.o construct_utils.o expression_builder.o hash_table/pattern_trie.o error_handling/error_manager.o
-	$(CC) -g -fsanitize=address -O0 -o $@ $^
+	$(CC) -g -fsanitize=address -O0 -Wall -o $@ $^
 
 %.o : %.c %.h
 	$(CC) -g -c $< -o $@

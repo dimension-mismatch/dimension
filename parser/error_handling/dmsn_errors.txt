@@ -29,3 +29,5 @@
 ~ in Function Declaration |@ Duplicate 'priority' statement. Functions may only have one priority
 
 ~ in Function Declaration |@ Duplicate 'does' clause. Functions may only do one thing
+
+~ Unknown Identifier |@ Could not find a match for identifier "#T" 

@@ -38,6 +38,8 @@ typedef struct pattern_trie_node{
   int match_index;
   
   int max_child_priority;
+
+  int num_matches;
   possible_type_matches_t* type_matches;
 }pattern_trie_node_t;
 
