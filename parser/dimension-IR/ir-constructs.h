@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-char* instruction_names[] = {"+", "-", "*", "/", ">", "<", ">=", "<=", "==", "deref", ">>", "<<", "&", "|", "^", "!", "&&", "||", "!!"};
+char* instruction_names[] = {"+", "-", "*", "/", ">", "<", ">=", "<=", "==", "deref", ">>", "<<", "&", "|", "^", "!", "&&", "||", "^^", "!!"};
 
 #define BLOCK_OPCODE 255
 typedef enum value_type{
