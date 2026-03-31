@@ -3,43 +3,47 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+char* instruction_names[] = {"+", "-", "*", "/", ">", "<", ">=", "<=", "==", "deref", ">>", "<<", "&", "|", "^", "!", "&&", "||", "!!"};
+
+#define BLOCK_OPCODE 255
 typedef enum value_type{
-  RESULT,
-  VARIABLE,
-  PARAMETER,
+  REGISTER,
   LITERAL,
-  ARGUMENT,
 }value_type_t;
 
 typedef struct value{
   value_type_t type;
   union{
-    uint64_t data;
-    char* text;
+    uint64_t register_id;
+    struct{
+      uint64_t byte_count;
+      uint8_t* data;
+    };
   };
-  bool is_fixed;
 }value_t;
 
-struct program;
-
+struct block;
 typedef struct instruction{
-  unsigned int opcode;
+  uint8_t opcode;
   union{
     struct{
-      bool has_label;
-      unsigned int label;
-      unsigned int datasize;
-      value_t arg1;
-      value_t arg2;
-    };
-    struct program* block;
+      uint64_t dest_register;
+      value_t a1;
+      value_t a2;
+    } instruction;
+    struct block* block;
   };
-
+  
 }instruction_t;
 
-typedef struct program{
-  unsigned int length;
+
+typedef struct block{
+  uint64_t length;
   instruction_t* instructions;
-  
   value_t multiplier;
+}block_t;
+
+typedef struct program{
+  block_t root;
+  
 }program_t;
