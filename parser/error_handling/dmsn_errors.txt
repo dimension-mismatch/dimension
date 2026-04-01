@@ -31,3 +31,5 @@
 ~ in Function Declaration |@ Duplicate 'does' clause. Functions may only do one thing
 
 ~ Unknown Identifier |@ Could not find a match for identifier "#T" 
+
+~ Missing Semicolon |@ Expected a semicolon before "#T" to end the previous line

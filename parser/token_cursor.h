@@ -18,6 +18,10 @@ token_cursor_t tc_init(token_array_t *array, pattern_trie_t *fn_trie, pattern_tr
 
 void tc_update(token_cursor_t *tc);
 
+void tc_dec(token_cursor_t* tc);
+
 bool tc_inc(token_cursor_t *tc);
 
 bool tc_is_asterisk(token_cursor_t *tc);
+
+void tc_throw_error(token_cursor_t* tc, int error_num);
