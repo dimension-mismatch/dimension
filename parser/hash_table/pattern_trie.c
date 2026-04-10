@@ -529,12 +529,9 @@ void pattern_trie_pop_pattern(pattern_trie_t* trie, int match_to_remove){
   node->children = realloc(node->children, node->children_count * sizeof(pattern_trie_node_t*));
 }
 void pattern_trie_scope_out(pattern_trie_t* trie){
-  pattern_trie_pop_pattern(trie, trie->match_count-1);
-  pattern_trie_pop_pattern(trie, trie->match_count-2);
-  pattern_trie_pop_pattern(trie, trie->match_count-3);
-  //pattern_trie_pop_pattern(trie, 0);
-  // for(int i = trie->match_count - 1; i >= trie->scopes[trie->scope_levels - 1]; i--){
-  //   pattern_trie_pop_pattern(trie, i);
-  // }
-
+  for(int i = trie->match_count - 1; i >= trie->scopes[trie->scope_levels - 1]; i--){
+    if(trie->matches[i].match){
+      pattern_trie_pop_pattern(trie, i);
+    }
+  }
 }
