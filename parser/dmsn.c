@@ -46,6 +46,13 @@ int main(int argc, char* argv[]){
   printf(MAGENTA BOLD "\nFunction Trie:\n" RESET_COLOR);
   print_pattern_trie(&fn_trie);
 
+  printf("\nremoving last match\n");
+  pattern_trie_scope_out(&type_trie);
+  
+  printf(MAGENTA BOLD "\nNew Type Trie:\n" RESET_COLOR);
+  print_pattern_trie(&type_trie);
+
+
   printf("\n");
 
   // error_manager_t errors = error_manager_init(all_tokens, &function_record, &variable_record, &type_record);

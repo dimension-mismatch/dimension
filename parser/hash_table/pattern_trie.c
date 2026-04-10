@@ -160,6 +160,7 @@ pattern_trie_node_t trie_node_init(){
     .next_pattern_types = init_hash_table(67, 0.9), 
     .children_count = 0, 
     .children = NULL, 
+    .parent = NULL,
     .match_index = NO_MATCH, 
     .max_child_priority = 0,
     .num_matches = 0,
@@ -168,50 +169,57 @@ pattern_trie_node_t trie_node_init(){
 }
 
 pattern_trie_t pattern_trie_init(){
-  pattern_trie_t new = {NULL, 0,NULL};
+  pattern_trie_t new = {.match_count = 0, .matches = NULL, .root = NULL, .scope_levels = 0, .scopes = NULL};
   new.root = malloc(sizeof(pattern_trie_node_t));
   *(new.root) = trie_node_init();
   return new;
 }
 
-pattern_trie_node_t* pattern_trie_node_match_pattern(pattern_trie_node_t* node, pattern_t* pattern, int* entry_index){
-  while(*entry_index < pattern->entry_count){
-    pattern_entry_t entry = pattern->entries[*entry_index];
-    int* child_index = NULL;
+pattern_trie_node_t* pattern_trie_node_find_next(pattern_trie_node_t* node, pattern_entry_t* entry){
+  int* child_index = NULL;
+  switch(entry->type){
+    case PATTERN_IDENTIFIER:
+      child_index = get_value_from_key(&node->next_identifiers, entry->identifier);
+      break;
+    case PATTERN_VARIABLE:
+      if(entry->variable.type.is_param){
+        return NULL;
+      }
+      //Fall through is intentional here, both pattern types and variables need to compare to existing possibilities
+    case PATTERN_TYPE: {
+      int* match_index = (entry->type == PATTERN_TYPE)? 
+      get_value_from_int(&node->next_pattern_types, entry->pattern_type.base_type_id):
+      get_value_from_int(&node->next_parameters, entry->variable.type.base_type_id);
 
-    switch(entry.type){
-      case PATTERN_IDENTIFIER:
-        child_index = get_value_from_key(&node->next_identifiers, entry.identifier);
-        break;
-      case PATTERN_VARIABLE:
-        if(entry.variable.type.is_param){
+      if(match_index == NULL){
+        return node;
+      }
+      possible_type_matches_t possible_indices = node->type_matches[*match_index];
+      child_index = NULL;
+      for(int i = 0; i < possible_indices.num_possibilities; i++){
+        pattern_entry_t* compareto = &node->children[possible_indices.possible_matches[i]]->pattern;
+        if(pattern_entry_compare(compareto, entry)){
+          child_index = &possible_indices.possible_matches[i];
           break;
-        }
-        //Fall through is intentional here, both pattern types and variables need to compare to existing possibilities
-      case PATTERN_TYPE: {
-        int* match_index = (entry.type == PATTERN_TYPE)? 
-        get_value_from_int(&node->next_pattern_types, entry.pattern_type.base_type_id):
-        get_value_from_int(&node->next_parameters, entry.variable.type.base_type_id);
-
-        if(match_index == NULL){
-          return node;
-        }
-        possible_type_matches_t possible_indices = node->type_matches[*match_index];
-        child_index = NULL;
-        printf(GREEN "%i possibilities" RESET_COLOR, possible_indices.num_possibilities);
-        for(int i = 0; i < possible_indices.num_possibilities; i++){
-          pattern_entry_t* compareto = &node->children[possible_indices.possible_matches[i]].pattern;
-          if(pattern_entry_compare(compareto, &entry)){
-            child_index = &possible_indices.possible_matches[i];
-            break;
-          }
         }
       }
     }
-    if(child_index == NULL){
+  }
+  if(child_index == NULL){
+    return NULL;
+  }
+  return node->children[*child_index];
+}
+
+pattern_trie_node_t* pattern_trie_node_match_pattern(pattern_trie_node_t* node, pattern_t* pattern, int* entry_index){
+  while(*entry_index < pattern->entry_count){
+    pattern_entry_t entry = pattern->entries[*entry_index];
+    
+    pattern_trie_node_t* next = pattern_trie_node_find_next(node, &entry);
+    if(!next){
       return node;
     }
-    node = node->children + *child_index;
+    node = next;
     (*entry_index)++;
   }
   return node;
@@ -231,12 +239,10 @@ trie_match_result_t* pattern_trie_validate_pattern(pattern_trie_t* trie, pattern
 
 
 
-void pattern_trie_node_push_pattern(pattern_trie_node_t** root, pattern_t* pattern, int result_id){
+pattern_trie_node_t* pattern_trie_node_push_pattern(pattern_trie_node_t* root, pattern_t* pattern, int result_id){
   int entry_index = 0;
-  pattern_trie_node_t* node = *root;
-  if(node != NULL){
-    node = pattern_trie_node_match_pattern(node, pattern, &entry_index);
-  }
+  pattern_trie_node_t* node =  pattern_trie_node_match_pattern(root, pattern, &entry_index);
+
   while(entry_index < pattern->entry_count){
     pattern_entry_t* entry = pattern->entries + entry_index;
     switch(entry->type){
@@ -256,7 +262,6 @@ void pattern_trie_node_push_pattern(pattern_trie_node_t** root, pattern_t* patte
         int match_index;
         if(mip == NULL){
           node->num_matches++;
-          printf("num matches: %i", node->num_matches);
           node->type_matches = realloc(node->type_matches, (node->num_matches) * sizeof(possible_type_matches_t));
           possible_type_matches_t new = {.num_possibilities = 0,.possible_matches = NULL};
           node->type_matches[node->num_matches - 1] = new;
@@ -279,27 +284,25 @@ void pattern_trie_node_push_pattern(pattern_trie_node_t** root, pattern_t* patte
       }
     }
     node->children_count++;
-    node->children = realloc(node->children, node->children_count * sizeof(pattern_trie_node_t));
-    pattern_trie_node_t* new_node = node->children + node->children_count - 1;
+    node->children = realloc(node->children, node->children_count * sizeof(pattern_trie_node_t*));
+    pattern_trie_node_t* new_node = malloc(sizeof(pattern_trie_node_t));
+    node->children[node->children_count - 1] = new_node;
     *new_node = trie_node_init();
+    new_node->parent = node;
     copy_pattern_entry(&new_node->pattern, pattern->entries + entry_index);
-   
-    
- 
-    if(node == NULL){
-      *root = new_node;
-    }
+
     node = new_node;
     entry_index++;
   }
   node->match_index = result_id;
+  return node;
 }
 
 void pattern_trie_push_type(pattern_trie_t *trie, type_declaration_t *type){
-  pattern_trie_node_push_pattern(&trie->root, type->match_pattern, trie->match_count);
+  pattern_trie_node_t* node = pattern_trie_node_push_pattern(trie->root, type->match_pattern, trie->match_count);
   trie->match_count++;
   trie->matches = realloc(trie->matches, trie->match_count * sizeof(trie_match_result_t));
-  trie_match_result_t new = {.type = MATCH_TYPE, .priority = 0, .typedec = *type, .length = type->match_pattern->entry_count, .index = trie->match_count - 1};
+  trie_match_result_t new = {.match = node, .type = MATCH_TYPE, .priority = 0, .typedec = *type, .length = type->match_pattern->entry_count, .index = trie->match_count - 1};
   trie->matches[trie->match_count - 1] = new;
 }
 
@@ -307,18 +310,18 @@ void pattern_trie_push_variable(pattern_trie_t* trie, variable_declaration_t* va
   pattern_entry_t entry = {.type = PATTERN_IDENTIFIER, .identifier = var->var_name};
   pattern_t pattern = {.entries = &entry, .entry_count = 1};
 
-  pattern_trie_node_push_pattern(&trie->root, &pattern, trie->match_count);
+  pattern_trie_node_t* node = pattern_trie_node_push_pattern(trie->root, &pattern, trie->match_count);
   trie->match_count++;
   trie->matches = realloc(trie->matches, trie->match_count * sizeof(trie_match_result_t));
-  trie_match_result_t new = {.type = MATCH_VARIABLE, .priority = 0, .vardec = *var, .length = 1, .index = trie->match_count - 1};
+  trie_match_result_t new = {.match = node, .type = MATCH_VARIABLE, .priority = 0, .vardec = *var, .length = 1, .index = trie->match_count - 1};
   trie->matches[trie->match_count - 1] = new;
 }
 
 void pattern_trie_push_function(pattern_trie_t* trie, function_definition_t* fn){
-  pattern_trie_node_push_pattern(&trie->root, &fn->match, trie->match_count);
+  pattern_trie_node_t* node = pattern_trie_node_push_pattern(trie->root, &fn->match, trie->match_count);
   trie->match_count++;
   trie->matches = realloc(trie->matches, trie->match_count * sizeof(trie_match_result_t));
-  trie_match_result_t new = {.type = MATCH_FUNCTION, .priority = fn->priority, .fndec = *fn, .length = fn->match.entry_count, .index = trie->match_count - 1};
+  trie_match_result_t new = {.match = node, .type = MATCH_FUNCTION, .priority = fn->priority, .fndec = *fn, .length = fn->match.entry_count, .index = trie->match_count - 1};
   trie->matches[trie->match_count - 1] = new;
 }
 
@@ -336,26 +339,35 @@ void print_trie_match_result(trie_match_result_t* result){
       break;
   }
 }
-
-void print_trie_node(pattern_trie_node_t* node, int indent, int** levels){
+void print_single_trie_node(pattern_trie_node_t* node){
   print_pattern_entry(&node->pattern);
   if(node->match_index != NO_MATCH){
     printf(" (MATCH #%d)", node->match_index);
   }
+}
+
+void print_trie_node(pattern_trie_node_t* node, int indent, int** levels){
+  print_single_trie_node(node);
+  //printf(RED "   %p   " RESET_COLOR, node);
   if(node->children_count == 0){
+    
     return;
   }
+  
   *levels = realloc(*levels, (indent + 1) * sizeof(int));
   (*levels)[indent] = (indent > 0? 3 : 1) + (node->pattern.type == PATTERN_IDENTIFIER? (node->pattern.identifier? (2 + strlen(node->pattern.identifier)) : 8) : (4 + node->pattern.variable.constant_lvl));
   printf(" ═> ");
-  print_trie_node(node->children, indent + 1, levels);
+  print_trie_node(node->children[0], indent + 1, levels);
   printf("\n");
+  
   for(int k = 0; k < indent + 1; k++){
     for(int j = 0; j < (*levels)[k]; j++){
       printf(" ");
     }
     printf("║");
   }
+  
+  
   for(int i = 1; i < node->children_count; i++){
     printf("\n");
     for(int k = 0; k < indent + 1; k++){
@@ -367,7 +379,7 @@ void print_trie_node(pattern_trie_node_t* node, int indent, int** levels){
       }
     }
     printf("╚> ");
-    print_trie_node(node->children + i, indent + 1, levels);
+    print_trie_node(node->children[i], indent + 1, levels);
   }
 }
 
@@ -375,6 +387,15 @@ void print_pattern_trie(pattern_trie_t *trie){
   printf("DEFINITIONS:\n");
   for(int i = 0; i < trie->match_count; i++){
     print_trie_match_result(trie->matches + i);
+    if((trie->matches + i)->match){
+      printf("  ->   ");
+      print_single_trie_node((trie->matches + i)->match);
+    }
+    else{
+      printf(BLACK BOLD "  Descoped" RESET_COLOR);
+    }
+
+    //printf(RED "   %p" RESET_COLOR, (trie->matches + i)->match);
     printf("\n");
   }
   printf("\n");
@@ -395,7 +416,8 @@ void destroy_pattern_trie_node(pattern_trie_node_t* node){
   destroy_hash_table(&node->next_identifiers);
   destroy_hash_table(&node->next_parameters);
   for(int i = 0; i < node->children_count; i++){
-    destroy_pattern_trie_node(node->children + i);
+    destroy_pattern_trie_node(node->children[i]);
+    free(node->children[i]);
   }
   node->children_count = 0;
   free(node->children);
@@ -425,4 +447,94 @@ void destroy_pattern_trie(pattern_trie_t* trie){
   free(trie->matches);
   trie->matches = NULL;
   trie->match_count = 0;
+}
+
+
+void pattern_trie_scope_in(pattern_trie_t *trie){
+  trie->scope_levels++;
+  trie->scopes = realloc(trie->scopes, trie->scope_levels * sizeof(int));
+  trie->scopes[trie->scope_levels - 1] = trie->match_count;
+}
+
+void pattern_trie_pop_pattern(pattern_trie_t* trie, int match_to_remove){
+  pattern_trie_node_t* node = (trie->matches + match_to_remove)->match;
+  (trie->matches + match_to_remove)->match = NULL;
+  printf("Match node: \n");
+  print_single_trie_node(node);
+  if(node->children_count > 0){
+    return;
+  }
+
+  pattern_entry_t* slice_pattern;
+  while(node->children_count < 2 && node->parent){
+    
+    pattern_trie_node_t* next = node->parent;
+    slice_pattern = &node->pattern;
+    if(next){
+      node = next;
+    }
+    else{
+      break;
+    }
+    
+  }
+  int* child_index = NULL;
+  switch(slice_pattern->type){
+    case PATTERN_IDENTIFIER:
+      child_index = get_value_from_key(&node->next_identifiers, slice_pattern->identifier);
+      remove_key_value(&node->next_identifiers, slice_pattern->identifier);
+      break;
+    case PATTERN_VARIABLE:
+      if(slice_pattern->variable.type.is_param){
+        return;
+      }
+      //Fall through is intentional here, both pattern types and variables need to compare to existing possibilities
+    case PATTERN_TYPE: {
+      int* match_index = (slice_pattern->type == PATTERN_TYPE)? 
+      get_value_from_int(&node->next_pattern_types, slice_pattern->pattern_type.base_type_id):
+      get_value_from_int(&node->next_parameters, slice_pattern->variable.type.base_type_id);
+
+      if(match_index == NULL){
+        break;
+        //We should always have a match so this should never be null
+      }
+      possible_type_matches_t*  possible_indices = node->type_matches + *match_index;
+      child_index = NULL;
+      for(int i = possible_indices->num_possibilities - 1; i <= 0; i--){
+        pattern_entry_t* compareto = &node->children[possible_indices->possible_matches[i]]->pattern;
+        if(pattern_entry_compare(compareto, slice_pattern)){
+          *child_index = possible_indices->possible_matches[i];
+          if(i == 0){
+            if(slice_pattern->type == PATTERN_TYPE){
+              remove_int_value(&node->next_pattern_types, slice_pattern->pattern_type.base_type_id);
+            }
+            else{
+              remove_int_value(&node->next_parameters, slice_pattern->variable.type.base_type_id);
+            }
+            free(possible_indices->possible_matches);
+            possible_indices->num_possibilities = 0;
+            node->num_matches = *match_index;
+            node->type_matches = realloc(node->type_matches, node->num_matches * sizeof(possible_type_matches_t));
+            break;
+          }
+          possible_indices->num_possibilities = *match_index;
+          possible_indices->possible_matches = realloc(possible_indices->possible_matches, possible_indices->num_possibilities * sizeof(int));
+          break;
+        }
+      }
+    }
+  }
+  destroy_pattern_trie_node(node->children[*child_index]);
+  node->children_count = *child_index;
+  node->children = realloc(node->children, node->children_count * sizeof(pattern_trie_node_t*));
+}
+void pattern_trie_scope_out(pattern_trie_t* trie){
+  pattern_trie_pop_pattern(trie, trie->match_count-1);
+  pattern_trie_pop_pattern(trie, trie->match_count-2);
+  pattern_trie_pop_pattern(trie, trie->match_count-3);
+  //pattern_trie_pop_pattern(trie, 0);
+  // for(int i = trie->match_count - 1; i >= trie->scopes[trie->scope_levels - 1]; i--){
+  //   pattern_trie_pop_pattern(trie, i);
+  // }
+
 }

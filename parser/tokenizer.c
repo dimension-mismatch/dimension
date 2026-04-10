@@ -181,9 +181,9 @@ token_array_t* tokenize_file(FILE* file){
     }
 
     if(in_comment == 2){
+      destroy_token(&current_token);
       if(ch == '\n'){
         in_comment = 0;
-        destroy_token(&current_token);
       }
       continue;
     }
@@ -356,6 +356,8 @@ token_array_t* tokenize_file(FILE* file){
         current_token.type = TK_IDENTIFIER;
         current_token.is_symbolic_identifier = !is_alphanumeric(ch);
       } 
+      current_token.line_number = line;
+      current_token.start_pos = col;
     }
     push_char(&current_token, ch);
   }

@@ -612,7 +612,12 @@ void recover_from_error(token_cursor_t* tc){
 }
 
 void parse_block(token_cursor_t* tc, token_type_t end_type, block_t* result){
+  int iters = 0;
   while(tc->tk.type != end_type && tc->tk.type != TK_NONE){
+    iters++;
+    if(iters > 10){
+      return;
+    }
     type_declaration_t typedec;
     parse_result_t type_result = parse_type_declaration(tc, &typedec);
     if(type_result == PRS_SUCCESS){

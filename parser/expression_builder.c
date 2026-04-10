@@ -62,7 +62,7 @@ int* node_match_expression_array(pattern_trie_node_t* node, expression_array_t* 
       update_attempt_record(attempt, depth, array, node);//failed match, but record how close we got to make errors clearer
       return NULL;
     }
-    return node_match_expression_array(node->children + *cip, array->next, depth + 1, attempt);
+    return node_match_expression_array(node->children[*cip], array->next, depth + 1, attempt);
   }
   else if(array->exp.type == EXP_TYPE_LITERAL){
     int* type_index = get_value_from_int(&node->next_pattern_types, array->exp.type_literal->type_id);
@@ -73,7 +73,7 @@ int* node_match_expression_array(pattern_trie_node_t* node, expression_array_t* 
     }
     possible_type_matches_t* matches = node->type_matches + *type_index;
     for(int i = 0; i < matches->num_possibilities; i++){
-      pattern_trie_node_t* child = node->children + matches->possible_matches[i];
+      pattern_trie_node_t* child = node->children[matches->possible_matches[i]];
       if(test_pattern_type(&child->pattern.pattern_type, array->exp.type_literal)){
         int* result = node_match_expression_array(child, array->next, depth + 1, attempt);
         if(result != NULL){
@@ -98,7 +98,7 @@ int* node_match_expression_array(pattern_trie_node_t* node, expression_array_t* 
     }
     possible_type_matches_t* matches = node->type_matches + *type_index;
     for(int i = 0; i < matches->num_possibilities; i++){
-      pattern_trie_node_t* child = node->children + matches->possible_matches[i];
+      pattern_trie_node_t* child = node->children[matches->possible_matches[i]];
       //TODO: maybe accept incompatible const levels, but throw an error?
       if(compatible_const_levels(child->pattern.variable.constant_lvl, array->exp.const_lvl) && test_pattern_type(&child->pattern.variable.type, array->exp.return_type)){
         int* result = node_match_expression_array(child, array->next, depth + 1, attempt);
