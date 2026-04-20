@@ -60,7 +60,7 @@ bool pattern_value_compare(pattern_value_t* a, pattern_value_t* b){
     return false;
   }
   if(a->is_param){
-    return pattern_type_compare(a->param, b->param);
+    return pattern_type_compare(a->param.type, b->param.type);
   }
   else{
     return compare_expressions(a->base_value, b->base_value);
@@ -172,6 +172,7 @@ pattern_trie_t pattern_trie_init(){
   pattern_trie_t new = {.match_count = 0, .matches = NULL, .root = NULL, .scope_levels = 0, .scopes = NULL};
   new.root = malloc(sizeof(pattern_trie_node_t));
   *(new.root) = trie_node_init();
+  pattern_trie_scope_in(&new);
   return new;
 }
 
@@ -386,15 +387,14 @@ void print_trie_node(pattern_trie_node_t* node, int indent, int** levels){
 void print_pattern_trie(pattern_trie_t *trie){
   printf("DEFINITIONS:\n");
   for(int i = 0; i < trie->match_count; i++){
-    print_trie_match_result(trie->matches + i);
     if((trie->matches + i)->match){
-      printf("  ->   ");
-      print_single_trie_node((trie->matches + i)->match);
+      // printf("  ->   ");
+      // print_single_trie_node((trie->matches + i)->match);
     }
     else{
-      printf(BLACK BOLD "  Descoped" RESET_COLOR);
+      printf(BLACK BOLD "  Descoped " RESET_COLOR);
     }
-
+    print_trie_match_result(trie->matches + i);
     //printf(RED "   %p" RESET_COLOR, (trie->matches + i)->match);
     printf("\n");
   }
@@ -459,8 +459,6 @@ void pattern_trie_scope_in(pattern_trie_t *trie){
 void pattern_trie_pop_pattern(pattern_trie_t* trie, int match_to_remove){
   pattern_trie_node_t* node = (trie->matches + match_to_remove)->match;
   (trie->matches + match_to_remove)->match = NULL;
-  printf("Match node: \n");
-  print_single_trie_node(node);
   if(node->children_count > 0){
     return;
   }
@@ -478,11 +476,13 @@ void pattern_trie_pop_pattern(pattern_trie_t* trie, int match_to_remove){
     }
     
   }
+  
   int* child_index = NULL;
   switch(slice_pattern->type){
-    case PATTERN_IDENTIFIER:
+    case PATTERN_IDENTIFIER:  
       child_index = get_value_from_key(&node->next_identifiers, slice_pattern->identifier);
       remove_key_value(&node->next_identifiers, slice_pattern->identifier);
+      
       break;
     case PATTERN_VARIABLE:
       if(slice_pattern->variable.type.is_param){
@@ -524,6 +524,7 @@ void pattern_trie_pop_pattern(pattern_trie_t* trie, int match_to_remove){
       }
     }
   }
+
   destroy_pattern_trie_node(node->children[*child_index]);
   node->children_count = *child_index;
   node->children = realloc(node->children, node->children_count * sizeof(pattern_trie_node_t*));
@@ -534,4 +535,6 @@ void pattern_trie_scope_out(pattern_trie_t* trie){
       pattern_trie_pop_pattern(trie, i);
     }
   }
+  trie->scope_levels--;
+  trie->scopes = realloc(trie->scopes, trie->scope_levels * sizeof(int));
 }

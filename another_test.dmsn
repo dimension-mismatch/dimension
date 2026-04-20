@@ -1,5 +1,5 @@
 type [i] holds 8;
-type [j (val ::: 2[i])] holds 4;
+type [j (val ::: (n ::: [i]) * (n) * [i])] holds 4;
 
 type [k [i]] holds 6;
 
@@ -9,6 +9,6 @@ my_var : [k i];
 
 
 
-fn my_func(v : 3[i]) makes [k i] does {
+fn my_func(v : 3[i]) makes [i] does {
 
 } priority 7;

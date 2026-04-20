@@ -1,11 +1,12 @@
 #pragma once
-
+#include <stdbool.h>
 
 
 struct hash_entry{
   struct hash_entry* next;
   struct hash_entry* prev;
   int value;
+  bool is_int;
   union{
     char* name;
     int id;
@@ -36,3 +37,5 @@ int *get_value_from_key(hash_table_t *record, char *key);
 int *get_value_from_int(hash_table_t *record, int key);
 
 void destroy_hash_table(hash_table_t *record);
+
+void print_hash_table(hash_table_t* table);

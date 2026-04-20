@@ -126,7 +126,8 @@ void print_variable_declaration(variable_declaration_t* vardec){
 void print_pattern_value(pattern_value_t* pval){
   printf("(");
   if(pval->is_param){
-    print_pattern_type(pval->param);
+    printf(BLUE ":::" RESET_COLOR);
+    print_pattern_type(pval->param.type);
   }
   else{
     print_expression(pval->base_value);
@@ -308,7 +309,8 @@ void destroy_variable_declaration(variable_declaration_t* vardec){
 }
 void destroy_pattern_value(pattern_value_t* pval){
   if(pval->is_param){
-    destroy_pattern_type(pval->param);
+    destroy_pattern_type(pval->param.type);
+    free(pval->param.type);
   }
   else{
     destroy_expression(pval->base_value);
@@ -473,7 +475,9 @@ void copy_variable_declaration(variable_declaration_t *new, variable_declaration
 void copy_pattern_value(pattern_value_t* new, pattern_value_t* pval){
   new->is_param = pval->is_param;
   if(new->is_param){
-    copy_pattern_type(new->param, pval->param);
+    new->param.type = malloc(sizeof(pattern_type_t));
+    new->param.var_id = pval->param.var_id;
+    copy_pattern_type(new->param.type, pval->param.type);
   }
   else{
     new->base_value = malloc(sizeof(expression_t));

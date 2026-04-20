@@ -4,6 +4,7 @@
 #include "colors.h"
 #include "expression_builder.h"
 #include "construct_utils.h"
+#include "hash_table/pattern_trie.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -83,6 +84,36 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
   return true;
 }
 
+expression_t resolve_pattern_value(pattern_value_t* pval){
+  expression_t result;
+  if(pval->is_param){
+    result.type = EXP_READ_VAR;
+    result.read_var_id = pval->param.var_id;
+  }
+  else{
+    copy_expression(&result, pval->base_value);
+  }
+  return result;
+}
+
+type_identifier_t resolve_pattern_type(pattern_type_t* ptype){
+  type_identifier_t result = {
+    .dimensions = {
+      .dimension_count = ptype->dimensions.dimension_count,
+      .dimensions = malloc(ptype->dimensions.dimension_count * sizeof(expression_t))},
+    .num_params = ptype->param_count,
+    .params = malloc(ptype->param_count * sizeof(expression_t)),
+    .type_id = ptype->base_type_id
+    };
+  for(int i = 0; i < ptype->dimensions.dimension_count; i++){
+    result.dimensions.dimensions[i] = resolve_pattern_value(ptype->dimensions.dimensions + i);
+  }
+  for(int i = 0; i < result.num_params; i++){
+    result.params[i] = resolve_pattern_value(ptype->parameters + i);
+  }
+  return result;
+}
+
 //* 4
 parse_result_t parse_vardec(token_cursor_t* base_tc, variable_declaration_t* result){
   token_cursor_t tc = *base_tc;
@@ -156,13 +187,15 @@ bool parse_pattern_type(token_cursor_t* base_tc, pattern_type_t* result){
           tc_throw_error(&tc, 11);
           return false;
         }
+        pattern_trie_push_variable(tc.fn_trie, &vardec);
         pattern_value_t* value = add_pattern_dimension(&dimensions);
         value->is_param = true;
         pattern_type_t ptype = {.is_param = true, .dimensions = {.dimension_count = 0, .dimensions = NULL}, .param_count = 0, .parameters = NULL};
         ptype.base_type_id = vardec.type.type_id;
         
-        value->param = malloc(sizeof(pattern_type_t));
-        *value->param = ptype;
+        value->param.type = malloc(sizeof(pattern_type_t));
+        value->param.var_id = tc.fn_trie->match_count - 1;
+        *value->param.type = ptype;
         
       }
       //if that fails, try reading an expression
@@ -260,10 +293,13 @@ bool parse_pattern_vardec(token_cursor_t* base_tc, pattern_variable_t* result){
   if(!parse_pattern_type(&tc, &result->type)){
     return false;
   }
-  // result->name = malloc((1 + strlen(name) * sizeof(char)));
-  // strcpy(result->name, name);
 
+  variable_declaration_t vardec = {
+    .constant_lvl = result->constant_lvl, 
+    .type = resolve_pattern_type(&result->type), 
+    .var_name = name};
 
+  pattern_trie_push_variable(tc.fn_trie, &vardec);
   tc_inc(&tc);
   *base_tc = tc;
   return true;
@@ -417,6 +453,7 @@ parse_result_t parse_type_declaration(token_cursor_t* base_tc, type_declaration_
   if(tc.tk.type != TK_KEYWORD || tc.tk.keyword_id != 0){
     return PRS_NOT_FOUND;
   }
+  pattern_trie_scope_in(tc.fn_trie);
   tc_inc(&tc);
   if(tc.tk.type != TK_TYPE || !tc.tk.is_open){
     tc_throw_error(&tc, 5);
@@ -439,6 +476,7 @@ parse_result_t parse_type_declaration(token_cursor_t* base_tc, type_declaration_
         if(tc.tk.type == TK_ENDLINE){
           tc_inc(&tc);
           *base_tc = tc;
+          pattern_trie_scope_out(tc.fn_trie);
           return PRS_SUCCESS;
         }
         tc_throw_error(&tc, 17);
@@ -509,6 +547,7 @@ parse_result_t parse_type_declaration(token_cursor_t* base_tc, type_declaration_
   }
   tc_inc(&tc);
   if(tc.tk.type == TK_ENDLINE){
+    pattern_trie_scope_out(tc.fn_trie);
     tc_inc(&tc);
     *base_tc = tc;
     return PRS_SUCCESS;
@@ -524,6 +563,8 @@ parse_result_t parse_fn_declaration(token_cursor_t* base_tc, function_definition
     return PRS_NOT_FOUND;
   }
   tc_inc(&tc);
+  pattern_trie_scope_in(tc.fn_trie);
+  pattern_trie_scope_in(tc.type_trie);
   pattern_t pattern;
   if(!parse_pattern(&tc, TK_KEYWORD, &pattern)){
     return PRS_ERROR;
@@ -595,6 +636,8 @@ parse_result_t parse_fn_declaration(token_cursor_t* base_tc, function_definition
       return PRS_ERROR;
     }
   }
+  pattern_trie_scope_out(tc.fn_trie);
+  pattern_trie_scope_out(tc.type_trie);
   tc_inc(&tc);
   *base_tc = tc;
   return PRS_SUCCESS;
@@ -627,7 +670,9 @@ void parse_block(token_cursor_t* tc, token_type_t end_type, block_t* result){
       //continue;
     }
     else if(type_result == PRS_ERROR){
+      pattern_trie_scope_out(tc->fn_trie);
       recover_from_error(tc);
+
       //continue;
     }
     else{
@@ -652,6 +697,8 @@ void parse_block(token_cursor_t* tc, token_type_t end_type, block_t* result){
         }
         else if(fn_result == PRS_ERROR){
           recover_from_error(tc);
+          pattern_trie_scope_out(tc->fn_trie);
+          pattern_trie_scope_out(tc->type_trie);
         }
         else{
           tc_throw_error(tc, 2);
