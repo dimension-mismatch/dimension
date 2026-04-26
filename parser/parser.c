@@ -652,15 +652,14 @@ void recover_from_error(token_cursor_t* tc){
     }
     tc_inc(tc);
   }
+  tc_inc(tc);
 }
 
 void parse_block(token_cursor_t* tc, token_type_t end_type, block_t* result){
+  result->line_count = 0;
+  result->lines = NULL;
   int iters = 0;
   while(tc->tk.type != end_type && tc->tk.type != TK_NONE){
-    iters++;
-    if(iters > 10){
-      return;
-    }
     type_declaration_t typedec;
     parse_result_t type_result = parse_type_declaration(tc, &typedec);
     if(type_result == PRS_SUCCESS){
@@ -701,8 +700,18 @@ void parse_block(token_cursor_t* tc, token_type_t end_type, block_t* result){
           pattern_trie_scope_out(tc->type_trie);
         }
         else{
-          tc_throw_error(tc, 2);
-          tc_inc(tc);
+
+          expression_t line;
+          if(parse_expression(tc, TK_ENDLINE, &line)){
+            result->line_count++;
+            result->lines = realloc(result->lines, result->line_count * sizeof(expression_t));
+            result->lines[result->line_count - 1] = line;
+            tc_inc(tc);
+          }
+          else{
+            recover_from_error(tc);
+
+          }
         }
       }
     }
