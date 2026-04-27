@@ -11,7 +11,7 @@ dmsn : dmsn.c tokenizer.o parser.o token_cursor.o hash_table/hash_table.o constr
 another : 
 	./dmsn ../another_test.dmsn
 
-ir : dimension-IR/ir-interpreter.c hash_table/hash_table.o dimension-IR/ir-parser.o dimension-IR/dmsn-vm.o
+ir : hash_table/hash_table.o dimension-IR/ir_parser.o dimension-IR/ir_construct_utils.o
 	$(CC) -g -fsanitize=address -O0 -o $@ $^
 test :
 	as  ../test.s -o ../test.o

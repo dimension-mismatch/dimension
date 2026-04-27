@@ -179,3 +179,11 @@ int* get_value_from_int(hash_table_t* record, int key){
 }
 
 
+hash_table_t init_hash_table_from_array(int hash_array_size, float max_fill_factor, char* array[], int length){
+  hash_table_t res = init_hash_table(hash_array_size, max_fill_factor);
+  for(int i = 0; i < length; i++){
+    push_key_value(&res, array[i], i);
+  }
+  return res;
+}
+

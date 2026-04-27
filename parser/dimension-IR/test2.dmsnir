@@ -1,5 +1,5 @@
-takes (my_arg: 8, my_other_arg: 3, my_long_arg: 33, my_ptr: PTR )
-makes (rval_0: 16, rval_1: 1)
+in (my_arg: 8, my_other_arg: 3, my_long_arg: 33, my_ptr: PTR )
+out (rval_0: 16, rval_1: 1)
 
 r0     =  + my_arg,  my_other_arg 
 

@@ -23,6 +23,8 @@ unsigned long long hash_fn(char *input);
 
 hash_table_t init_hash_table(int array_size, float max_fill_factor);
 
+hash_table_t init_hash_table_from_array(int hash_array_size, float max_fill_factor, char* array[], int length);
+
 void push_key_value(hash_table_t *record, char *key, int value);
 
 void push_int_value(hash_table_t *record, int key, int value);

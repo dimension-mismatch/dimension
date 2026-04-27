@@ -2,8 +2,11 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "../hash_table/hash_table.h"
 
-char* instruction_names[] = {"+", "-", "*", "/", ">", "<", ">=", "<=", "==", "deref", ">>", "<<", "&", "|", "^", "!", "&&", "||", "^^", "!!"};
+int instruction_count = 20;
+char* instruction_names[] = {"+", "-", "*", "/", ">", "<", ">=", "<=", "==", "deref", ">>", "<<", "&", "|", "^", "!", "&&", "||", "^^", "!!", "printchar"};
+
 
 #define BLOCK_OPCODE 255
 typedef enum value_type{
@@ -18,7 +21,7 @@ typedef struct value{
     struct{
       uint64_t byte_count;
       uint8_t* data;
-    };
+    }literal;
   };
 }value_t;
 
@@ -30,7 +33,7 @@ typedef struct instruction{
       uint64_t dest_register;
       value_t a1;
       value_t a2;
-    } instruction;
+    };
     struct block* block;
   };
   
@@ -41,9 +44,11 @@ typedef struct block{
   uint64_t length;
   instruction_t* instructions;
   value_t multiplier;
-}block_t;
+}ir_block_t;
+
 
 typedef struct program{
-  block_t root;
-  
+  ir_block_t root;
+  uint64_t register_count;
+  uint64_t* registers;
 }program_t;

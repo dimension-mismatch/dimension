@@ -20,7 +20,7 @@ typedef enum{
   TK_FORCE_EXP_END,
   TK_ENDLINE,
 
-  TK_DMSN_IR,
+  TK_IR,
 
   TK_CHAR,
   TK_STRING,
@@ -33,7 +33,6 @@ typedef enum{
   NUM_BINARY_INT,
   NUM_FLOAT,
   NUM_SCI_FLOAT
-
 }numeric_literal_type_t;
 
 typedef struct token{

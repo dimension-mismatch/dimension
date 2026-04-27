@@ -109,7 +109,7 @@ void print_token_array(token_array_t* tokens){
       case TK_KEYWORD:
         printf(RED "KEYWORD     " RESET_COLOR);
         break;
-      case TK_DMSN_IR:
+      case TK_IR:
         printf(BLACK "IR          " RESET_COLOR);
         break;
       case TK_CHAR :
@@ -288,17 +288,6 @@ token_array_t* tokenize_file(FILE* file){
       continue;
     }
 
-
-    if(in_asm){
-      if(ch == '~'){
-        finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table, line, col);
-        in_asm = false;
-      }
-      else{
-        push_char(&current_token, ch);
-      }
-      continue;
-    }
     if(in_char){
       if(ch == '\''){
         finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table, line, col);
@@ -323,8 +312,10 @@ token_array_t* tokenize_file(FILE* file){
     
     if(ch == '~'){
       finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table, line, col);
-      current_token.type = TK_DMSN_IR;
-      in_asm = true;
+      current_token.type = TK_IR;
+      in_asm = !in_asm;
+      push_char(&current_token, ch);
+      finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table, line, col);
       continue;
     }
     if(ch == '\''){
