@@ -1,7 +1,9 @@
 #include "hash_table.h"
+#include "../colors.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #define FNV_PRIME 1099511628211
 #define FNV_OFFSET 1469598103934665603
@@ -67,7 +69,7 @@ void push_hash_node(hash_table_t* record, unsigned long long hash, struct hash_e
     record->array[idx] = new_node;
   }
   else{
-    if(name != NULL && strcmp(name, ptr->name)){
+    if(name != NULL && !strcmp(name, ptr->name)){
       return;
     }
     if(id != NULL && *id == ptr->id){
@@ -88,6 +90,7 @@ void push_key_value(hash_table_t* record, char* key, int value){
   new_node->prev = NULL;
   new_node->value = value;
   new_node->name = malloc((strlen(key) + 1) * sizeof(char));
+  new_node->is_int = false;
   strcpy(new_node->name, key);
   push_hash_node(record, hash_fn(key), new_node, key, NULL);
 }
@@ -98,6 +101,7 @@ void push_int_value(hash_table_t* record, int key, int value){
   new_node->prev = NULL;
   new_node->value = value;
   new_node->id = key;
+  new_node->is_int = true;
   push_hash_node(record, hash_int(key), new_node, NULL, &key);
 }
 
@@ -111,7 +115,7 @@ void remove_key_value(hash_table_t *record, char *key){
   if(ptr == NULL){
     return;
   }
-  while(strcmp(key, ptr->name)){
+  while(ptr->is_int || strcmp(key, ptr->name)){
     ptr = ptr->next;
     if(ptr == NULL){
       return;
@@ -135,7 +139,7 @@ void remove_int_value(hash_table_t* record, int key){
   if(ptr == NULL){
     return;
   }
-  while(ptr->id != key){
+  while(!ptr->is_int || ptr->id != key){
     ptr = ptr->next;
     if(ptr == NULL){
       return;
@@ -154,7 +158,7 @@ int* get_value_from_key(hash_table_t* record, char* key){
   if(ptr == NULL){
     return NULL;
   }
-  while(strcmp(key, ptr->name)){
+  while(ptr->is_int || strcmp(key, ptr->name)){
     ptr = ptr->next;
     if(ptr == NULL){
       return NULL;
@@ -169,7 +173,7 @@ int* get_value_from_int(hash_table_t* record, int key){
   if(ptr == NULL){
     return NULL;
   }
-  while(ptr->id != key){
+  while(!ptr->is_int || ptr->id != key){
     ptr = ptr->next;
     if(ptr == NULL){
       return NULL;
@@ -178,6 +182,25 @@ int* get_value_from_int(hash_table_t* record, int key){
   return &(ptr->value);
 }
 
+void print_hash_table(hash_table_t* table){
+  for(int i = 0; i < table->array_size; i++){
+    struct hash_entry* ptr = table->array[i];
+    if(ptr){
+      printf("\n");
+    }
+    while(ptr){
+      if(ptr->is_int){
+        printf(YELLOW "%i" RESET_COLOR, ptr->id);
+      }
+      else{
+        printf(WHITE "\"%s\"" RESET_COLOR, ptr->name);
+      }
+      printf("  :  %i ->", ptr->value);
+      ptr = ptr->next;
+    }
+    
+  }
+}
 
 hash_table_t init_hash_table_from_array(int hash_array_size, float max_fill_factor, char* array[], int length){
   hash_table_t res = init_hash_table(hash_array_size, max_fill_factor);

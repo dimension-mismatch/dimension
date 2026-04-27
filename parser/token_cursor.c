@@ -24,6 +24,17 @@ bool tc_inc(token_cursor_t* tc){
   return not_at_end;
 }
 
+void tc_dec(token_cursor_t* tc){
+  if(tc->index > 0){
+    tc->index--;
+    tc_update(tc);
+  }
+}
+
+void tc_throw_error(token_cursor_t* tc, int error_num){
+  throw_error(tc->error_manager, error_num, tc->index);
+}
+
 bool tc_is_asterisk(token_cursor_t* tc){
   return tc->tk.type == TK_IDENTIFIER && tc->tk.is_symbolic_identifier && tc->tk.length == 2 && tc->tk.content[0] == '*';
 }
