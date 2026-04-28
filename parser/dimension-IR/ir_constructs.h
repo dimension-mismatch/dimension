@@ -31,7 +31,7 @@ typedef struct instruction{
       ir_value_t a1;
       ir_value_t a2;
     };
-    struct block* block;
+    struct ir_block* block;
   };
   
 }instruction_t;
