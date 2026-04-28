@@ -1,5 +1,6 @@
 #pragma once
 #include "tokenizer.h"
+#include "dimension-IR/ir_constructs.h"
 #include <stdbool.h>
 
 struct type_identifier;
@@ -166,6 +167,6 @@ typedef struct function_definition{
   bool is_IR;
   union{
     block_t body;
-    char* ir;
+    program_t ir;
   };
 }function_definition_t;

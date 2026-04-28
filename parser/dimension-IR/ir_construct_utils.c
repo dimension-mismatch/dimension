@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 void print_value(ir_value_t* value){
   switch(value->type){
@@ -32,7 +33,7 @@ void print_instruction(instruction_t* instruction, int indent){
     printf(" ");
   }
   printf(CYAN BOLD "R%hu " RESET_COLOR " = ", instruction->dest_register);
-  printf(GREEN BOLD "%s " RESET_COLOR, instruction_names[instruction->opcode]);
+  printf(GREEN BOLD "op %i " RESET_COLOR, instruction->opcode);
   print_value(&instruction->a1);
   printf(", ");
   print_value(&instruction->a2);
@@ -55,4 +56,39 @@ void print_ir_block(ir_block_t* block, int indent){
 
 void print_program(program_t* program){
   print_ir_block(&program->root, 0);
+}
+
+void destroy_value(ir_value_t* value){
+  if(value->type == VAL_LITERAL){
+    free(value->literal.data);
+    value->literal.data = NULL;
+    value->literal.byte_count = 0;
+  }
+}
+
+void destroy_ir_block(ir_block_t* block);
+void destroy_instruction(instruction_t* instr){
+  if(instr->opcode == BLOCK_OPCODE){
+      destroy_ir_block(instr->block);
+    }
+    else{
+      destroy_value(&instr->a1);
+      destroy_value(&instr->a2);
+    }
+}
+
+void destroy_ir_block(ir_block_t* block){
+  for(int i = 0; i < block->length; i++){
+    destroy_instruction(block->instructions + i);
+  }
+  free(block->instructions);
+  block->instructions = NULL;
+  block->length = 0;
+  destroy_value(&block->multiplier);
+}
+
+void destroy_program(program_t* program){
+  destroy_ir_block(&program->root);
+  free(program->array.registers);
+  program->array.register_count = 0;
 }
