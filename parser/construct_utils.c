@@ -2,6 +2,7 @@
 #include "constructs.h"
 #include "colors.h"
 #include "tokenizer.h"
+#include "dimension-IR/ir_construct_utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -205,7 +206,8 @@ void print_function_definition(function_definition_t* fn_def){
   printf("\n   RETURNS: ");
   print_type_identifier(fn_def->return_type);
   if(fn_def->is_IR){
-    printf("\n   DOES (IR): %s", fn_def->ir);
+    printf("\n   DOES (IR): \n");
+    print_program(&fn_def->ir);
   }
   else{
     print_block(&fn_def->body);
@@ -377,8 +379,7 @@ void destroy_function_definition(function_definition_t* fn_def){
   fn_def->return_type = NULL;
 
   if(fn_def->is_IR){
-    free(fn_def->ir);
-    fn_def->ir = NULL;
+    destroy_program(&fn_def->ir);
   }
   else{
     destroy_block(&fn_def->body);
@@ -545,8 +546,7 @@ void copy_function_definition(function_definition_t *new, function_definition_t 
   new->return_type = malloc(sizeof(type_identifier_t));
   copy_type_identifier(new->return_type, fn_def->return_type);
   if(new->is_IR){
-    new->ir = malloc((1 + strlen(fn_def->ir)) * sizeof(char));
-    strcpy(new->ir, fn_def->ir);
+    //yeah im not gonna implement this i dont think I ever use this function anyways
   }
   else{
     copy_block(&new->body, &fn_def->body);
