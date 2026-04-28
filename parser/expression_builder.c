@@ -277,7 +277,7 @@ expression_t* construct_match(match_t match){
 
 expression_array_t* collapse_exp_array(pattern_trie_t* trie, expression_array_t* array, match_attempt_record_t* best_attempt){
   printf(RED BOLD "Expression Array: \n" RESET_COLOR);
-  print_expression_array(array);
+  //print_expression_array(array);
   printf("\n");
   expression_array_t* start = array;
   while(true){

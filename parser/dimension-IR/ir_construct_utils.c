@@ -16,7 +16,7 @@ void print_value(ir_value_t* value){
       printf(MAGENTA BOLD);
       uint8_t* data_p = value->literal.data;
       for(int i = 0; i < value->literal.byte_count; i++){
-        printf("0x%x", *data_p);
+        printf("%x", *data_p);
         data_p++;
       }
       printf(RESET_COLOR);
@@ -33,7 +33,7 @@ void print_instruction(instruction_t* instruction, int indent){
     printf(" ");
   }
   printf(CYAN BOLD "R%hu " RESET_COLOR " = ", instruction->dest_register);
-  printf(GREEN BOLD "op %i " RESET_COLOR, instruction->opcode);
+  printf(GREEN BOLD "op_%i " RESET_COLOR, instruction->opcode);
   print_value(&instruction->a1);
   printf(", ");
   print_value(&instruction->a2);

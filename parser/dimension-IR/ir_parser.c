@@ -38,11 +38,10 @@ bool parse_value(token_cursor_t* base_tc, ir_value_t* result, hash_table_t* itab
   if(tc.tk.type == TK_NUMERIC){
     result->type = VAL_LITERAL;
     //TODO: handle different immediate sizes
-    result->literal.byte_count = 4;
-    result->literal.data = malloc(4);
+    result->literal.byte_count = 1;
+    result->literal.data = malloc(1);
     int data = atoi(tc.tk.content);
-    uint32_t* dp = (uint32_t*) &data;
-    *result->literal.data = *dp;
+    *result->literal.data = data;
   }
   else if(tc.tk.type == TK_IDENTIFIER){
     decoded_identifier_t id = decode_identifier(tc.tk.content, itable, regtable);
@@ -123,10 +122,10 @@ parse_result_t parse_instruction(token_cursor_t* base_tc, instruction_t* result,
   if(tc.tk.type == TK_FORCE_EXP_END){
     tc_inc(&tc);
   }
-  tc_inc(&tc);
   if(!parse_value(&tc, &result->a2, itable, regtable)){
     return PRS_ERROR;
   }
+  tc_inc(&tc);
   *base_tc = tc;
   return PRS_SUCCESS;
 }
@@ -136,8 +135,8 @@ void parse_ir_block(token_cursor_t* base_tc, ir_block_t* result, hash_table_t* i
   result->length = 0;
   result->instructions = NULL;
   result->multiplier.type = VAL_LITERAL;
-  result->multiplier.literal.byte_count = 4;
-  result->multiplier.literal.data = malloc(4);
+  result->multiplier.literal.byte_count = 1;
+  result->multiplier.literal.data = malloc(1);
   *result->multiplier.literal.data = 1;
   while(tc.tk.type != TK_IR && !(tc.tk.type == TK_BLOCK && !tc.tk.is_open) && tc.tk.type != TK_NONE){
     instruction_t instruction;
@@ -152,9 +151,9 @@ void parse_ir_block(token_cursor_t* base_tc, ir_block_t* result, hash_table_t* i
       result->length++;
       result->instructions = realloc(result->instructions, result->length * sizeof(instruction_t));
       result->instructions[result->length - 1] = instruction;
-      tc_inc(&tc);
     }
   }
+  *base_tc = tc;
 }
 
 parse_result_t parse_ir(token_cursor_t* base_tc, program_t* result){
@@ -170,12 +169,14 @@ parse_result_t parse_ir(token_cursor_t* base_tc, program_t* result){
   hash_table_t label_table = init_hash_table(67, 0.9);
   result->array.register_count = 0;
   result->array.registers = NULL;
+  printf("we are at least trying to read ir...\n");
   parse_ir_block(&tc, &result->root, &instruction_table, &register_table, &result->array);
 
   destroy_hash_table(&instruction_table);
   destroy_hash_table(&register_table);
   destroy_hash_table(&label_table);
   *base_tc = tc;
+  printf("after attempting to read ir, we are now at ln %i, col %i\n", tc.tk.line_number, tc.tk.start_pos);
   return PRS_SUCCESS;
 }
 

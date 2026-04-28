@@ -5,6 +5,7 @@
 #include "expression_builder.h"
 #include "construct_utils.h"
 #include "hash_table/pattern_trie.h"
+#include "dimension-IR/ir_parser.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -69,6 +70,7 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
   if(!parse_expression(&tc, TK_TYPE, &contents)){
     return false;
   }
+  
   if(contents.type != EXP_TYPE_LITERAL){
     tc_throw_error(&tc, 2);
     destroy_expression(&contents);
@@ -422,6 +424,7 @@ bool parse_expression(token_cursor_t* base_tc, token_type_t end_type, expression
     } 
     else if(tc.tk.type == end_type || tc.tk.type == TK_FORCE_EXP_END || tc.tk.type == TK_ENDLINE){
       pattern_trie_t* trie = (end_type == TK_TYPE)? tc.type_trie : tc.fn_trie;
+      printf(" Building at Line %i, Column %i", tc.tk.line_number, tc.tk.start_pos);
       if(!build_expression(trie, &root, result, end_type == TK_VECTOR, tc.error_manager)){
         return false;
       }
@@ -576,6 +579,7 @@ parse_result_t parse_fn_declaration(token_cursor_t* base_tc, function_definition
   bool has_priority = false;
   bool has_does = false;
   while(tc.tk.type != TK_ENDLINE){
+    
     if(tc.tk.type != TK_KEYWORD){
       tc_throw_error(&tc, 12);
       return PRS_ERROR;
@@ -617,21 +621,38 @@ parse_result_t parse_fn_declaration(token_cursor_t* base_tc, function_definition
       tc_inc(&tc);
       block_t fn_body = {.line_count = 0, .lines = NULL};
       expression_t one_liner;
+      result->is_IR = false;
+      result->body = fn_body;
       if(tc.tk.type == TK_BLOCK && tc.tk.is_open){
-        do{
+        program_t ir;
+        tc_inc(&tc);
+        if(parse_ir(&tc, &ir) == PRS_SUCCESS){
+          result->is_IR = true;
+          result->ir = ir;
           tc_inc(&tc);
-        }while(tc.tk.type != TK_BLOCK);
+          if(tc.tk.type != TK_BLOCK || tc.tk.is_open){
+            tc_throw_error(&tc, 2);
+            return PRS_ERROR;
+          }
+        }
+        else{     
+          while(tc.tk.type != TK_BLOCK){
+            tc_inc(&tc);
+          }
+        }
         tc_inc(&tc);
       }
       else if(parse_expression(&tc, TK_KEYWORD, &one_liner)){
 
       }
       else{
+        
         tc_throw_error(&tc, 2);
         return PRS_ERROR;
       }
     }
     else{
+      
       tc_throw_error(&tc, 12);
       return PRS_ERROR;
     }
@@ -639,6 +660,7 @@ parse_result_t parse_fn_declaration(token_cursor_t* base_tc, function_definition
   pattern_trie_scope_out(tc.fn_trie);
   pattern_trie_scope_out(tc.type_trie);
   tc_inc(&tc);
+
   *base_tc = tc;
   return PRS_SUCCESS;
 }
@@ -710,8 +732,8 @@ void parse_block(token_cursor_t* tc, token_type_t end_type, block_t* result){
           }
           else{
             recover_from_error(tc);
-
           }
+          //tc_inc(tc);
         }
       }
     }
