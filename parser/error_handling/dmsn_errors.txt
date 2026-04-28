@@ -33,3 +33,13 @@
 ~ Unknown Identifier |@ Could not find a match for identifier "#T" 
 
 ~ Missing Semicolon |@ Expected a semicolon before "#T" to end the previous line
+
+~ in Dimension IR Instruction |@ Expected an identifier
+
+~ Missing IR Value |@ Expected a register or immediate value, but instead found instruction "#T"
+
+~ Undefined Register |@ Cannot read from register "#T" because it was not yet defined in this scope
+
+~ in IR Instruction |@ Expected Assignment operater "=",  but instead found "#T"
+
+~ invalid Instruction Name |@ Expected a name of a valid IR Instruction, but instead fount "#T"

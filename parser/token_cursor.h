@@ -14,6 +14,13 @@ typedef struct token_cursor{
   error_manager_t* error_manager;
 }token_cursor_t;
 
+typedef enum parse_result{
+  PRS_SUCCESS,
+  PRS_NOT_FOUND,
+  PRS_ERROR,
+  PRS_ERROR_UNCAUGHT,
+}parse_result_t;
+
 token_cursor_t tc_init(token_array_t *array, pattern_trie_t *fn_trie, pattern_trie_t *type_trie, error_manager_t *error_manager);
 
 void tc_update(token_cursor_t *tc);

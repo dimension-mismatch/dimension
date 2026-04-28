@@ -6,12 +6,12 @@
 #include <stdio.h>
 #include <stdint.h>
 
-void print_value(value_t* value){
+void print_value(ir_value_t* value){
   switch(value->type){
-    case REGISTER:
-      printf(CYAN BOLD "R%llu" RESET_COLOR, value->register_id);
+    case VAL_REGISTER:
+      printf(CYAN BOLD "R%hu" RESET_COLOR, value->register_id);
       break;
-    case LITERAL:
+    case VAL_LITERAL:
       printf(MAGENTA BOLD);
       uint8_t* data_p = value->literal.data;
       for(int i = 0; i < value->literal.byte_count; i++){
@@ -25,13 +25,13 @@ void print_ir_block(ir_block_t* block, int indent);
 
 void print_instruction(instruction_t* instruction, int indent){
   if(instruction->opcode == 255){
-    print_block(instruction->block, indent);
+    print_ir_block(instruction->block, indent);
     return;
   }
   for(int i = 0; i < indent; i++){
     printf(" ");
   }
-  printf(CYAN BOLD "R%llu " RESET_COLOR " = ", instruction->dest_register);
+  printf(CYAN BOLD "R%hu " RESET_COLOR " = ", instruction->dest_register);
   printf(GREEN BOLD "%s " RESET_COLOR, instruction_names[instruction->opcode]);
   print_value(&instruction->a1);
   printf(", ");
@@ -54,5 +54,5 @@ void print_ir_block(ir_block_t* block, int indent){
 }
 
 void print_program(program_t* program){
-  print_block(&program->root, 0);
+  print_ir_block(&program->root, 0);
 }
