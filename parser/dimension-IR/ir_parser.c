@@ -67,6 +67,7 @@ parse_result_t parse_instruction(token_cursor_t* base_tc, instruction_t* result,
     return PRS_NOT_FOUND;
   }
   decoded_identifier_t id = decode_identifier(tc.tk.content, itable, regtable);
+  bool register_needs_size = false;
   if(id.type == ID_INSTRUCTION){
     result->dest_register = -1;
     tc_inc(&tc);
@@ -78,6 +79,8 @@ parse_result_t parse_instruction(token_cursor_t* base_tc, instruction_t* result,
     }
     else{
       char* name = tc.tk.content;
+      register_needs_size = true;
+      int size = 1;
       tc_inc(&tc);
       if(tc.tk.type == TK_DECL && tc.tk.decl_const_lvl == CL_MUTABLE){
         tc_inc(&tc);
@@ -89,14 +92,16 @@ parse_result_t parse_instruction(token_cursor_t* base_tc, instruction_t* result,
           tc_throw_error(&tc, 9);
           return PRS_ERROR;
         }
-        int size = atoi(tc.tk.content);
-        push_key_value(regtable, name, reg_array->register_count);
-        reg_array->register_count++;
-        reg_array->registers = realloc(reg_array->registers, reg_array->register_count * sizeof(uint16_t));
-        reg_array->registers[reg_array->register_count - 1] = size;
-
+        
+        size = atoi(tc.tk.content);
         tc_inc(&tc);
       }
+      push_key_value(regtable, name, reg_array->register_count);
+      result->dest_register = reg_array->register_count;
+      reg_array->register_count++;
+      reg_array->registers = realloc(reg_array->registers, reg_array->register_count * sizeof(uint16_t));
+      reg_array->registers[reg_array->register_count - 1] = size;
+     
     }
     if(tc.tk.type != TK_IDENTIFIER || tc.tk.length != 2 || tc.tk.content[0] != '='){
       tc_throw_error(&tc, 21);
@@ -117,6 +122,15 @@ parse_result_t parse_instruction(token_cursor_t* base_tc, instruction_t* result,
   }
   if(!parse_value(&tc, &result->a1, itable, regtable)){
     return PRS_ERROR;
+  }
+  //if register size was not specified, then we infer size from instruction arguments
+  if(register_needs_size){
+    if(result->a1.type == VAL_REGISTER){
+      reg_array->registers[result->dest_register] = reg_array->registers[result->a1.register_id];
+    }
+    else{
+      reg_array->registers[result->dest_register] = result->a1.literal.byte_count;
+    }
   }
   tc_inc(&tc);
   if(tc.tk.type == TK_FORCE_EXP_END){
@@ -145,7 +159,10 @@ void parse_ir_block(token_cursor_t* base_tc, ir_block_t* result, hash_table_t* i
       tc_inc(&tc);
     }
     else if(instr_res == PRS_ERROR){
-      tc_inc(&tc);
+      int current_line = tc.tk.line_number;
+      while(tc.tk.line_number == current_line && tc.tk.type != TK_IR && !(tc.tk.type == TK_BLOCK && !tc.tk.is_open) && tc.tk.type != TK_NONE){
+        tc_inc(&tc);
+      }
     }
     else{
       result->length++;
@@ -164,7 +181,7 @@ parse_result_t parse_ir(token_cursor_t* base_tc, program_t* result){
   tc_inc(&tc);
   int instruction_count = 20;
   char* instruction_names[] = {"+", "-", "*", "/", ">", "<", ">=", "<=", "==", "deref", ">>", "<<", "&", "|", "^", "!", "&&", "||", "^^", "!!", "printchar"};
-  hash_table_t instruction_table = init_hash_table_from_array(67, 0.9, instruction_names, 20);
+  hash_table_t instruction_table = init_hash_table_from_array(67, 0.9, instruction_names, instruction_count);
   hash_table_t register_table = init_hash_table(67, 0.9);
   hash_table_t label_table = init_hash_table(67, 0.9);
   result->array.register_count = 0;

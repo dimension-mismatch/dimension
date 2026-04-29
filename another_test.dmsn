@@ -11,5 +11,5 @@ my_var : [k i];
 
 fn (a :: [i]) + (b :: [i]) makes [i] does {~
   reg = >> 4 3
-  q = + 2 5
+  q = + reg 5
 ~} priority 7;
