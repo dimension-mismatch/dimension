@@ -475,15 +475,18 @@ parse_result_t parse_type_declaration(token_cursor_t* base_tc, type_declaration_
       if(tc.tk.number_type != NUM_FLOAT && tc.tk.number_type != NUM_SCI_FLOAT){
         result->is_builtin = true;
         result->byte_count = atoi(tc.tk.content);
+        printf("end of holds segment at %i, col %i\n", tc.tk.line_number, tc.tk.start_pos);
         tc_inc(&tc);
         if(tc.tk.type == TK_ENDLINE){
           tc_inc(&tc);
-          *base_tc = tc;
-          pattern_trie_scope_out(tc.fn_trie);
-          return PRS_SUCCESS;
         }
-        tc_throw_error(&tc, 17);
-        return PRS_ERROR;
+        else{
+          tc_throw_error(&tc, 17); //Here we throw a missing semicolon error, but we don't return failure, 
+          //since we still successfully read a type declaration
+        }
+        *base_tc = tc;
+        pattern_trie_scope_out(tc.fn_trie);  
+        return PRS_SUCCESS; 
       }
       tc_throw_error(&tc, 9);
       return PRS_ERROR;
@@ -549,6 +552,7 @@ parse_result_t parse_type_declaration(token_cursor_t* base_tc, type_declaration_
     }
   }
   tc_inc(&tc);
+    
   if(tc.tk.type == TK_ENDLINE){
     pattern_trie_scope_out(tc.fn_trie);
     tc_inc(&tc);
@@ -667,14 +671,15 @@ parse_result_t parse_fn_declaration(token_cursor_t* base_tc, function_definition
 
 void recover_from_error(token_cursor_t* tc){
   while(tc->tk.type != TK_ENDLINE && tc->tk.type != TK_NONE){
+    tc_inc(tc);
     if(tc->tk.type == TK_KEYWORD && (tc->tk.keyword_id == 0 || tc->tk.keyword_id == 4)){
       tc_throw_error(tc, 17);
       tc_dec(tc);
       return;
     }
-    tc_inc(tc);
   }
   tc_inc(tc);
+
 }
 
 void parse_block(token_cursor_t* tc, token_type_t end_type, block_t* result){
@@ -688,12 +693,15 @@ void parse_block(token_cursor_t* tc, token_type_t end_type, block_t* result){
       type_declaration_t* typedecptr = malloc(sizeof(type_declaration_t));
       *typedecptr = typedec;
       pattern_trie_push_type(tc->type_trie, typedecptr);
+      printf("successful typedec! we are now at line %i, column %i\n", tc->tk.line_number, tc->tk.start_pos);
       //continue;
     }
     else if(type_result == PRS_ERROR){
+      printf("error in type declaration, recovering now\n");
+      printf("current position: line %i, column %i\n", tc->tk.line_number, tc->tk.start_pos);
       pattern_trie_scope_out(tc->fn_trie);
       recover_from_error(tc);
-
+      printf("recovered to: line %i, column %i\n", tc->tk.line_number, tc->tk.start_pos);
       //continue;
     }
     else{
