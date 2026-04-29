@@ -1,6 +1,10 @@
 type [i] holds 8;
 
-fn (a ::: [i], b :: 2[i])* makes [i] does {~
+type [prt (p ::: [i])] holds 12;
+type [j (val ::: (n ::: [i]) * (n) * [i])] holds 4;
+
+fn (a ::: [prt(n ::: [i])]) + (b ::: [i]) makes [i] does {~
   reg = >> 4 3
   q = + reg 5
 ~} priority 7;
+
