@@ -1,15 +1,6 @@
 type [i] holds 8;
-type [j (val ::: (n ::: [i]) * (n) * [i])] holds 4;
 
-type [k [i]] holds 6;
-
-my_int : 234[i];
-
-my_var : [k i];
-
-
-
-fn (a :: [i]) + (b :: [i]) makes [i] does {~
+fn (a ::: [i], b :: 2[i])* makes [i] does {~
   reg = >> 4 3
   q = + reg 5
 ~} priority 7;

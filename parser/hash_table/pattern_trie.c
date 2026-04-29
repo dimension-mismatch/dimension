@@ -193,7 +193,7 @@ pattern_trie_node_t* pattern_trie_node_find_next(pattern_trie_node_t* node, patt
       get_value_from_int(&node->next_parameters, entry->variable.type.base_type_id);
 
       if(match_index == NULL){
-        return node;
+        return NULL;
       }
       possible_type_matches_t possible_indices = node->type_matches[*match_index];
       child_index = NULL;
@@ -215,7 +215,6 @@ pattern_trie_node_t* pattern_trie_node_find_next(pattern_trie_node_t* node, patt
 pattern_trie_node_t* pattern_trie_node_match_pattern(pattern_trie_node_t* node, pattern_t* pattern, int* entry_index){
   while(*entry_index < pattern->entry_count){
     pattern_entry_t entry = pattern->entries[*entry_index];
-    
     pattern_trie_node_t* next = pattern_trie_node_find_next(node, &entry);
     if(!next){
       return node;
