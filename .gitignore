@@ -1,6 +1,6 @@
 *.o
-dmsn
-another
+/parser/dmsn
+
 .DS_store
 
 test
