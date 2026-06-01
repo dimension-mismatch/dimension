@@ -86,11 +86,16 @@ void print_dimension_array(dimension_array_t* array){
 }
 
 void print_type_argument(type_argument_t* arg){
-  if(arg->is_subtype){
-    print_type_identifier(arg->subtype);
-  }
-  else{
-    print_datum(&arg->arg);
+  switch(arg->type){
+    case TYPEARG_SUBTYPE:
+      print_type_identifier(arg->subtype);
+      break;
+    case TYPEARG_DATUM:
+      print_datum(&arg->arg);
+      break;
+    case TYPEARG_PARAM_EXP:
+      print_expression(arg->exp);
+      break;
   }
 }
 
@@ -164,20 +169,14 @@ void print_pattern_type(pattern_type_t* ptype){
     print_type_identifier(&ptype->param_type);
   }
   else{
-    printf("[" GREEN BOLD "#%i" RESET_COLOR, ptype->base_type_id);
+    printf("[");
+    //printf(GREEN BOLD "#%i" RESET_COLOR, ptype->base_type_id);
     print_pattern(ptype->subpattern);
     printf("]");
   }
 }
 void print_pattern_variable(pattern_variable_t* pvar){
   if(!pvar) return;
-  // if(pvar->name){
-  //   printf(MAGENTA "%s " BLUE, pvar->name);
-  //   for(int i = 0; i < pvar->constant_lvl; i++){
-  //     printf(":");
-  //   }
-  //   printf(RESET_COLOR " ");
-  // }
   
   for(int i = 0; i < pvar->constant_lvl + 1; i++){
     printf(":");
@@ -189,10 +188,12 @@ void print_pattern_entry(pattern_entry_t* pentry){
   if(!pentry) return;
   switch(pentry->type){
     case PATTERN_IDENTIFIER:
-      printf(WHITE "\"%s\"" RESET_COLOR, pentry->identifier);
+      printf(WHITE "%s" RESET_COLOR, pentry->identifier);
       break;
     case PATTERN_VARIABLE:
+      printf("(");
       print_pattern_variable(&pentry->variable);
+      printf(")");
       break;
     case PATTERN_TYPE: 
       print_pattern_type(&pentry->pattern_type);
@@ -283,11 +284,16 @@ void destroy_datum(datum_t* datum){
   datum->size = 0;
 }
 void destroy_type_argument(type_argument_t* arg){
-  if(arg->is_subtype){
-    destroy_type_identifier(arg->subtype);
-  }
-  else{
-    destroy_datum(&arg->arg);
+  switch(arg->type){
+    case TYPEARG_SUBTYPE:
+      destroy_type_identifier(arg->subtype);
+      break;
+    case TYPEARG_DATUM:
+      destroy_datum(&arg->arg);
+      break;
+    case TYPEARG_PARAM_EXP:
+      destroy_expression(arg->exp);
+      break;
   }
 }
 
@@ -422,13 +428,19 @@ void copy_datum(datum_t* new, datum_t* datum){
   }
 }
 void copy_type_argument(type_argument_t* new, type_argument_t* arg){
-  new->is_subtype = arg->is_subtype;
-  if(arg->is_subtype){
-    new->subtype = malloc(sizeof(type_identifier_t));
-    copy_type_identifier(new->subtype, arg->subtype);
-  }
-  else{
-    copy_datum(&new->arg, &arg->arg);
+  new->type = arg->type;
+  switch(arg->type){
+    case TYPEARG_SUBTYPE:
+      new->subtype = malloc(sizeof(type_identifier_t));
+      copy_type_identifier(new->subtype, arg->subtype);
+      break;
+    case TYPEARG_DATUM:
+      copy_datum(&new->arg, &arg->arg);
+      break;
+    case TYPEARG_PARAM_EXP:
+      new->exp = malloc(sizeof(expression_t));
+      copy_expression(new->exp, arg->exp);
+      break;
   }
 }
 

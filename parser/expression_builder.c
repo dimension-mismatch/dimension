@@ -133,44 +133,32 @@ trie_match_result_t* match_expression_array(pattern_trie_t* trie, expression_arr
 expression_t* construct_fn_call(match_t match){
   expression_t fn_call = {
     .type = EXP_FUNCTION_CALL, 
-    .function_call = {.fn_id = match.content->index, .num_params = 0, .params = NULL},
+    .function_call = {.fn_id = match.content->index, .num_params = match.content->fndec.match.param_count, .params = NULL},
     .const_lvl = CL_CONST};
-
+  fn_call.function_call.params = malloc(fn_call.function_call.num_params * sizeof(expression_t));
   expression_array_t* start = match.location;
   expression_array_t* curr = start;
   expression_array_t* next = start->next;
   int tk_begin = next->tk_begin;
   int tk_end;
-  printf("Function Def: ");
-  print_function_definition(&match.content->fndec);
-  printf("\n");
+  int param_i = 0;
+  
   for(int i = 0; i < match.content->length; i++){
     curr = next;
     tk_end = curr->tk_end;
-    switch(match.content->fndec.match.entries[i].type){
+    pattern_entry_t* entry = match.content->fndec.match.entries + i;
+    switch(entry->type){
       case PATTERN_IDENTIFIER:
         destroy_expression(&curr->exp);
         break;
       case PATTERN_VARIABLE: {
-        int new_c = ++fn_call.function_call.num_params;
-        fn_call.function_call.params = realloc(fn_call.function_call.params, new_c * sizeof(expression_t));
-        fn_call.function_call.params[new_c - 1] = curr->exp;
+        fn_call.function_call.params[param_i] = curr->exp;
+        param_i++;
         break;
       }
       case PATTERN_TYPE: {
-        int new_c = fn_call.function_call.num_params + curr->exp.type_literal->num_params;
-        fn_call.function_call.params = realloc(fn_call.function_call.params, new_c * sizeof(expression_t));
-        for (int i = fn_call.function_call.num_params, j = 0; i < new_c; i++, j++){
-          type_argument_t arg = curr->exp.type_literal->params[j];
-          if(arg.is_subtype){
-            
-          }
-          else{
-            //fn_call.function_call.params[i] = *arg;
-          }
-          
-        }        
-        fn_call.function_call.num_params = new_c;
+       
+
         break;
       }
       case PATTERN_EXP: //Function definition patterns do not have prefilled expression arguments
@@ -220,7 +208,7 @@ expression_t* construct_type_call(match_t match){
         int new_c = ++type_id->num_params;
         type_id->params = realloc(type_id->params, new_c * sizeof(type_argument_t));
 
-        type_argument_t arg = {.is_subtype = false, .arg = evaluate_expression(&curr->exp)};
+        type_argument_t arg = {.type = TYPEARG_DATUM, .arg = evaluate_expression(&curr->exp)};
         type_id->params[new_c - 1] = arg;
         break;
       }

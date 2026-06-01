@@ -127,19 +127,17 @@ type_identifier_t resolve_pattern_type(pattern_type_t* ptype){
       case PATTERN_IDENTIFIER:
         continue;
       case PATTERN_TYPE:
-        arg.is_subtype = true;
+        arg.type = TYPEARG_SUBTYPE;
         arg.subtype = malloc(sizeof(type_identifier_t));
         *arg.subtype = resolve_pattern_type(&entry->pattern_type);
         break;
       case PATTERN_VARIABLE:
-        arg.is_subtype = false;
-        //TODO: Read superconst variable as datum
-        datum_t value = {.size = 2, .data = malloc(2)};
-        value.data[0] = 67;
-        arg.arg = value;
+        arg.type = TYPEARG_PARAM_EXP;
+        expression_t exp = {.type = EXP_READ_VAR, .const_lvl = 2, .read_var_id = 1}; //TODO get actual var id
+        
         break;
       case PATTERN_EXP:
-        arg.is_subtype = false;
+        arg.type = TYPEARG_DATUM;
         arg.arg = entry->datum;
         break;
     }

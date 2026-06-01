@@ -80,11 +80,18 @@ typedef struct dimension_array{
   uint16_t* dimensions;
 }dimension_array_t;
 
+typedef enum type_argument_type{
+  TYPEARG_DATUM,
+  TYPEARG_SUBTYPE,
+  TYPEARG_PARAM_EXP,
+}type_argument_type_t;
+
 typedef struct type_argument{
-  bool is_subtype;
+  type_argument_type_t type;
   union{
     struct type_identifier* subtype;
     datum_t arg;
+    expression_t* exp;
   };
 }type_argument_t;
 

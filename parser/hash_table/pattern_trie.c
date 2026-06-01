@@ -30,10 +30,13 @@ bool uint16_datum_compare(datum_t* a, uint16_t b){
 }
 
 bool type_argument_compare(type_argument_t* a, type_argument_t* b){
-  if(a->is_subtype != b->is_subtype){
+  if(a->type != b->type){
     return false;
   }
-  if(a->is_subtype){
+  if(a->type == TYPEARG_PARAM_EXP){
+    return false; 
+  }
+  else if(a->type == TYPEARG_SUBTYPE){
     return type_identifier_compare(a->subtype, b->subtype);
   }
   return compare_data(&a->arg, &b->arg);
@@ -151,16 +154,16 @@ bool test_pattern_type(pattern_type_t* test, type_identifier_t* subject){
       case PATTERN_IDENTIFIER:
         break;
       case PATTERN_VARIABLE: {
-        if(arg->is_subtype) return false; //we shouldn't need to check this since we know both structs fit the same pattern
+        if(arg->type == TYPEARG_SUBTYPE) return false; //we shouldn't need to check this since we know both structs fit the same pattern
         j++;
       }
       case PATTERN_TYPE: {
-        if(!arg->is_subtype) return false;
+        if(arg->type != TYPEARG_SUBTYPE) return false;
         if(!test_pattern_type(&entry->pattern_type, arg->subtype)) return false;
         j++;
       }
       case PATTERN_EXP: {
-        if(arg->is_subtype) return false;
+        if(arg->type != TYPEARG_DATUM) return false;
         if(!compare_data(&entry->datum, &arg->arg)) return false;
         j++;
       }
