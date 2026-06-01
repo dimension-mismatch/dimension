@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "../hash_table/hash_table.h"
+#include "registers.h"
 
 
 #define BLOCK_OPCODE 255
@@ -43,11 +44,7 @@ typedef struct ir_block{
   ir_value_t multiplier;
 }ir_block_t;
 
-typedef struct register_array{
-  uint16_t register_count;
-  uint16_t* registers;
-}register_array_t;
 typedef struct program{
   ir_block_t root;
-  register_array_t array;
+  register_file_t registers;
 }program_t;

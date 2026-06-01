@@ -6,6 +6,7 @@
 #include "token_cursor.h"
 #include "hash_table/pattern_trie.h"
 #include "colors.h"
+#include "comptime_eval.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -127,6 +128,8 @@ trie_match_result_t* match_expression_array(pattern_trie_t* trie, expression_arr
   return trie->matches + *result_index;
 }
 
+
+
 expression_t* construct_fn_call(match_t match){
   expression_t fn_call = {
     .type = EXP_FUNCTION_CALL, 
@@ -157,12 +160,22 @@ expression_t* construct_fn_call(match_t match){
       case PATTERN_TYPE: {
         int new_c = fn_call.function_call.num_params + curr->exp.type_literal->num_params;
         fn_call.function_call.params = realloc(fn_call.function_call.params, new_c * sizeof(expression_t));
-        for (unsigned int i = fn_call.function_call.num_params, j = 0; i < new_c; i++, j++){
-          fn_call.function_call.params[i] = curr->exp.type_literal->params[j];
+        for (int i = fn_call.function_call.num_params, j = 0; i < new_c; i++, j++){
+          type_argument_t arg = curr->exp.type_literal->params[j];
+          if(arg.is_subtype){
+            
+          }
+          else{
+            //fn_call.function_call.params[i] = *arg;
+          }
+          
         }        
         fn_call.function_call.num_params = new_c;
+        break;
       }
-      break;
+      case PATTERN_EXP: //Function definition patterns do not have prefilled expression arguments
+        break;
+      
     }
     next = curr->next;
     free(curr);
@@ -195,9 +208,7 @@ expression_t* construct_type_call(match_t match){
   expression_array_t* next = start->next;
   int tk_start = next->tk_begin;
   int tk_end;
-  printf("Type Def: ");
-  print_type_declaration(&match.content->typedec);
-  printf("\n");
+
   for(int i = 0; i < match.content->length; i++){
     curr = next;
     tk_end = curr->tk_end;
@@ -207,18 +218,24 @@ expression_t* construct_type_call(match_t match){
         break;
       case PATTERN_VARIABLE:{
         int new_c = ++type_id->num_params;
-        type_id->params = realloc(type_id->params, new_c * sizeof(expression_t));
-        type_id->params[new_c - 1] = curr->exp;
+        type_id->params = realloc(type_id->params, new_c * sizeof(type_argument_t));
+
+        type_argument_t arg = {.is_subtype = false, .arg = evaluate_expression(&curr->exp)};
+        type_id->params[new_c - 1] = arg;
         break;
       }
       case PATTERN_TYPE: {
         int new_c = type_id->num_params + curr->exp.type_literal->num_params;
-        type_id->params = realloc(type_id->params, new_c * sizeof(expression_t));
-        for (unsigned int i = type_id->num_params, j = 0; i < new_c; i++, j++){
+        type_id->params = realloc(type_id->params, new_c * sizeof(type_argument_t));
+        for (int i = type_id->num_params, j = 0; i < new_c; i++, j++){
           type_id->params[i] = curr->exp.type_literal->params[j];
         }        
         type_id->num_params = new_c;
       }
+      break;
+      case PATTERN_EXP:
+        //shouldnt ever use this
+        break;
       break;
     }
     next = curr->next;

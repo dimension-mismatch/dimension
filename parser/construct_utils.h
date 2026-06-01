@@ -4,7 +4,8 @@
 void print_block(block_t* block);
 void print_expression(expression_t* exp);
 void print_dimension_array(dimension_array_t* array);
-void print_type_identifier(type_identifier_t* type);
+void print_type_argument(type_argument_t *arg);
+void print_type_identifier(type_identifier_t *type);
 void print_type_declaration(type_declaration_t* typedec);
 void print_variable_declaration(variable_declaration_t* vardec);
 void print_pattern_value(pattern_value_t* pval);
@@ -44,7 +45,7 @@ void copy_pattern_entry(pattern_entry_t* new, pattern_entry_t* pentry);
 void copy_pattern(pattern_t* new, pattern_t* pattern);
 void copy_function_definition(function_definition_t* new, function_definition_t* fn_def);
 
-expression_t *add_dimension(dimension_array_t *array);
+void add_dimension(dimension_array_t *array, uint16_t dimension);
 
 pattern_value_t *add_pattern_dimension(pattern_dimension_array_t *array);
 

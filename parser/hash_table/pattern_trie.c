@@ -8,26 +8,35 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-bool compare_expressions(expression_t* a, expression_t* b){
-  if(a->type != EXP_VALUE_LITERAL || b->type != EXP_VALUE_LITERAL){
+bool type_identifier_compare(type_identifier_t* a, type_identifier_t* b);
+bool pattern_entry_compare(pattern_entry_t* a, pattern_entry_t* b);
+
+bool compare_data(datum_t* a, datum_t* b){
+  if(a->size != b->size){
     return false;
   }
-  if(a->value_literal.type != b->value_literal.type){
-    return false;
+  for(int i = 0; i < a->size; i++){
+    if(a->data[i] != b->data[i]){
+      return false;
+    }
   }
   return true;
-  switch(a->value_literal.type){
-    case VAL_CHAR:
-      return a->value_literal.c == b->value_literal.c;
-    case VAL_FLOAT:
-      return a->value_literal.f == b->value_literal.f;
-    case VAL_INT:
-      return a->value_literal.i == b->value_literal.i;
-    case VAL_STRING:
-      return !strcmp(a->value_literal.s, b->value_literal.s);
-    case VAL_UNSIGNED:
-      return a->value_literal.u == b->value_literal.u;
+}
+
+bool uint16_datum_compare(datum_t* a, uint16_t b){
+  if(a->size != 2) return false; //datum must be 2 bytes to match uint16
+  uint16_t read = (a->data[0] << 8) | a->data[1]; //(a->data[1] << 8) | a->data[0]; swap endianness
+  return read == b;
+}
+
+bool type_argument_compare(type_argument_t* a, type_argument_t* b){
+  if(a->is_subtype != b->is_subtype){
+    return false;
   }
+  if(a->is_subtype){
+    return type_identifier_compare(a->subtype, b->subtype);
+  }
+  return compare_data(&a->arg, &b->arg);
 }
 
 
@@ -42,12 +51,12 @@ bool type_identifier_compare(type_identifier_t* a, type_identifier_t* b){
     return false;
   }
   for(int i = 0; i < a->dimensions.dimension_count; i++){
-    if(!compare_expressions(a->dimensions.dimensions + i, b->dimensions.dimensions + i)){
+    if(a->dimensions.dimensions[i] != b->dimensions.dimensions[i]){
       return false;
     }
   }
   for(int i = 0; i < a->num_params; i++){
-    if(!type_identifier_compare(a->params[i].return_type, b->params[i].return_type)){
+    if(!type_argument_compare(&a->params[i], &b->params[i])){
       return false;
     }
   }
@@ -63,7 +72,7 @@ bool pattern_value_compare(pattern_value_t* a, pattern_value_t* b){
     return pattern_type_compare(a->param.type, b->param.type);
   }
   else{
-    return compare_expressions(a->base_value, b->base_value);
+    return compare_data(&a->base_value, &b->base_value);
   }
 }
 bool pattern_type_compare(pattern_type_t* a, pattern_type_t* b){
@@ -86,8 +95,8 @@ bool pattern_type_compare(pattern_type_t* a, pattern_type_t* b){
   if(a->is_param){
     return true;
   }
-  for(int i = 0; i < a->param_count; i++){
-    if(!pattern_value_compare(a->parameters + i, b->parameters + i)){
+  for(int i = 0; i < a->subpattern->entry_count; i++){
+    if(!pattern_entry_compare(a->subpattern->entries + i, b->subpattern->entries + i)){
       return false;
     }
   }
@@ -98,27 +107,20 @@ bool pattern_entry_compare(pattern_entry_t* a, pattern_entry_t* b){
   if(a->type != b->type){
     return false;
   }
-
-  if(a->type == PATTERN_IDENTIFIER){
-    return !strcmp(a->identifier, b->identifier);
+  switch(a->type){
+    case PATTERN_IDENTIFIER:
+      return !strcmp(a->identifier, b->identifier);
+    case PATTERN_TYPE:
+      return pattern_type_compare(&a->pattern_type, &b->pattern_type);
+    case PATTERN_VARIABLE: {
+      if(a->variable.constant_lvl != b->variable.constant_lvl){
+        return false;
+      }
+      return pattern_type_compare(&a->variable.type, &b->variable.type);
+    }
+    case PATTERN_EXP:
+      return compare_data(&a->datum, &b->datum);
   }
-
-  if(a->type == PATTERN_TYPE){
-    return pattern_type_compare(&a->pattern_type, &b->pattern_type);
-  }
- 
-  if(a->variable.constant_lvl != b->variable.constant_lvl){
-    return false;
-  }
-  if(a->variable.type.is_param != b->variable.type.is_param){
-    return false;
-  }
-  if(a->variable.type.is_param){
-    return true;
-  }
-  pattern_type_t* a_type = &a->variable.type;
-  pattern_type_t* b_type = &b->variable.type;
-  return pattern_type_compare(a_type, b_type);
 }
 
 
@@ -137,17 +139,32 @@ bool test_pattern_type(pattern_type_t* test, type_identifier_t* subject){
   }
   for(int i = 0; i < test->dimensions.dimension_count; i++){
     if(!test->dimensions.dimensions[i].is_param){
-      if(!compare_expressions(test->dimensions.dimensions[i].base_value, subject->dimensions.dimensions + i)){
+      if(!uint16_datum_compare(&test->dimensions.dimensions[i].base_value, subject->dimensions.dimensions[i])){
         return false;
       }
     }
   }
-  for(int i = 0; i < test->param_count; i++){
-    if(!test->parameters[i].is_param){
-      if(!compare_expressions(test->parameters[i].base_value, subject->params + i)){
-        return false;
+  for(int i = 0, j = 0; i < test->subpattern->entry_count; i++){
+    pattern_entry_t* entry = test->subpattern->entries + i;
+    type_argument_t* arg = subject->params + j;
+    switch(entry->type){
+      case PATTERN_IDENTIFIER:
+        break;
+      case PATTERN_VARIABLE: {
+        if(arg->is_subtype) return false; //we shouldn't need to check this since we know both structs fit the same pattern
+        j++;
       }
-    }
+      case PATTERN_TYPE: {
+        if(!arg->is_subtype) return false;
+        if(!test_pattern_type(&entry->pattern_type, arg->subtype)) return false;
+        j++;
+      }
+      case PATTERN_EXP: {
+        if(arg->is_subtype) return false;
+        if(!compare_data(&entry->datum, &arg->arg)) return false;
+        j++;
+      }
+    } 
   }
   return true;
 }
@@ -205,6 +222,8 @@ pattern_trie_node_t* pattern_trie_node_find_next(pattern_trie_node_t* node, patt
         }
       }
     }
+    case PATTERN_EXP:
+      break; // this case doesn't happen
   }
   if(child_index == NULL){
     return NULL;
@@ -282,6 +301,9 @@ pattern_trie_node_t* pattern_trie_node_push_pattern(pattern_trie_node_t* root, p
         possible_indices->possible_matches[possible_indices->num_possibilities - 1] = node->children_count;
         break;
       }
+      case PATTERN_EXP:
+        //this case doesn't happen
+        break;
     }
     node->children_count++;
     node->children = realloc(node->children, node->children_count * sizeof(pattern_trie_node_t*));
@@ -299,6 +321,7 @@ pattern_trie_node_t* pattern_trie_node_push_pattern(pattern_trie_node_t* root, p
 }
 
 void pattern_trie_push_type(pattern_trie_t *trie, type_declaration_t *type){
+  
   pattern_trie_node_t* node = pattern_trie_node_push_pattern(trie->root, type->match_pattern, trie->match_count);
   trie->match_count++;
   trie->matches = realloc(trie->matches, trie->match_count * sizeof(trie_match_result_t));
@@ -522,6 +545,9 @@ void pattern_trie_pop_pattern(pattern_trie_t* trie, int match_to_remove){
         }
       }
     }
+    case PATTERN_EXP:
+      break; //this case doesn't happen
+
   }
 
   destroy_pattern_trie_node(node->children[*child_index]);

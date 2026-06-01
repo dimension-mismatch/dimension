@@ -7,6 +7,7 @@ struct type_identifier;
 struct variable_declaration;
 struct pattern;
 struct pattern_type;
+struct type_argument;
 
 typedef enum expression_type{
   EXP_TYPE_LITERAL,
@@ -22,7 +23,8 @@ typedef enum value_type{
   VAL_UNSIGNED,
   VAL_FLOAT,
   VAL_CHAR,
-  VAL_STRING
+  VAL_STRING,
+  VAL_DATUM
 }value_type_t;
 
 typedef enum constant_level{
@@ -31,7 +33,10 @@ typedef enum constant_level{
   CL_SUPERCONST,
 }const_lvl_t;
 
-
+typedef struct datum{
+  uint16_t size;
+  uint8_t* data;
+}datum_t;
 
 typedef struct expression{
   expression_type_t type;
@@ -52,6 +57,7 @@ typedef struct expression{
         float f;
         char c;
         char* s;
+        datum_t datum;
       };
     } value_literal;
     struct{
@@ -71,13 +77,21 @@ typedef struct block{
 
 typedef struct dimension_array{
   unsigned int dimension_count;
-  expression_t* dimensions;
+  uint16_t* dimensions;
 }dimension_array_t;
+
+typedef struct type_argument{
+  bool is_subtype;
+  union{
+    struct type_identifier* subtype;
+    datum_t arg;
+  };
+}type_argument_t;
 
 typedef struct type_identifier{
   int type_id;
   int num_params;
-  expression_t* params;
+  type_argument_t* params;
   dimension_array_t dimensions;
 }type_identifier_t;
 
@@ -107,11 +121,15 @@ typedef struct variable_declaration{
 typedef struct pattern_value{
   bool is_param;
   union{
-    expression_t* base_value;
+    datum_t base_value;
+    uint16_t base_dimension;
     struct{
       struct pattern_type* type;
       int var_id;
-    }param;
+    } param;
+    struct{
+      int var_id; // don't bother storing type with dimensions, since they have to be [u]
+    } param_dimension;
     
   };
 }pattern_value_t;
@@ -126,12 +144,12 @@ typedef struct pattern_type{
   union{
     struct{
       int base_type_id;
-      int param_count;
-      pattern_value_t* parameters;
+      struct pattern* subpattern;
     };
     type_identifier_t param_type;
   };
   pattern_dimension_array_t dimensions;
+  int param_count;
 }pattern_type_t;
 
 
@@ -143,7 +161,8 @@ typedef struct pattern_variable{
 typedef enum pattern_entry_type{
   PATTERN_VARIABLE,
   PATTERN_IDENTIFIER,
-  PATTERN_TYPE
+  PATTERN_TYPE,
+  PATTERN_EXP
 } pattern_entry_type_t;
 
 typedef struct pattern_entry{
@@ -152,11 +171,14 @@ typedef struct pattern_entry{
     pattern_variable_t variable;
     char* identifier;
     pattern_type_t pattern_type;
+    datum_t datum;
   };
 }pattern_entry_t;
 
+
 typedef struct pattern{
   int entry_count;
+  int param_count;
   pattern_entry_t* entries;
 }pattern_t;
 

@@ -4,14 +4,16 @@
 #include "colors.h"
 #include "expression_builder.h"
 #include "construct_utils.h"
+#include "comptime_eval.h"
 #include "hash_table/pattern_trie.h"
 #include "dimension-IR/ir_parser.h"
+#include "variable_to_register.h"
 
 #include <stdlib.h>
 #include <string.h>
 
 bool parse_expression(token_cursor_t* base_tc, token_type_t end_type, expression_t* result);
-bool parse_pattern(token_cursor_t* base_tc, token_type_t end_type, pattern_t* result);
+bool parse_pattern(token_cursor_t* base_tc, token_type_t end_type, pattern_t* result, bool allow_exp);
 //* 2
 bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
   token_cursor_t tc = *base_tc;
@@ -23,10 +25,12 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
     }
     else if(tc.tk.type == TK_VECTOR){
       tc_inc(&tc);
-      if(!parse_expression(&tc, TK_VECTOR, add_dimension(&dimensions))){
+      expression_t exp;
+      if(!parse_expression(&tc, TK_VECTOR, &exp)){
         destroy_dimension_array(&dimensions);
         return false;
       }
+      add_dimension(&dimensions, get_dimension(evaluate_expression(&exp)));
       tc_inc(&tc);
       continue;
     }
@@ -36,10 +40,7 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
         tc_throw_error(&tc, 3);
         return false;
       }
-      expression_t* new = add_dimension(&dimensions);
-      new->type = EXP_VALUE_LITERAL;
-      new->value_literal.type = VAL_UNSIGNED;
-      new->value_literal.u = atoi(tc.tk.content);
+      add_dimension(&dimensions, atoi(tc.tk.content));
     }
     else{
       destroy_dimension_array(&dimensions);
@@ -93,7 +94,7 @@ expression_t resolve_pattern_value(pattern_value_t* pval){
     result.read_var_id = pval->param.var_id;
   }
   else{
-    copy_expression(&result, pval->base_value);
+    result = create_exp_from_datum(pval->base_value);
   }
   return result;
 }
@@ -103,15 +104,48 @@ type_identifier_t resolve_pattern_type(pattern_type_t* ptype){
     .dimensions = {
       .dimension_count = ptype->dimensions.dimension_count,
       .dimensions = malloc(ptype->dimensions.dimension_count * sizeof(expression_t))},
-    .num_params = ptype->param_count,
-    .params = malloc(ptype->param_count * sizeof(expression_t)),
+    .num_params = 0,
+    .params = NULL,
     .type_id = ptype->base_type_id
     };
   for(int i = 0; i < ptype->dimensions.dimension_count; i++){
-    result.dimensions.dimensions[i] = resolve_pattern_value(ptype->dimensions.dimensions + i);
+    if(ptype->dimensions.dimensions[i].is_param){
+      result.dimensions.dimensions[i] = 1; //TODO: read superconst variable as datum
+    }else{
+      result.dimensions.dimensions[i] = ptype->dimensions.dimensions[i].base_dimension;
+    }
+     resolve_pattern_value(ptype->dimensions.dimensions + i);
   }
-  for(int i = 0; i < result.num_params; i++){
-    result.params[i] = resolve_pattern_value(ptype->parameters + i);
+  if(ptype->is_param){
+    result.type_id = -1; //TODO: Figure out how to handle fully parameterized types?
+    return result;
+  }
+  for(int i = 0; i < ptype->subpattern->entry_count; i++){
+    pattern_entry_t* entry = ptype->subpattern->entries + i;
+    type_argument_t arg;
+    switch(entry->type){
+      case PATTERN_IDENTIFIER:
+        continue;
+      case PATTERN_TYPE:
+        arg.is_subtype = true;
+        arg.subtype = malloc(sizeof(type_identifier_t));
+        *arg.subtype = resolve_pattern_type(&entry->pattern_type);
+        break;
+      case PATTERN_VARIABLE:
+        arg.is_subtype = false;
+        //TODO: Read superconst variable as datum
+        datum_t value = {.size = 2, .data = malloc(2)};
+        value.data[0] = 67;
+        arg.arg = value;
+        break;
+      case PATTERN_EXP:
+        arg.is_subtype = false;
+        arg.arg = entry->datum;
+        break;
+    }
+    result.num_params++;
+    result.params = realloc(result.params, result.num_params * sizeof(type_argument_t));
+    result.params[result.num_params - 1] = arg;
   }
   return result;
 }
@@ -145,10 +179,10 @@ parse_result_t parse_vardec(token_cursor_t* base_tc, variable_declaration_t* res
 bool parse_pattern_type(token_cursor_t* base_tc, pattern_type_t* result){
   result->dimensions.dimension_count = 0;
   result->dimensions.dimensions = NULL;
-  result->param_count = 0;
-  result->parameters = NULL;
+  result->subpattern = NULL;
   result->base_type_id = 0;
   result->is_param = true;
+  result->param_count = 0;
   token_cursor_t tc = *base_tc;
   pattern_dimension_array_t dimensions = {.dimension_count = 0, .dimensions = NULL};
   //read dimensions for this type
@@ -174,9 +208,11 @@ bool parse_pattern_type(token_cursor_t* base_tc, pattern_type_t* result){
           //if we found a variable declaration but no asterisk then this is a dimensionless pattern type
           //e.g. variable :: (t ::: [t])
           result->is_param = true;
+          result->param_count = 1;
           *base_tc = tc;
           return true;
         }
+        //parameterized dimensions must be unsigned integer [u] types 
         if(vardec.type.dimensions.dimension_count > 0){
           tc_throw_error(&tc, 10);
           return false;
@@ -185,26 +221,27 @@ bool parse_pattern_type(token_cursor_t* base_tc, pattern_type_t* result){
           tc_throw_error(&tc, 10); 
           return false;
         }
-        if(vardec.constant_lvl != 2){
+        //parameterized dimensions must be superconst :::
+        if(vardec.constant_lvl != CL_SUPERCONST){
           tc_throw_error(&tc, 11);
           return false;
         }
         pattern_trie_push_variable(tc.fn_trie, &vardec);
         pattern_value_t* value = add_pattern_dimension(&dimensions);
         value->is_param = true;
-        pattern_type_t ptype = {.is_param = true, .dimensions = {.dimension_count = 0, .dimensions = NULL}, .param_count = 0, .parameters = NULL};
+        pattern_type_t ptype = {.is_param = true, .dimensions = {.dimension_count = 0, .dimensions = NULL}, .param_count = 0, .subpattern = NULL};
         ptype.base_type_id = vardec.type.type_id;
         
         value->param.type = malloc(sizeof(pattern_type_t));
         value->param.var_id = tc.fn_trie->match_count - 1;
         *value->param.type = ptype;
-        
+        result->param_count++;
       }
       //if that fails, try reading an expression
       else if(parse_expression(&tc, TK_VECTOR, exp)){
         pattern_value_t* value = add_pattern_dimension(&dimensions);
         value->is_param = false;
-        value->base_value = exp;
+        value->base_value = evaluate_expression(exp);
       }
       else{
         //not an expression or pattern variable, throw an error!!
@@ -212,7 +249,7 @@ bool parse_pattern_type(token_cursor_t* base_tc, pattern_type_t* result){
         return false;
       }
     }
-    //the expression might also just be a single number or variable
+    //the expression might also just be a single number
     else if(tc.tk.type == TK_NUMERIC){
       if(tc.tk.number_type == NUM_FLOAT || tc.tk.number_type == NUM_SCI_FLOAT){
         destroy_pattern_dimension_array(&dimensions);
@@ -221,14 +258,7 @@ bool parse_pattern_type(token_cursor_t* base_tc, pattern_type_t* result){
       }
       pattern_value_t* new = add_pattern_dimension(&dimensions);
       new->is_param = false;
-      new->base_value = malloc(sizeof(expression_t));
-      expression_t* new_exp = new->base_value;
-      new_exp->type = EXP_VALUE_LITERAL;
-      new_exp->value_literal.type = VAL_UNSIGNED;
-      new_exp->value_literal.u = atoi(tc.tk.content);
-    }
-    else if(tc.tk.type == TK_IDENTIFIER){
-
+      new->base_dimension = atoi(tc.tk.content);
     }
     else if(!tc_is_asterisk(&tc)){
       break;
@@ -246,24 +276,25 @@ bool parse_pattern_type(token_cursor_t* base_tc, pattern_type_t* result){
     }
     result->param_type = vardec.type;
     result->is_param = true;
+    result->param_count++;
     //found a variable declaration
   }
   else if(tc.tk.type == TK_TYPE && tc.tk.is_open){
     tc_inc(&tc);
     pattern_t pattern;
-    if(!parse_pattern(&tc, TK_TYPE, &pattern)){
+    if(!parse_pattern(&tc, TK_TYPE, &pattern, true)){
       return false;
     }
     trie_match_result_t* match = pattern_trie_validate_pattern(tc.type_trie, &pattern);
     if(!match){
       return false;
     }
-
+    result->subpattern = malloc(sizeof(pattern_t));
+    *result->subpattern = pattern;
+    result->param_count += pattern.param_count;
 
     result->is_param = false;
     result->base_type_id = match->index;
-    result->param_count = 0;//pattern_count_parameters(&pattern);
-    result->parameters = malloc(result->param_count * sizeof(pattern_value_t));
   }
   else{
     //syntax error
@@ -295,7 +326,6 @@ bool parse_pattern_vardec(token_cursor_t* base_tc, pattern_variable_t* result){
   if(!parse_pattern_type(&tc, &result->type)){
     return false;
   }
-
   variable_declaration_t vardec = {
     .constant_lvl = result->constant_lvl, 
     .type = resolve_pattern_type(&result->type), 
@@ -308,10 +338,11 @@ bool parse_pattern_vardec(token_cursor_t* base_tc, pattern_variable_t* result){
 }
 
 //* 7
-bool parse_pattern(token_cursor_t* base_tc, token_type_t end_type, pattern_t* result){
+bool parse_pattern(token_cursor_t* base_tc, token_type_t end_type, pattern_t* result, bool allow_exp){
   token_cursor_t tc = *base_tc;
   result->entries = NULL;
   result->entry_count = 0;
+  result->param_count = 0;
   while(true){
 
     if(tc.tk.type == TK_IDENTIFIER){
@@ -324,11 +355,20 @@ bool parse_pattern(token_cursor_t* base_tc, token_type_t end_type, pattern_t* re
       while(true){
         tc_inc(&tc);
         pattern_variable_t variable;
-        if(!parse_pattern_vardec(&tc, &variable)){
+        expression_t exp;
+        if(parse_pattern_vardec(&tc, &variable)){
+          pattern_entry_t new_entry = {.type = PATTERN_VARIABLE, .variable = variable};
+          pattern_push_entry(result, new_entry);
+          result->param_count += (1 + variable.type.param_count);
+        }
+        else if(allow_exp && parse_expression(&tc, TK_VECTOR, &exp)){
+          pattern_entry_t new_entry = {.type = PATTERN_EXP, .datum = evaluate_expression(&exp)};
+          pattern_push_entry(result, new_entry);
+        }
+        else{
           return false;
         }
-        pattern_entry_t new_entry = {.type = PATTERN_VARIABLE, .variable = variable};
-        pattern_push_entry(result, new_entry);
+        
         if(tc.tk.type == TK_FORCE_EXP_END){
 
         }
@@ -464,7 +504,7 @@ parse_result_t parse_type_declaration(token_cursor_t* base_tc, type_declaration_
   }
   tc_inc(&tc);
   result->match_pattern = malloc(sizeof(pattern_t));
-  if(!parse_pattern(&tc, TK_TYPE, result->match_pattern)){
+  if(!parse_pattern(&tc, TK_TYPE, result->match_pattern, false)){
     return PRS_ERROR;
   }
 
@@ -573,7 +613,7 @@ parse_result_t parse_fn_declaration(token_cursor_t* base_tc, function_definition
   pattern_trie_scope_in(tc.fn_trie);
   pattern_trie_scope_in(tc.type_trie);
   pattern_t pattern;
-  if(!parse_pattern(&tc, TK_KEYWORD, &pattern)){
+  if(!parse_pattern(&tc, TK_KEYWORD, &pattern, false)){
     return PRS_ERROR;
   }
   result->match = pattern;
@@ -630,7 +670,10 @@ parse_result_t parse_fn_declaration(token_cursor_t* base_tc, function_definition
       if(tc.tk.type == TK_BLOCK && tc.tk.is_open){
         program_t ir;
         tc_inc(&tc);
-        if(parse_ir(&tc, &ir) == PRS_SUCCESS){
+        
+        register_file_t registers = {.count = 0, .registers = NULL};
+        pattern_to_registers(&result->match, &registers);
+        if(parse_ir(&tc, &ir, registers) == PRS_SUCCESS){
           result->is_IR = true;
           result->ir = ir;
           tc_inc(&tc);

@@ -2,6 +2,7 @@
 #include "ir_constructs.h"
 #include "../hash_table/hash_table.h"
 #include "../token_cursor.h"
+#include "registers.h"
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -60,7 +61,7 @@ bool parse_value(token_cursor_t* base_tc, ir_value_t* result, hash_table_t* itab
   return true;
 }
 
-parse_result_t parse_instruction(token_cursor_t* base_tc, instruction_t* result, hash_table_t* itable, hash_table_t* regtable, register_array_t* reg_array){
+parse_result_t parse_instruction(token_cursor_t* base_tc, instruction_t* result, hash_table_t* itable, hash_table_t* regtable, register_file_t* reg_array){
   token_cursor_t tc = *base_tc;
   if(tc.tk.type != TK_IDENTIFIER){
     tc_throw_error(&tc, 18);
@@ -96,11 +97,9 @@ parse_result_t parse_instruction(token_cursor_t* base_tc, instruction_t* result,
         size = atoi(tc.tk.content);
         tc_inc(&tc);
       }
-      push_key_value(regtable, name, reg_array->register_count);
-      result->dest_register = reg_array->register_count;
-      reg_array->register_count++;
-      reg_array->registers = realloc(reg_array->registers, reg_array->register_count * sizeof(uint16_t));
-      reg_array->registers[reg_array->register_count - 1] = size;
+      push_key_value(regtable, name, reg_array->count);
+      result->dest_register = reg_array->count;
+      register_file_push(reg_array, size);
      
     }
     if(tc.tk.type != TK_IDENTIFIER || tc.tk.length != 2 || tc.tk.content[0] != '='){
@@ -144,7 +143,7 @@ parse_result_t parse_instruction(token_cursor_t* base_tc, instruction_t* result,
   return PRS_SUCCESS;
 }
 
-void parse_ir_block(token_cursor_t* base_tc, ir_block_t* result, hash_table_t* itable, hash_table_t* regtable, register_array_t* reg_array){
+void parse_ir_block(token_cursor_t* base_tc, ir_block_t* result, hash_table_t* itable, hash_table_t* regtable, register_file_t* reg_array){
   token_cursor_t tc = *base_tc;
   result->length = 0;
   result->instructions = NULL;
@@ -173,7 +172,7 @@ void parse_ir_block(token_cursor_t* base_tc, ir_block_t* result, hash_table_t* i
   *base_tc = tc;
 }
 
-parse_result_t parse_ir(token_cursor_t* base_tc, program_t* result){
+parse_result_t parse_ir(token_cursor_t* base_tc, program_t* result, register_file_t rf){
   token_cursor_t tc = *base_tc;
   if(tc.tk.type != TK_IR){
     return PRS_NOT_FOUND;
@@ -184,10 +183,10 @@ parse_result_t parse_ir(token_cursor_t* base_tc, program_t* result){
   hash_table_t instruction_table = init_hash_table_from_array(67, 0.9, instruction_names, instruction_count);
   hash_table_t register_table = init_hash_table(67, 0.9);
   hash_table_t label_table = init_hash_table(67, 0.9);
-  result->array.register_count = 0;
-  result->array.registers = NULL;
-  printf("we are at least trying to read ir...\n");
-  parse_ir_block(&tc, &result->root, &instruction_table, &register_table, &result->array);
+  result->registers = rf;
+  printf("\n Reading IR with %i provided arguments\n", rf.count);
+  
+  parse_ir_block(&tc, &result->root, &instruction_table, &register_table, &result->registers);
 
   destroy_hash_table(&instruction_table);
   destroy_hash_table(&register_table);

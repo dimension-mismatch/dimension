@@ -9,6 +9,11 @@
 #include <stdbool.h>
 #include <string.h>
 
+void print_datum(datum_t* datum){
+  for(int i = 0; i < datum->size; i++){
+    printf("%x", datum->data[i]);
+  }
+}
 
 void print_block(block_t* block){
   if(!block) return;
@@ -16,6 +21,7 @@ void print_block(block_t* block){
     print_expression(&block->lines[i]);
   }
 }
+
 void print_expression(expression_t* exp){
   if(!exp) return;
   switch(exp->type){
@@ -49,6 +55,9 @@ void print_expression(expression_t* exp){
         case VAL_STRING:
           printf(WHITE "\"%s\"" RESET_COLOR, exp->value_literal.s);
           break;
+        case VAL_DATUM:
+          printf("0x");
+          print_datum(&exp->value_literal.datum);
       }
       break;
     case EXP_VECTOR:
@@ -71,10 +80,17 @@ void print_expression(expression_t* exp){
 }
 
 void print_dimension_array(dimension_array_t* array){
-  for(unsigned int i = 0; i < array->dimension_count; i++){
-    printf("(");
-    print_expression(array->dimensions + i);
-    printf(")" MAGENTA "*" RESET_COLOR);
+  for(int i = 0; i < array->dimension_count; i++){
+    printf("(%i)" MAGENTA "*" RESET_COLOR, array->dimensions[i]);
+  }
+}
+
+void print_type_argument(type_argument_t* arg){
+  if(arg->is_subtype){
+    print_type_identifier(arg->subtype);
+  }
+  else{
+    print_datum(&arg->arg);
   }
 }
 
@@ -88,7 +104,7 @@ void print_type_identifier(type_identifier_t* type){
       if(i > 0){
         printf(",");
       }
-      print_expression(&type->params[i]);
+      print_type_argument(&type->params[i]);
     }
     printf(")");
   } 
@@ -131,7 +147,7 @@ void print_pattern_value(pattern_value_t* pval){
     print_pattern_type(pval->param.type);
   }
   else{
-    print_expression(pval->base_value);
+    print_datum(&pval->base_value);
   }
   printf(")");
 }
@@ -149,16 +165,7 @@ void print_pattern_type(pattern_type_t* ptype){
   }
   else{
     printf("[" GREEN BOLD "#%i" RESET_COLOR, ptype->base_type_id);
-    if(ptype->param_count > 0){
-      printf("(");
-      for(int i = 0; i < ptype->param_count; i++){
-        if(i > 0){
-          printf(",");
-        }
-        print_pattern_value(ptype->parameters + i);
-      }
-      printf(")");
-    } 
+    print_pattern(ptype->subpattern);
     printf("]");
   }
 }
@@ -190,6 +197,9 @@ void print_pattern_entry(pattern_entry_t* pentry){
     case PATTERN_TYPE: 
       print_pattern_type(&pentry->pattern_type);
       break;
+    case PATTERN_EXP:
+      print_datum(&pentry->datum);
+      break;
   }
 }
 void print_pattern(pattern_t* pattern){
@@ -197,6 +207,7 @@ void print_pattern(pattern_t* pattern){
     print_pattern_entry(pattern->entries + i);
     printf(" ");
   }
+ // printf(" (%i total parameters)", pattern->param_count);
 }
 void print_function_definition(function_definition_t* fn_def){
   printf(GREEN "FUNCTION: \n" RESET_COLOR);
@@ -266,10 +277,21 @@ void destroy_expression(expression_t* exp){
   
 }
 
-void destroy_dimension_array(dimension_array_t* array){
-  for(int i = 0; i < array->dimension_count; i++){
-    destroy_expression(array->dimensions + i);
+void destroy_datum(datum_t* datum){
+  free(datum->data);
+  datum->data = NULL;
+  datum->size = 0;
+}
+void destroy_type_argument(type_argument_t* arg){
+  if(arg->is_subtype){
+    destroy_type_identifier(arg->subtype);
   }
+  else{
+    destroy_datum(&arg->arg);
+  }
+}
+
+void destroy_dimension_array(dimension_array_t* array){
   free(array->dimensions);
   array->dimensions = NULL;
   array->dimension_count = 0;
@@ -278,7 +300,7 @@ void destroy_type_identifier(type_identifier_t* type){
   if(!type) return;
   destroy_dimension_array(&type->dimensions);
   for(int i = 0; i < type->num_params; i++){
-    destroy_expression(type->params + i);
+    destroy_type_argument(type->params + i);
   }
   free(type->params);
   type->params = NULL;
@@ -315,9 +337,7 @@ void destroy_pattern_value(pattern_value_t* pval){
     free(pval->param.type);
   }
   else{
-    destroy_expression(pval->base_value);
-    free(pval->base_value);
-    pval->base_value = NULL;
+    destroy_datum(&pval->base_value);
   }
 }
 void destroy_pattern_dimension_array(pattern_dimension_array_t* array){
@@ -337,9 +357,7 @@ void destroy_pattern_type(pattern_type_t* ptype){
     destroy_type_identifier(&ptype->param_type);
   }
   else{
-    for(int i = 0; i < ptype->param_count; i++){
-      destroy_pattern_value(ptype->parameters + i);
-    }
+    destroy_pattern(ptype->subpattern);
   }
 }
 void destroy_pattern_variable(pattern_variable_t* pvar){
@@ -355,13 +373,16 @@ void destroy_pattern_entry(pattern_entry_t* pentry){
     case PATTERN_IDENTIFIER:
       free(pentry->identifier);
       pentry->identifier = NULL;
-    break;
+      break;
     case PATTERN_VARIABLE:
       destroy_pattern_variable(&pentry->variable);
-    break;
+      break;
     case PATTERN_TYPE:
       destroy_pattern_type(&pentry->pattern_type);
-    break;
+      break;
+    case PATTERN_EXP:
+      destroy_datum(&pentry->datum);
+      break;
   }
 }
 void destroy_pattern(pattern_t* pattern){
@@ -391,6 +412,23 @@ void copy_block(block_t *new, block_t *block){
   new->lines = malloc(block->line_count * sizeof(expression_t));
   for(int i = 0; i < new->line_count; i++){
     copy_expression(new->lines + i, block->lines + i);
+  }
+}
+void copy_datum(datum_t* new, datum_t* datum){
+  new->size = datum->size;
+  new->data = malloc(new->size);
+  for(int i = 0; i < new->size; i++){
+    new->data[i] = datum->data[i];
+  }
+}
+void copy_type_argument(type_argument_t* new, type_argument_t* arg){
+  new->is_subtype = arg->is_subtype;
+  if(arg->is_subtype){
+    new->subtype = malloc(sizeof(type_identifier_t));
+    copy_type_identifier(new->subtype, arg->subtype);
+  }
+  else{
+    copy_datum(&new->arg, &arg->arg);
   }
 }
 
@@ -436,8 +474,8 @@ void copy_expression(expression_t *new, expression_t *exp){
 void copy_dimension_array(dimension_array_t* new, dimension_array_t* array){
   new->dimension_count = array->dimension_count;
   new->dimensions = malloc(array->dimension_count * sizeof(expression_t));
-  for(unsigned int i = 0; i < new->dimension_count; i++){
-    copy_expression(new->dimensions + i, array->dimensions + i);
+  for(int i = 0; i < new->dimension_count; i++){
+    new->dimensions[i] = array->dimensions[i];
   }
 }
 void copy_type_identifier(type_identifier_t *new, type_identifier_t *type){
@@ -447,7 +485,7 @@ void copy_type_identifier(type_identifier_t *new, type_identifier_t *type){
   new->type_id = type->type_id;
 
   for(int i = 0; i < new->num_params; i++){
-    copy_expression(new->params + i, type->params + i);
+    copy_type_argument(new->params + i, type->params + i);
   }
 }
 
@@ -481,8 +519,7 @@ void copy_pattern_value(pattern_value_t* new, pattern_value_t* pval){
     copy_pattern_type(new->param.type, pval->param.type);
   }
   else{
-    new->base_value = malloc(sizeof(expression_t));
-    copy_expression(new->base_value, pval->base_value);
+    copy_datum(&new->base_value, &pval->base_value);
   }
 }
 
@@ -501,12 +538,9 @@ void copy_pattern_type(pattern_type_t* new, pattern_type_t* ptype){
     copy_type_identifier(&new->param_type, &ptype->param_type);
   }
   else{
-    new->param_count = ptype->param_count;
-    new->parameters = malloc(ptype->param_count * sizeof(pattern_value_t));
     new->base_type_id = ptype->base_type_id;
-    for(int i = 0; i < new->param_count; i++){
-      copy_pattern_value(new->parameters + i, ptype->parameters + i);
-    }
+    new->subpattern = malloc(sizeof(pattern_t));
+    copy_pattern(new->subpattern, ptype->subpattern);
   }
 }
 
@@ -530,11 +564,16 @@ void copy_pattern_entry(pattern_entry_t* new, pattern_entry_t* pattern){
     case PATTERN_TYPE:
       copy_pattern_type(&new->pattern_type, &pattern->pattern_type);
       break;
+    case PATTERN_EXP:
+      copy_datum(&new->datum, &pattern->datum);
+      break;
   }
 }
 
 void copy_pattern(pattern_t *new, pattern_t *pattern){
   new->entry_count = pattern->entry_count;
+  new->param_count = pattern->param_count;
+  new->entries = malloc(new->entry_count * sizeof(pattern_entry_t));
   for(int i = 0; i < new->entry_count; i++){
     copy_pattern_entry(new->entries + i, pattern->entries + i);
   }
@@ -555,11 +594,11 @@ void copy_function_definition(function_definition_t *new, function_definition_t 
 
 
 
-//expands the array of dimensions by one and returns a pointer to the newly created expression
-expression_t* add_dimension(dimension_array_t* array){
+//expands the array of dimensions by one 
+void add_dimension(dimension_array_t* array, uint16_t dimension){
   array->dimension_count++;
-  array->dimensions = realloc(array->dimensions, array->dimension_count * sizeof(expression_t));
-  return array->dimensions + array->dimension_count - 1;
+  array->dimensions = realloc(array->dimensions, array->dimension_count * sizeof(uint16_t));
+  array->dimensions[array->dimension_count - 1] = dimension;
 }
 
 //expands the array of dimensions by one and returns a pointer to the newly created expression

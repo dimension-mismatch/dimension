@@ -89,6 +89,5 @@ void destroy_ir_block(ir_block_t* block){
 
 void destroy_program(program_t* program){
   destroy_ir_block(&program->root);
-  free(program->array.registers);
-  program->array.register_count = 0;
+  destroy_register_file(&program->registers);
 }
