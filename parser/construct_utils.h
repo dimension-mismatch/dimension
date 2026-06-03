@@ -45,7 +45,7 @@ void copy_pattern_entry(pattern_entry_t* new, pattern_entry_t* pentry);
 void copy_pattern(pattern_t* new, pattern_t* pattern);
 void copy_function_definition(function_definition_t* new, function_definition_t* fn_def);
 
-void add_dimension(dimension_array_t *array, uint16_t dimension);
+void add_dimension(dimension_array_t *array, expression_t exp);
 
 pattern_value_t *add_pattern_dimension(pattern_dimension_array_t *array);
 

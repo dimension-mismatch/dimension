@@ -81,7 +81,9 @@ void print_expression(expression_t* exp){
 
 void print_dimension_array(dimension_array_t* array){
   for(int i = 0; i < array->dimension_count; i++){
-    printf("(%i)" MAGENTA "*" RESET_COLOR, array->dimensions[i]);
+    printf("(");
+    print_expression(array->dimensions + i);
+    printf(")" MAGENTA "*" RESET_COLOR);
   }
 }
 
@@ -89,9 +91,6 @@ void print_type_argument(type_argument_t* arg){
   switch(arg->type){
     case TYPEARG_SUBTYPE:
       print_type_identifier(arg->subtype);
-      break;
-    case TYPEARG_DATUM:
-      print_datum(&arg->arg);
       break;
     case TYPEARG_PARAM_EXP:
       print_expression(arg->exp);
@@ -149,10 +148,15 @@ void print_pattern_value(pattern_value_t* pval){
   printf("(");
   if(pval->is_param){
     printf(BLUE ":::" RESET_COLOR);
-    print_pattern_type(pval->param.type);
+    if(pval->param.type){
+      print_pattern_type(pval->param.type);
+    }
+    else{
+      printf("[u]");
+    }
   }
   else{
-    print_datum(&pval->base_value);
+    print_expression(pval->base_value);
   }
   printf(")");
 }
@@ -199,7 +203,7 @@ void print_pattern_entry(pattern_entry_t* pentry){
       print_pattern_type(&pentry->pattern_type);
       break;
     case PATTERN_EXP:
-      print_datum(&pentry->datum);
+      print_expression(&pentry->exp);
       break;
   }
 }
@@ -288,9 +292,6 @@ void destroy_type_argument(type_argument_t* arg){
     case TYPEARG_SUBTYPE:
       destroy_type_identifier(arg->subtype);
       break;
-    case TYPEARG_DATUM:
-      destroy_datum(&arg->arg);
-      break;
     case TYPEARG_PARAM_EXP:
       destroy_expression(arg->exp);
       break;
@@ -339,11 +340,13 @@ void destroy_variable_declaration(variable_declaration_t* vardec){
 }
 void destroy_pattern_value(pattern_value_t* pval){
   if(pval->is_param){
-    destroy_pattern_type(pval->param.type);
-    free(pval->param.type);
+    if(pval->param.type){
+      destroy_pattern_type(pval->param.type);
+      free(pval->param.type);
+    }
   }
   else{
-    destroy_datum(&pval->base_value);
+    destroy_expression(pval->base_value);
   }
 }
 void destroy_pattern_dimension_array(pattern_dimension_array_t* array){
@@ -387,7 +390,7 @@ void destroy_pattern_entry(pattern_entry_t* pentry){
       destroy_pattern_type(&pentry->pattern_type);
       break;
     case PATTERN_EXP:
-      destroy_datum(&pentry->datum);
+      destroy_expression(&pentry->exp);
       break;
   }
 }
@@ -433,9 +436,6 @@ void copy_type_argument(type_argument_t* new, type_argument_t* arg){
     case TYPEARG_SUBTYPE:
       new->subtype = malloc(sizeof(type_identifier_t));
       copy_type_identifier(new->subtype, arg->subtype);
-      break;
-    case TYPEARG_DATUM:
-      copy_datum(&new->arg, &arg->arg);
       break;
     case TYPEARG_PARAM_EXP:
       new->exp = malloc(sizeof(expression_t));
@@ -526,16 +526,24 @@ void copy_variable_declaration(variable_declaration_t *new, variable_declaration
 void copy_pattern_value(pattern_value_t* new, pattern_value_t* pval){
   new->is_param = pval->is_param;
   if(new->is_param){
-    new->param.type = malloc(sizeof(pattern_type_t));
+    
     new->param.var_id = pval->param.var_id;
-    copy_pattern_type(new->param.type, pval->param.type);
+    if(pval->param.type){
+      new->param.type = malloc(sizeof(pattern_type_t));
+      copy_pattern_type(new->param.type, pval->param.type);
+    }
+    else{
+      new->param.type = NULL;
+    }
   }
   else{
-    copy_datum(&new->base_value, &pval->base_value);
+    new->base_value = malloc(sizeof(expression_t));
+    copy_expression(new->base_value, pval->base_value);
   }
 }
 
 void copy_pattern_dimension_array(pattern_dimension_array_t* new, pattern_dimension_array_t* array){
+  
   new->dimension_count = array->dimension_count;
   new->dimensions = malloc(array->dimension_count * sizeof(pattern_value_t));
   for(int i = 0; i < array->dimension_count; i++){
@@ -558,9 +566,8 @@ void copy_pattern_type(pattern_type_t* new, pattern_type_t* ptype){
 
 void copy_pattern_variable(pattern_variable_t* new, pattern_variable_t* pvar){
   new->constant_lvl = pvar->constant_lvl;
-  //new->name = malloc((1 + strlen(pvar->name)) * sizeof(char));
   copy_pattern_type(&new->type, &pvar->type);
-  //strcpy(new->name, pvar->name);
+  new->name = pvar->name;
 }
 
 void copy_pattern_entry(pattern_entry_t* new, pattern_entry_t* pattern){
@@ -577,7 +584,7 @@ void copy_pattern_entry(pattern_entry_t* new, pattern_entry_t* pattern){
       copy_pattern_type(&new->pattern_type, &pattern->pattern_type);
       break;
     case PATTERN_EXP:
-      copy_datum(&new->datum, &pattern->datum);
+      copy_expression(&new->exp, &pattern->exp);
       break;
   }
 }
@@ -607,10 +614,10 @@ void copy_function_definition(function_definition_t *new, function_definition_t 
 
 
 //expands the array of dimensions by one 
-void add_dimension(dimension_array_t* array, uint16_t dimension){
+void add_dimension(dimension_array_t* array, expression_t exp){
   array->dimension_count++;
   array->dimensions = realloc(array->dimensions, array->dimension_count * sizeof(uint16_t));
-  array->dimensions[array->dimension_count - 1] = dimension;
+  array->dimensions[array->dimension_count - 1] = exp;
 }
 
 //expands the array of dimensions by one and returns a pointer to the newly created expression

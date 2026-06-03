@@ -39,7 +39,43 @@ bool type_argument_compare(type_argument_t* a, type_argument_t* b){
   else if(a->type == TYPEARG_SUBTYPE){
     return type_identifier_compare(a->subtype, b->subtype);
   }
-  return compare_data(&a->arg, &b->arg);
+  
+  return false;
+  //return compare_data(&a->arg, &b->arg);
+}
+
+bool expression_compare(expression_t* a, expression_t* b){
+  if(a->type != b->type) return false;
+  switch(a->type){
+    case EXP_FUNCTION_CALL:
+      if(a->function_call.fn_id != b->function_call.fn_id) return false;
+      if(a->function_call.num_params != b->function_call.num_params) return false;
+      for(int i = 0; i < a->function_call.num_params; i++){
+        if(!expression_compare(a->function_call.params + i, b->function_call.params + i)) return false;
+      }
+      return true;
+    case EXP_READ_VAR:
+      return a->read_var_id == b->read_var_id;
+    case EXP_TYPE_LITERAL:
+      return type_identifier_compare(a->type_literal, b->type_literal);
+    case EXP_VALUE_LITERAL:
+      switch(a->value_literal.type){
+        case VAL_CHAR: return a->value_literal.c == b->value_literal.c;
+        case VAL_FLOAT: return a->value_literal.f == b->value_literal.f;
+        case VAL_INT: return a->value_literal.i == b->value_literal.i;
+        case VAL_UNSIGNED: return a->value_literal.u == b->value_literal.u;
+        case VAL_STRING: return !strcmp(a->value_literal.s, b->value_literal.s);
+        case VAL_DATUM: return compare_data(&a->value_literal.datum, &b->value_literal.datum);
+      }
+    case EXP_VECTOR:
+      if(a->vector.num_params != b->vector.num_params) return false;
+      for(int i = 0; i < a->vector.num_params; i++){
+        if(! expression_compare(a->vector.params + i, b->vector.params + i)) return false;
+      }
+      return true;
+    default: 
+      return false;
+  }
 }
 
 
@@ -54,7 +90,7 @@ bool type_identifier_compare(type_identifier_t* a, type_identifier_t* b){
     return false;
   }
   for(int i = 0; i < a->dimensions.dimension_count; i++){
-    if(a->dimensions.dimensions[i] != b->dimensions.dimensions[i]){
+    if(!expression_compare(a->dimensions.dimensions+ i, b->dimensions.dimensions + i)){
       return false;
     }
   }
@@ -75,7 +111,7 @@ bool pattern_value_compare(pattern_value_t* a, pattern_value_t* b){
     return pattern_type_compare(a->param.type, b->param.type);
   }
   else{
-    return compare_data(&a->base_value, &b->base_value);
+    return expression_compare(a->base_value, b->base_value);
   }
 }
 bool pattern_type_compare(pattern_type_t* a, pattern_type_t* b){
@@ -122,7 +158,7 @@ bool pattern_entry_compare(pattern_entry_t* a, pattern_entry_t* b){
       return pattern_type_compare(&a->variable.type, &b->variable.type);
     }
     case PATTERN_EXP:
-      return compare_data(&a->datum, &b->datum);
+      return expression_compare(&a->exp, &b->exp);
   }
 }
 
@@ -142,7 +178,7 @@ bool test_pattern_type(pattern_type_t* test, type_identifier_t* subject){
   }
   for(int i = 0; i < test->dimensions.dimension_count; i++){
     if(!test->dimensions.dimensions[i].is_param){
-      if(!uint16_datum_compare(&test->dimensions.dimensions[i].base_value, subject->dimensions.dimensions[i])){
+      if(!expression_compare(test->dimensions.dimensions[i].base_value, subject->dimensions.dimensions + i)){
         return false;
       }
     }
@@ -163,8 +199,8 @@ bool test_pattern_type(pattern_type_t* test, type_identifier_t* subject){
         j++;
       }
       case PATTERN_EXP: {
-        if(arg->type != TYPEARG_DATUM) return false;
-        if(!compare_data(&entry->datum, &arg->arg)) return false;
+        if(arg->type != TYPEARG_PARAM_EXP) return false;
+        if(!expression_compare(&entry->exp, arg->exp)) return false;
         j++;
       }
     } 
@@ -426,6 +462,12 @@ void print_pattern_trie(pattern_trie_t *trie){
   printf("\n");
   int* levels = NULL;
   print_trie_node(trie->root, 0, &levels);
+  free(levels);
+}
+
+void print_trie_starting_at_node(pattern_trie_node_t* node){
+  int* levels = NULL;
+  print_trie_node(node, 0, &levels);
   free(levels);
 }
 

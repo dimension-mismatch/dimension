@@ -3,8 +3,12 @@ type [i] holds 8;
 type [prt (p ::: [i])] holds 12;
 type [j (val ::: (n ::: [i]) * (n) * [i])] holds 4;
 
-fn (a ::: [prt(n ::: [i])]) + (b ::: [i]) makes [i] does {~
-  reg = >> 4 3
-  q = + reg 5
+fn (a ::: [i]) + (b ::: [i]) makes [i] does {~
+  q   = + a b
 ~} priority 7;
 
+test_int ::: [i];
+
+test_val ::: [prt(test_int)];
+
+test_int + test_int + test_int;

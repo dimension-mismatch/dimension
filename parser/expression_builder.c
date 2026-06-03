@@ -14,18 +14,20 @@
 typedef struct match_attempt_record{
   int depth;
   int priority;
-  expression_array_t* array;
+  expression_t* exp;
   pattern_trie_node_t* node;
+  char* reason;
 }match_attempt_record_t;
 
-void update_attempt_record(match_attempt_record_t* attempt, int depth, expression_array_t* array, pattern_trie_node_t* node){
+void update_attempt_record(match_attempt_record_t* attempt, int depth, expression_t* exp, pattern_trie_node_t* node, char* msg){
   //is the current depth greater then our previous best? (using priority to break ties)
   int priority = node->max_child_priority;
   if(depth > attempt->depth || (depth == attempt->depth && priority > attempt->priority)){
     attempt->depth = depth;
     attempt->priority = priority;
-    attempt->array = array;
+    attempt->exp = exp;
     attempt->node = node;
+    attempt->reason = msg;
   }
 }
 
@@ -41,6 +43,8 @@ void print_expression_array(expression_array_t* array){
   array = array->next;
   while(array != NULL){
     print_expression(&array->exp);
+    printf(" ");
+    print_type_identifier(array->exp.return_type);
     array = array->next;
     printf(" ");
   }
@@ -52,7 +56,7 @@ int* node_match_expression_array(pattern_trie_node_t* node, expression_array_t* 
   }
   if(array == NULL){
     //failed match, but record how close we got to make errors clearer
-    update_attempt_record(attempt, depth, array, node);
+    update_attempt_record(attempt, depth, NULL, node, "reached end of expression");
     return NULL;
   }
 
@@ -60,7 +64,7 @@ int* node_match_expression_array(pattern_trie_node_t* node, expression_array_t* 
     int* cip = get_value_from_key(&node->next_identifiers, array->exp.raw_token.content);
     if(cip == NULL){
       //no pattern has this identifier at this position
-      update_attempt_record(attempt, depth, array, node);//failed match, but record how close we got to make errors clearer
+      update_attempt_record(attempt, depth, &array->exp, node, "could not match an identifier");//failed match, but record how close we got to make errors clearer
       return NULL;
     }
     return node_match_expression_array(node->children[*cip], array->next, depth + 1, attempt);
@@ -69,7 +73,7 @@ int* node_match_expression_array(pattern_trie_node_t* node, expression_array_t* 
     int* type_index = get_value_from_int(&node->next_pattern_types, array->exp.type_literal->type_id);
     if(type_index == NULL){
       //no pattern has this identifier at this position
-      update_attempt_record(attempt, depth, array, node);//failed match, but record how close we got to make errors clearer
+      update_attempt_record(attempt, depth, &array->exp, node, "this type index is not in the array");//failed match, but record how close we got to make errors clearer
       return NULL;
     }
     possible_type_matches_t* matches = node->type_matches + *type_index;
@@ -82,7 +86,7 @@ int* node_match_expression_array(pattern_trie_node_t* node, expression_array_t* 
         }
       }
     }
-    update_attempt_record(attempt, depth, array, node);//failed match, but record how close we got to make errors clearer
+    update_attempt_record(attempt, depth, &array->exp, node, "no variants of this type matched the expression");//failed match, but record how close we got to make errors clearer
     return NULL;
   }
   else{
@@ -94,7 +98,7 @@ int* node_match_expression_array(pattern_trie_node_t* node, expression_array_t* 
     int* type_index = get_value_from_int(&node->next_parameters, array->exp.return_type->type_id);
     if(type_index == NULL){
       //no pattern has any form of this type at this position
-      update_attempt_record(attempt, depth, array, node);//failed match, but record how close we got to make errors clearer
+      update_attempt_record(attempt, depth, &array->exp, node, "the return type was not in the array");//failed match, but record how close we got to make errors clearer
       return NULL;
     }
     possible_type_matches_t* matches = node->type_matches + *type_index;
@@ -108,7 +112,7 @@ int* node_match_expression_array(pattern_trie_node_t* node, expression_array_t* 
         }
       }
     }
-    update_attempt_record(attempt, depth, array, node);//failed match, but record how close we got to make errors clearer
+    update_attempt_record(attempt, depth, &array->exp, node, "no variant of this type matched the current expression");//failed match, but record how close we got to make errors clearer
     return NULL;
   }
 }
@@ -134,7 +138,10 @@ expression_t* construct_fn_call(match_t match){
   expression_t fn_call = {
     .type = EXP_FUNCTION_CALL, 
     .function_call = {.fn_id = match.content->index, .num_params = match.content->fndec.match.param_count, .params = NULL},
-    .const_lvl = CL_CONST};
+    .const_lvl = CL_SUPERCONST,
+    .return_type = malloc(sizeof(type_identifier_t))
+  };
+  copy_type_identifier(fn_call.return_type, match.content->fndec.return_type);
   fn_call.function_call.params = malloc(fn_call.function_call.num_params * sizeof(expression_t));
   expression_array_t* start = match.location;
   expression_array_t* curr = start;
@@ -153,6 +160,9 @@ expression_t* construct_fn_call(match_t match){
         break;
       case PATTERN_VARIABLE: {
         fn_call.function_call.params[param_i] = curr->exp;
+        if(curr->exp.const_lvl != CL_SUPERCONST){
+          fn_call.const_lvl = CL_CONST;
+        }
         param_i++;
         break;
       }
@@ -208,7 +218,7 @@ expression_t* construct_type_call(match_t match){
         int new_c = ++type_id->num_params;
         type_id->params = realloc(type_id->params, new_c * sizeof(type_argument_t));
 
-        type_argument_t arg = {.type = TYPEARG_DATUM, .arg = evaluate_expression(&curr->exp)};
+        type_argument_t arg = {.type = TYPEARG_PARAM_EXP, .exp = &curr->exp};
         type_id->params[new_c - 1] = arg;
         break;
       }
@@ -281,22 +291,20 @@ expression_t* construct_match(match_t match){
 }
 
 expression_array_t* collapse_exp_array(pattern_trie_t* trie, expression_array_t* array, match_attempt_record_t* best_attempt){
-  printf(RED BOLD "Expression Array: \n" RESET_COLOR);
-  //print_expression_array(array);
+  printf(RED BOLD "\n Expression Array: \n" RESET_COLOR);
+  print_expression_array(array);
   printf("\n");
   expression_array_t* start = array;
   while(true){
-    int step = 0;
     match_t best = {.content = NULL, .location = NULL};
-    array = start;
-    match_attempt_record_t attempt = {.array = NULL, .depth = 0, .node = NULL, .priority = 0};
+    expression_array_t* exp = start;
+    match_attempt_record_t attempt = {.exp = NULL, .depth = 0, .node = NULL, .priority = 0};
     while(true){
-      array = array->next;
-      step++;
-      if(best.content && step > best.content->length){
+      exp = exp->next;
+      if(best.content){
         break;
       }
-      if(!array){
+      if(!exp){
         printf(RED BOLD "Resulting Expression Array: \n" RESET_COLOR);
         print_expression_array(start);
         printf("\n");
@@ -304,9 +312,9 @@ expression_array_t* collapse_exp_array(pattern_trie_t* trie, expression_array_t*
         return start;
       }
     
-      trie_match_result_t* contender = match_expression_array(trie, array->prev, &attempt);
+      trie_match_result_t* contender = match_expression_array(trie, exp->prev, &attempt);
       if(contender && (!best.content || contender->priority > best.content->priority)){
-        match_t new = {.content = contender, .location = array->prev};
+        match_t new = {.content = contender, .location = exp->prev};
         best = new;
       }
     }

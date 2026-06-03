@@ -75,6 +75,8 @@ void print_trie_match_result(trie_match_result_t* result);
 
 void print_pattern_trie(pattern_trie_t* record);
 
+void print_trie_starting_at_node(pattern_trie_node_t *node);
+
 void pattern_trie_scope_in(pattern_trie_t* trie);
 
 void pattern_trie_scope_out(pattern_trie_t* trie);

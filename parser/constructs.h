@@ -77,11 +77,10 @@ typedef struct block{
 
 typedef struct dimension_array{
   unsigned int dimension_count;
-  uint16_t* dimensions;
+  expression_t* dimensions;
 }dimension_array_t;
 
 typedef enum type_argument_type{
-  TYPEARG_DATUM,
   TYPEARG_SUBTYPE,
   TYPEARG_PARAM_EXP,
 }type_argument_type_t;
@@ -90,7 +89,6 @@ typedef struct type_argument{
   type_argument_type_t type;
   union{
     struct type_identifier* subtype;
-    datum_t arg;
     expression_t* exp;
   };
 }type_argument_t;
@@ -105,6 +103,7 @@ typedef struct type_identifier{
 
 typedef struct type_declaration{
   struct pattern* match_pattern;
+  program_t compute_size;
   bool is_builtin;
   union{
     struct{
@@ -128,16 +127,11 @@ typedef struct variable_declaration{
 typedef struct pattern_value{
   bool is_param;
   union{
-    datum_t base_value;
-    uint16_t base_dimension;
+    expression_t* base_value;
     struct{
       struct pattern_type* type;
       int var_id;
     } param;
-    struct{
-      int var_id; // don't bother storing type with dimensions, since they have to be [u]
-    } param_dimension;
-    
   };
 }pattern_value_t;
 
@@ -163,6 +157,7 @@ typedef struct pattern_type{
 typedef struct pattern_variable{
   const_lvl_t constant_lvl;
   pattern_type_t type;
+  char* name;
 }pattern_variable_t;
 
 typedef enum pattern_entry_type{
@@ -178,7 +173,7 @@ typedef struct pattern_entry{
     pattern_variable_t variable;
     char* identifier;
     pattern_type_t pattern_type;
-    datum_t datum;
+    expression_t exp;
   };
 }pattern_entry_t;
 

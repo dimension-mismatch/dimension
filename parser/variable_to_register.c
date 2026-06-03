@@ -17,13 +17,13 @@ void pattern_type_to_registers(pattern_type_t* ptype, register_file_t* rf){
 
 }
 void pattern_variable_to_registers(pattern_variable_t* pvar, register_file_t* rf){
-  printf("Adding a pattern variable\n");
+  printf("Adding a pattern variable named \"%s\"\n", pvar->name);
   pattern_type_to_registers(&pvar->type, rf);
-  register_file_push(rf, 4);
+  
+  register_file_push_named(rf, 4, pvar->name);
 }
 
 void pattern_to_registers(pattern_t* pattern, register_file_t* rf){
-  printf("generating argument registers...\n");
   for(int i = 0; i < pattern->entry_count; i++){
     pattern_entry_t* entry = pattern->entries + i; 
     switch(entry->type){
