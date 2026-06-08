@@ -6,6 +6,7 @@ typedef struct{
   uint16_t* registers;
   uint16_t count;
   hash_table_t name_table;
+  int argument_count;
 }register_file_t;
 
 register_file_t register_file_init();

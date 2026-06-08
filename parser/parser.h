@@ -5,4 +5,4 @@
 
 
 
-void parse_tokens(token_cursor_t* tc);
+block_t parse_tokens(token_cursor_t* tc);

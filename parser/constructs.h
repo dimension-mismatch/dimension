@@ -8,6 +8,7 @@ struct variable_declaration;
 struct pattern;
 struct pattern_type;
 struct type_argument;
+struct pattern_variable;
 
 typedef enum expression_type{
   EXP_TYPE_LITERAL,
@@ -103,7 +104,6 @@ typedef struct type_identifier{
 
 typedef struct type_declaration{
   struct pattern* match_pattern;
-  program_t compute_size;
   bool is_builtin;
   union{
     struct{
@@ -113,6 +113,11 @@ typedef struct type_declaration{
       struct variable_declaration* components;
     };
     int byte_count;
+    bool is_static_size;
+    union{
+      int size;
+      program_t compute_size;
+    };
   };
 }type_declaration_t;
 
@@ -128,10 +133,7 @@ typedef struct pattern_value{
   bool is_param;
   union{
     expression_t* base_value;
-    struct{
-      struct pattern_type* type;
-      int var_id;
-    } param;
+    struct pattern_variable* param;
   };
 }pattern_value_t;
 
@@ -158,6 +160,7 @@ typedef struct pattern_variable{
   const_lvl_t constant_lvl;
   pattern_type_t type;
   char* name;
+  int var_id;
 }pattern_variable_t;
 
 typedef enum pattern_entry_type{

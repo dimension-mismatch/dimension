@@ -10,6 +10,7 @@
 #include "error_handling/error_manager.h"
 #include "token_cursor.h"
 
+#include "compiler/compiler.h"
 
 
 
@@ -39,41 +40,26 @@ int main(int argc, char* argv[]){
   error_manager_t errors = error_manager_init(all_tokens);
 
   token_cursor_t tc = tc_init(all_tokens, &fn_trie, &type_trie, &errors);
-  parse_tokens(&tc);
+  block_t ast = parse_tokens(&tc);
 
   printf(MAGENTA BOLD "\nType Trie:\n" RESET_COLOR);
   print_pattern_trie(&type_trie);
   printf(MAGENTA BOLD "\nFunction Trie:\n" RESET_COLOR);
   print_pattern_trie(&fn_trie);
 
-  printf("\nremoving last match\n");
-  pattern_trie_scope_out(&type_trie);
-  
-  printf(MAGENTA BOLD "\nNew Type Trie:\n" RESET_COLOR);
-  print_pattern_trie(&type_trie);
-
 
   printf("\n");
 
-  // error_manager_t errors = error_manager_init(all_tokens, &function_record, &variable_record, &type_record);
-
-  // expression_t* ast = parse_tokens(&errors);
-  // validate_program(ast, &errors);
-
-  // print_variable_record(&variable_record);
-  // print_expression(ast);
   
   fclose(file);
 
   error_printout(&errors);
-  // if(errors.error_count > 0){
-  //   exit(1);
-  // }
-  // if(argc == 3 && errors.error_count == 0){
-  //   compile_program(argv[2], ast, &function_record, &variable_record, &type_record);
-  // }
 
-  // destroy_token_array(all_tokens);
-  // exp_destroy(ast);
+  if(errors.error_count != 0){
+    return 0;
+  }
 
+  program_t ir = compile_program(ast, &fn_trie, &type_trie);
+  print_program_registers(&ir);
+  print_program(&ir);
 }

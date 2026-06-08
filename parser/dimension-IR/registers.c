@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 register_file_t register_file_init(){
-  register_file_t rf = {.count = 0, .registers = NULL, .name_table = init_hash_table(67, 0.9)};
+  register_file_t rf = {.count = 0, .registers = NULL, .name_table = init_hash_table(67, 0.9), .argument_count = 0};
   return rf;
 }
 

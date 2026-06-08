@@ -54,7 +54,14 @@ void print_ir_block(ir_block_t* block, int indent){
   printf("{\n");
 }
 
-void print_program(program_t* program){
+void print_program_registers(program_t* program){
+  printf(MAGENTA BOLD "Registers:\n" RESET_COLOR);
+  for(int i = 0; i < program->registers.count; i++){
+    printf(CYAN BOLD "R%i" RESET_COLOR " : %ib\n", i, program->registers.registers[i]);
+  }
+}
+
+void print_program(program_t* program){ 
   print_ir_block(&program->root, 0);
 }
 
@@ -90,4 +97,23 @@ void destroy_ir_block(ir_block_t* block){
 void destroy_program(program_t* program){
   destroy_ir_block(&program->root);
   destroy_register_file(&program->registers);
+}
+
+ir_value_t single_byte_ir_value(uint8_t byte){
+  ir_value_t value = {.type = VAL_LITERAL, .literal = {.byte_count = 1, .data = malloc(1)}};
+  *value.literal.data = byte;
+  return value;
+}
+
+ir_value_t register_ir_value(uint16_t regid){
+  ir_value_t value = {.type = VAL_REGISTER, .register_id = regid};
+  return value;
+}
+
+ir_value_t literal_ir_value(uint16_t size, void *data){
+  ir_value_t value = {.type = VAL_LITERAL, .literal = {.byte_count = size, .data = malloc(size)}};
+  for(int i = 0; i < size; i++){
+    value.literal.data[i] = ((unsigned char*)data)[i];
+  }
+  return value;
 }

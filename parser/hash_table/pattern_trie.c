@@ -108,7 +108,7 @@ bool pattern_value_compare(pattern_value_t* a, pattern_value_t* b){
     return false;
   }
   if(a->is_param){
-    return pattern_type_compare(a->param.type, b->param.type);
+    return pattern_type_compare(&a->param->type, &b->param->type);
   }
   else{
     return expression_compare(a->base_value, b->base_value);
@@ -402,6 +402,10 @@ void print_trie_match_result(trie_match_result_t* result){
   }
 }
 void print_single_trie_node(pattern_trie_node_t* node){
+  if(node->pattern.type == PATTERN_IDENTIFIER && !node->pattern.identifier){
+    printf(BLUE "[ROOT]" RESET_COLOR);
+    return;
+  }
   print_pattern_entry(&node->pattern);
   if(node->match_index != NO_MATCH){
     printf(" (MATCH #%d)", node->match_index);
@@ -416,28 +420,31 @@ void print_trie_node(pattern_trie_node_t* node, int indent, int** levels){
     return;
   }
   
+
   *levels = realloc(*levels, (indent + 1) * sizeof(int));
-  (*levels)[indent] = (indent > 0? 3 : 1) + (node->pattern.type == PATTERN_IDENTIFIER? (node->pattern.identifier? (2 + strlen(node->pattern.identifier)) : 8) : (4 + node->pattern.variable.constant_lvl));
-  printf(" ═> ");
-  print_trie_node(node->children[0], indent + 1, levels);
-  printf("\n");
-  
-  for(int k = 0; k < indent + 1; k++){
-    for(int j = 0; j < (*levels)[k]; j++){
-      printf(" ");
-    }
-    printf("║");
+  if(indent == 0){
+    (*levels)[indent] = 7;
+  }
+  else{
+    (*levels)[indent] = 2;
+  }
+  if(node->children_count == 1){
+    printf(" ═> ");
+    print_trie_node(node->children[0], indent + 1, levels);
+    return;
   }
   
-  
-  for(int i = 1; i < node->children_count; i++){
-    printf("\n");
-    for(int k = 0; k < indent + 1; k++){
-      for(int j = 0; j < (*levels)[k]; j++){
-        printf(" ");
-      }
-      if(k < indent){
-        printf("║");
+  for(int i = 0; i < node->children_count; i++){
+    for(int d = 0; d < 2; d++){
+      printf("\n");
+      for(int k = 0; k < indent + 1; k++){
+        //printf("%i", (*levels)[k]);
+        for(int j = 0; j < (*levels)[k]; j++){
+          printf(" ");
+        }
+        if(k < indent || d == 0){
+          printf("║");
+        }
       }
     }
     printf("╚> ");
@@ -598,6 +605,8 @@ void pattern_trie_pop_pattern(pattern_trie_t* trie, int match_to_remove){
   destroy_pattern_trie_node(node->children[*child_index]);
   node->children_count = *child_index;
   node->children = realloc(node->children, node->children_count * sizeof(pattern_trie_node_t*));
+
+  destroy_trie_match_result(trie->matches + match_to_remove);
 }
 void pattern_trie_scope_out(pattern_trie_t* trie){
   for(int i = trie->match_count - 1; i >= trie->scopes[trie->scope_levels - 1]; i--){
@@ -605,6 +614,8 @@ void pattern_trie_scope_out(pattern_trie_t* trie){
       pattern_trie_pop_pattern(trie, i);
     }
   }
+  trie->match_count = trie->scopes[trie->scope_levels - 1];
+  trie->matches = realloc(trie->matches, trie->match_count * sizeof(trie_match_result_t));
   trie->scope_levels--;
   trie->scopes = realloc(trie->scopes, trie->scope_levels * sizeof(int));
 }

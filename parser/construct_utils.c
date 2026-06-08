@@ -147,13 +147,7 @@ void print_variable_declaration(variable_declaration_t* vardec){
 void print_pattern_value(pattern_value_t* pval){
   printf("(");
   if(pval->is_param){
-    printf(BLUE ":::" RESET_COLOR);
-    if(pval->param.type){
-      print_pattern_type(pval->param.type);
-    }
-    else{
-      printf("[u]");
-    }
+    print_pattern_variable(pval->param);
   }
   else{
     print_expression(pval->base_value);
@@ -191,9 +185,10 @@ void print_pattern_variable(pattern_variable_t* pvar){
 void print_pattern_entry(pattern_entry_t* pentry){
   if(!pentry) return;
   switch(pentry->type){
-    case PATTERN_IDENTIFIER:
+    case PATTERN_IDENTIFIER: {
       printf(WHITE "%s" RESET_COLOR, pentry->identifier);
       break;
+    }
     case PATTERN_VARIABLE:
       printf("(");
       print_pattern_variable(&pentry->variable);
@@ -340,10 +335,7 @@ void destroy_variable_declaration(variable_declaration_t* vardec){
 }
 void destroy_pattern_value(pattern_value_t* pval){
   if(pval->is_param){
-    if(pval->param.type){
-      destroy_pattern_type(pval->param.type);
-      free(pval->param.type);
-    }
+    destroy_pattern_variable(pval->param);
   }
   else{
     destroy_expression(pval->base_value);
@@ -526,15 +518,8 @@ void copy_variable_declaration(variable_declaration_t *new, variable_declaration
 void copy_pattern_value(pattern_value_t* new, pattern_value_t* pval){
   new->is_param = pval->is_param;
   if(new->is_param){
-    
-    new->param.var_id = pval->param.var_id;
-    if(pval->param.type){
-      new->param.type = malloc(sizeof(pattern_type_t));
-      copy_pattern_type(new->param.type, pval->param.type);
-    }
-    else{
-      new->param.type = NULL;
-    }
+    new->param = malloc(sizeof(pattern_variable_t));
+    copy_pattern_variable(new->param, pval->param);
   }
   else{
     new->base_value = malloc(sizeof(expression_t));

@@ -4,8 +4,12 @@ type [prt (p ::: [i])] holds 12;
 type [j (val ::: (n ::: [i]) * (n) * [i])] holds 4;
 
 fn (a ::: [i]) + (b ::: [i]) makes [i] does {~
-  q   = + a b
+  result   = + a b
 ~} priority 7;
+
+
+
+
 
 test_int ::: [i];
 
