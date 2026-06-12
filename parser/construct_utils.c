@@ -101,6 +101,10 @@ void print_type_argument(type_argument_t* arg){
 void print_type_identifier(type_identifier_t* type){
   if(!type) return;
   print_dimension_array(&type->dimensions);
+  if(type->type_id == -1){
+    printf("[%llu]", type->size);
+    return;
+  }
   printf("[" GREEN BOLD "#%i" RESET_COLOR, type->type_id);
   if(type->num_params > 0){
     printf("(");
@@ -133,7 +137,7 @@ void print_type_entry(type_entry_t* entry){
   }
   else{
     if(entry->base.var_name){
-      if(entry->base.type.type_id == -1){
+      if(entry->base.type.type_id == -1 && entry->base.type.size == 0){
         printf(MAGENTA "%s" RESET_COLOR, entry->base.var_name);
       }
       else{
@@ -321,6 +325,7 @@ void destroy_dimension_array(dimension_array_t* array){
 void destroy_type_identifier(type_identifier_t* type){
   if(!type) return;
   destroy_dimension_array(&type->dimensions);
+  if(type->type_id == -1) return;
   for(int i = 0; i < type->num_params; i++){
     destroy_type_argument(type->params + i);
   }
@@ -510,10 +515,14 @@ void copy_dimension_array(dimension_array_t* new, dimension_array_t* array){
   }
 }
 void copy_type_identifier(type_identifier_t *new, type_identifier_t *type){
+  new->type_id = type->type_id;
   copy_dimension_array(&new->dimensions, &type->dimensions);
+  if(type->type_id == -1){
+    new->size = type->size;
+    return;
+  }
   new->num_params = type->num_params;
   new->params = malloc(type->num_params * sizeof(expression_t));
-  new->type_id = type->type_id;
 
   for(int i = 0; i < new->num_params; i++){
     copy_type_argument(new->params + i, type->params + i);
@@ -636,7 +645,7 @@ void copy_function_definition(function_definition_t *new, function_definition_t 
 //expands the array of dimensions by one 
 void add_dimension(dimension_array_t* array, expression_t exp){
   array->dimension_count++;
-  array->dimensions = realloc(array->dimensions, array->dimension_count * sizeof(uint16_t));
+  array->dimensions = realloc(array->dimensions, array->dimension_count * sizeof(expression_t));
   array->dimensions[array->dimension_count - 1] = exp;
 }
 

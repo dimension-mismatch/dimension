@@ -96,9 +96,15 @@ typedef struct type_argument{
 
 typedef struct type_identifier{
   int type_id;
-  int num_params;
-  type_argument_t* params;
   dimension_array_t dimensions;
+  union{
+    struct{
+      int num_params;
+      type_argument_t* params;
+    };
+    uint64_t size;
+  };
+  
 }type_identifier_t;
 
 typedef struct variable_declaration{

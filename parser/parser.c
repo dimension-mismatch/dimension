@@ -72,6 +72,19 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
   }
   tc_inc(&tc);
   result->dimensions = dimensions;
+  token_cursor_t btc = tc;
+  if(btc.tk.type == TK_NUMERIC && btc.tk.number_type < NUM_FLOAT){
+    uint64_t size = atoi(btc.tk.content);
+    tc_inc(&btc);
+    if(btc.tk.type == TK_TYPE && !btc.tk.is_open){
+      result->type_id = -1;
+      result->size = size;
+      tc_inc(&btc);
+      *base_tc = btc;
+      return true;    
+    }
+  }
+  
   //read the contents of the [square brackets] to get the type expression
   expression_t contents;
   if(!parse_expression(&tc, TK_TYPE, &contents)){
@@ -543,6 +556,7 @@ bool parse_type_entry(token_cursor_t* base_tc, type_entry_t* result, bool check_
   result->subvector.components = NULL;
   result->subvector.name = vardec.var_name;
   result->subvector.const_lvl = vardec.constant_lvl;
+  result->subvector.is_enum = false;
   if(vectc.tk.type == TK_KEYWORD && tc.tk.keyword_id == 3){
     result->subvector.is_enum = true;
     tc_inc(&vectc);
@@ -570,7 +584,7 @@ bool parse_type_entry(token_cursor_t* base_tc, type_entry_t* result, bool check_
       result->subvector.components[result->subvector.component_count - 1] = entry;
     }
   }
-
+  printf("didn't read a vector\n");
   if(parse_type_identifier(&tc, &vardec.type)){
     result->is_vector = false;
     result->base = vardec;

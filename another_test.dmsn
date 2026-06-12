@@ -1,6 +1,6 @@
-type [i] is oneof (A B : oneof (C D));
+type [i] is [4];
 
-//type [prt (p ::: [i])] holds 12;
+//type [prt (p ::: [i])] is [12];
 //type [j (val ::: (n ::: [i]) * (n) * [i])] holds 4;
 
 //fn (a ::: [i]) + (b ::: [i]) makes [i] does {~
