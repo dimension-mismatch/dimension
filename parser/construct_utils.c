@@ -114,24 +114,44 @@ void print_type_identifier(type_identifier_t* type){
   } 
   printf("]");
 }
+void print_type_entry(type_entry_t* entry){
+  if(entry->is_vector){
+    if(entry->subvector.name){
+      printf(MAGENTA "%s" BLUE, entry->subvector.name);
+      for(int i = 0; i < entry->subvector.const_lvl + 1; i++){
+        printf(":");
+      }
+    }
+    printf(CYAN);
+    printf(entry->subvector.is_enum ? " oneof" : " ");
+    printf(RESET_COLOR "(");
+    for(int i = 0; i < entry->subvector.component_count; i++){
+      print_type_entry(entry->subvector.components + i);
+      if(i + 1 < entry->subvector.component_count) printf(", ");
+    }
+    printf(")");
+  }
+  else{
+    if(entry->base.var_name){
+      if(entry->base.type.type_id == -1){
+        printf(MAGENTA "%s" RESET_COLOR, entry->base.var_name);
+      }
+      else{
+        print_variable_declaration(&entry->base);
+      }
+    }
+    else{
+      print_type_identifier(&entry->base.type);
+    }
+  }
+}
 
 void print_type_declaration(type_declaration_t* typedec){
   if(!typedec) return;
   printf(CYAN "TYPE [" RESET_COLOR);
   print_pattern(typedec->match_pattern);
-  if(typedec->is_builtin){
-    printf(CYAN "] holds %d" RESET_COLOR, typedec->byte_count);
-    return;
-  }
-  printf(CYAN "] %s %s", typedec->is_is ? "is" : "has", typedec->is_enum ? "oneof" : "");
-  printf("(");
-  for(int i = 0; i < typedec->component_count; i++){
-    if(i > 0){
-      printf(",");
-    }
-    print_variable_declaration(typedec->components + i);
-  }
-  printf(")");
+  printf(CYAN "] %s ", typedec->is_is ? "is" : "has");
+  print_type_entry(&typedec->entry);
 }
 void print_variable_declaration(variable_declaration_t* vardec){
   if(!vardec) return;
@@ -308,7 +328,19 @@ void destroy_type_identifier(type_identifier_t* type){
   type->params = NULL;
   type->num_params = 0;
 }
-
+void destroy_type_entry(type_entry_t* entry){
+  if(entry->is_vector){
+    for(int i = 0; i < entry->subvector.component_count; i++){
+      destroy_type_entry(entry->subvector.components + i);
+    }
+    free(entry->subvector.components);
+    entry->subvector.component_count = 0;
+    entry->subvector.components = NULL;
+  }
+  else{
+    destroy_variable_declaration(&entry->base);
+  }
+}
 void destroy_type_declaration(type_declaration_t* typedec){
   if(!typedec) return;
   destroy_pattern(typedec->match_pattern);
@@ -318,12 +350,7 @@ void destroy_type_declaration(type_declaration_t* typedec){
     return;
   }
 
-  for(int i = 0; i < typedec->component_count; i++){
-    destroy_variable_declaration(typedec->components + i);
-  }
-  free(typedec->components);
-  typedec->components = NULL;
-  typedec->component_count = 0;
+  destroy_type_entry(&typedec->entry);
 }
 
 void destroy_variable_declaration(variable_declaration_t* vardec){
@@ -492,28 +519,36 @@ void copy_type_identifier(type_identifier_t *new, type_identifier_t *type){
     copy_type_argument(new->params + i, type->params + i);
   }
 }
+void copy_type_entry(type_entry_t* new, type_entry_t* entry){
+  new->is_vector = entry->is_vector;
+  if(entry->is_vector){
+    new->subvector.name = entry->subvector.name;
+    new->subvector.is_enum = entry->subvector.is_enum;
+    new->subvector.const_lvl = entry->subvector.component_count;
+    new->subvector.component_count = entry->subvector.component_count;
+    new->subvector.components = malloc(new->subvector.component_count * sizeof(type_entry_t));
+    for(int i = 0; i < new->subvector.component_count; i++){
+      copy_type_entry(new->subvector.components + i, entry->subvector.components + i);
+    }
+  }
+  else{
+    copy_variable_declaration(&new->base, &entry->base);
+  }
+}
 
 void copy_type_declaration(type_declaration_t *new, type_declaration_t *typedec){
-    new->component_count = typedec->component_count;
-    new->components = malloc(typedec->component_count * sizeof(type_declaration_t));
-    new->is_builtin = typedec->is_builtin;
-    if(new->is_builtin){
-      new->byte_count = typedec->byte_count;
-      return;
-    }
-    new->is_enum = typedec->is_enum;
-    new->is_is = typedec->is_is;
-    new->match_pattern = malloc(sizeof(pattern_t));
+  new->is_static_size = typedec->is_static_size;
+  new->size = typedec->size;
+  new->is_is = typedec->is_is;
+  new->match_pattern = malloc(sizeof(pattern_t));
   copy_pattern(new->match_pattern, typedec->match_pattern);
-  for(int i = 0; i < typedec->component_count; i++){
-    copy_variable_declaration(new->components + i, typedec->components + i);
-  }
+  copy_type_entry(&new->entry, &typedec->entry);
 }
 void copy_variable_declaration(variable_declaration_t *new, variable_declaration_t *vardec){
   new->constant_lvl = vardec->constant_lvl;
   new->var_name = malloc((1 + strlen(vardec->var_name)) * sizeof(char));
   copy_type_identifier(&new->type, &vardec->type);
-  strcpy(new->var_name, vardec->var_name);
+  //strcpy(new->var_name, vardec->var_name);
 }
 void copy_pattern_value(pattern_value_t* new, pattern_value_t* pval){
   new->is_param = pval->is_param;

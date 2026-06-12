@@ -1,18 +1,18 @@
-type [i] holds 8;
+type [i] is oneof (A B : oneof (C D));
 
-type [prt (p ::: [i])] holds 12;
-type [j (val ::: (n ::: [i]) * (n) * [i])] holds 4;
+//type [prt (p ::: [i])] holds 12;
+//type [j (val ::: (n ::: [i]) * (n) * [i])] holds 4;
 
-fn (a ::: [i]) + (b ::: [i]) makes [i] does {~
-  result   = + a b
-~} priority 7;
-
-
+//fn (a ::: [i]) + (b ::: [i]) makes [i] does {~
+//  result   = + a b
+//~} priority 7;
 
 
 
-test_int ::: [i];
 
-test_val ::: [prt(test_int)];
 
-test_int + test_int + test_int;
+//test_int ::: [i];
+
+//test_val ::: [prt(test_int)];
+
+//test_int + test_int + test_int;

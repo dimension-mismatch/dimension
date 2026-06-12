@@ -139,8 +139,8 @@ void print_token_array(token_array_t* tokens){
 token_array_t* tokenize_file(FILE* file){
 
   //Creating a table to look up keywords
-  int keyword_count = 10;
-  char* keywords[] = {"type","is",  "has","oneof", "fn", "makes", "does", "priority", "return", "holds"};
+  int keyword_count = 9;
+  char* keywords[] = {"type","is",  "has","oneof", "fn", "makes", "does", "priority", "return"};
 
   hash_table_t keyword_table = init_hash_table(67, 0.95);
   for(int i = 0; i < keyword_count; i++){
@@ -161,7 +161,7 @@ token_array_t* tokenize_file(FILE* file){
   token_array_t* all_tokens = init_token_array();
 
   int line = 1;
-  int col = 1;
+  int col = 0;
 
 
   token_t current_token = new_empty_token(line, col);
@@ -176,7 +176,7 @@ token_array_t* tokenize_file(FILE* file){
     
     col++;
     if(ch == '\n'){
-      col = 1;
+      col = 0;
       line++;
     }
 

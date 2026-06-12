@@ -101,6 +101,26 @@ typedef struct type_identifier{
   dimension_array_t dimensions;
 }type_identifier_t;
 
+typedef struct variable_declaration{
+  char* var_name;
+  const_lvl_t constant_lvl;
+  type_identifier_t 
+  type;
+}variable_declaration_t;
+
+typedef struct type_entry{
+  bool is_vector;
+  union{
+    variable_declaration_t base;
+    struct{
+      char* name;
+      const_lvl_t const_lvl;
+      uint16_t component_count;
+      struct type_entry* components;
+      bool is_enum;
+    } subvector;
+  };
+}type_entry_t;
 
 typedef struct type_declaration{
   struct pattern* match_pattern;
@@ -108,26 +128,18 @@ typedef struct type_declaration{
   union{
     struct{
       bool is_is;
-      bool is_enum;
-      int component_count;
-      struct variable_declaration* components;
+      type_entry_t entry;
     };
-    int byte_count;
     bool is_static_size;
     union{
-      int size;
+      uint64_t size;
       program_t compute_size;
     };
   };
 }type_declaration_t;
 
 
-typedef struct variable_declaration{
-  char* var_name;
-  const_lvl_t constant_lvl;
-  type_identifier_t 
-  type;
-}variable_declaration_t;
+
 
 typedef struct pattern_value{
   bool is_param;

@@ -24,7 +24,7 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
       // we've reached the end of the dimensions, move on to the type itself
       break;
     }
-    else if(tc.tk.type == TK_VECTOR){
+    else if(tc.tk.type == TK_VECTOR && tc.tk.is_open){
       tc_inc(&tc);
       expression_t exp;
       if(!parse_expression(&tc, TK_VECTOR, &exp)){
@@ -174,7 +174,7 @@ parse_result_t parse_vardec(token_cursor_t* base_tc, variable_declaration_t* res
   if(!parse_type_identifier(&tc, &result->type)){
     return PRS_ERROR;
   }
-  result->var_name = malloc((1 + strlen(name) * sizeof(char)));
+  result->var_name = name;//malloc((1 + strlen(name) * sizeof(char)));
   strcpy(result->var_name, name);
 
   *base_tc = tc;
@@ -507,6 +507,79 @@ bool parse_expression(token_cursor_t* base_tc, token_type_t end_type, expression
   };
   
 }
+bool parse_type_entry(token_cursor_t* base_tc, type_entry_t* result, bool check_name, bool require_name){
+  token_cursor_t tc = *base_tc;
+  variable_declaration_t vardec = {.constant_lvl = CL_MUTABLE, .var_name = NULL, .type.type_id = -1};
+  if(check_name){
+    if(tc.tk.type != TK_IDENTIFIER){
+      if(require_name){
+        printf("expected identifier on: %s\n", tc.tk.content);
+        tc_throw_error(&tc, 0);
+        return false;
+      } 
+    }
+    else{
+      printf("found identifier on: %s\n", tc.tk.content);
+      vardec.var_name = tc.tk.content;
+      tc_inc(&tc);
+      if(tc.tk.type != TK_DECL){
+        if(require_name){
+          result->is_vector = false;
+          result->base = vardec;
+          *base_tc = tc;
+          return true;
+        }
+
+        tc_throw_error(&tc, 1);
+        return false;
+      }
+      vardec.constant_lvl = tc.tk.decl_const_lvl;
+      tc_inc(&tc);
+    }
+  }
+  token_cursor_t vectc = tc;
+  result->is_vector = true;
+  result->subvector.component_count = 0;
+  result->subvector.components = NULL;
+  result->subvector.name = vardec.var_name;
+  result->subvector.const_lvl = vardec.constant_lvl;
+  if(vectc.tk.type == TK_KEYWORD && tc.tk.keyword_id == 3){
+    result->subvector.is_enum = true;
+    tc_inc(&vectc);
+  }
+  if(vectc.tk.type == TK_VECTOR && tc.tk.is_open){
+    printf("reading a new vector\n");
+    tc_inc(&vectc);
+    while(true){
+      if(vectc.tk.type == TK_VECTOR && !vectc.tk.is_open){
+        printf("exiting a vector\n");
+        tc_inc(&vectc);
+        *base_tc = vectc;
+        return true;
+      }
+      if(vectc.tk.type == TK_FORCE_EXP_END){
+        tc_inc(&vectc);
+        continue;
+      }
+      type_entry_t entry;
+      if(!parse_type_entry(&vectc, &entry, true, result->subvector.is_enum)){
+        break;
+      }
+      result->subvector.component_count++;
+      result->subvector.components = realloc(result->subvector.components, result->subvector.component_count * sizeof(type_entry_t));
+      result->subvector.components[result->subvector.component_count - 1] = entry;
+    }
+  }
+
+  if(parse_type_identifier(&tc, &vardec.type)){
+    result->is_vector = false;
+    result->base = vardec;
+    *base_tc = tc;
+    return true;
+  }
+  tc_throw_error(&tc, 2);
+  return false;
+}
 
 //* 3
 parse_result_t parse_type_declaration(token_cursor_t* base_tc, type_declaration_t* result){
@@ -527,31 +600,6 @@ parse_result_t parse_type_declaration(token_cursor_t* base_tc, type_declaration_
   }
 
   tc_inc(&tc);
-  if(tc.tk.type == TK_KEYWORD && tc.tk.keyword_id == 9){ //Handle "holds" keyword
-    tc_inc(&tc);
-    if(tc.tk.type == TK_NUMERIC){
-      if(tc.tk.number_type != NUM_FLOAT && tc.tk.number_type != NUM_SCI_FLOAT){
-        result->is_builtin = true;
-        result->byte_count = atoi(tc.tk.content);
-        printf("end of holds segment at %i, col %i\n", tc.tk.line_number, tc.tk.start_pos);
-        tc_inc(&tc);
-        if(tc.tk.type == TK_ENDLINE){
-          tc_inc(&tc);
-        }
-        else{
-          tc_throw_error(&tc, 17); //Here we throw a missing semicolon error, but we don't return failure, 
-          //since we still successfully read a type declaration
-        }
-        *base_tc = tc;
-        pattern_trie_scope_out(tc.fn_trie);  
-        return PRS_SUCCESS; 
-      }
-      tc_throw_error(&tc, 9);
-      return PRS_ERROR;
-    }
-    tc_throw_error(&tc, 8);
-    return PRS_ERROR;
-  }
   result->is_builtin = false;
 
   //Handle "is" and "has" keywords
@@ -561,55 +609,7 @@ parse_result_t parse_type_declaration(token_cursor_t* base_tc, type_declaration_
   }
   result->is_is = (tc.tk.keyword_id == 1); 
   tc_inc(&tc);
-
-  result->is_enum = (tc.tk.type == TK_KEYWORD && tc.tk.keyword_id == 3);
-  if(result->is_enum){
-    tc_inc(&tc);
-  }
-
-  if(tc.tk.type == TK_VECTOR && tc.tk.is_open){
-    while(true){
-      tc_inc(&tc);
-      variable_declaration_t vardec;
-      type_identifier_t typeid;
-      parse_result_t var_result = parse_vardec(&tc, &vardec);
-      if(var_result == PRS_ERROR){
-        continue;
-      }
-      else if(var_result == PRS_SUCCESS){
-
-      }
-      else if(parse_type_identifier(&tc, &typeid)){
-        vardec.var_name = NULL;
-        vardec.constant_lvl = 0;
-        vardec.type = typeid;
-      }
-      else if(tc.tk.type == TK_IDENTIFIER){
-        vardec.var_name = malloc((1 + strlen(tc.tk.content)) * sizeof(char));
-        strcpy(vardec.var_name, tc.tk.content);
-      }
-      else if(tc.tk.type == TK_FORCE_EXP_END){
-        continue;
-      }
-      else if(tc.tk.type == TK_VECTOR){
-        if(tc.tk.is_open){
-          //todo: allow for nesting type declarations here
-        }
-        else{
-          break;
-        }
-      }
-      else{
-        tc_throw_error(&tc, 2);
-        return PRS_ERROR;
-      }
-      result->component_count++;
-      result->components = realloc(result->components, result->component_count * sizeof(variable_declaration_t));
-
-      result->components[result->component_count - 1] = vardec;
-    }
-  }
-  tc_inc(&tc);
+  if(!parse_type_entry(&tc, &result->entry, false, false)) return PRS_ERROR;
     
   if(tc.tk.type == TK_ENDLINE){
     pattern_trie_scope_out(tc.fn_trie);

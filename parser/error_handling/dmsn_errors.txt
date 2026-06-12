@@ -12,7 +12,7 @@
 
 ~ Empty Pattern |@ Pattern must contain at least one entry: either an identifier, parameter, or sub-pattern
 
-~ in Type Declaration |@ Expected either "is", "has", or "holds" keyword after type label, but instead found "#T"
+~ in Type Declaration |@ Expected either "is" or "has" keyword after type label, but instead found "#T"
 
 ~ Missing Number |@ Expected an integer literal (e.g. "67"), but instead found "#T"
 
