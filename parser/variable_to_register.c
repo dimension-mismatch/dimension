@@ -5,10 +5,8 @@ void pattern_to_registers(pattern_t* pattern, register_file_t* rf);
 
 //TODO: not everything is 4 bytes
 void pattern_type_to_registers(pattern_type_t* ptype, register_file_t* rf){
-  printf("adding a pattern type with %i dimensions and %i parameters\n", ptype->dimensions.dimension_count, ptype->param_count);
   for(int i = 0; i < ptype->dimensions.dimension_count; i++){
     if(ptype->dimensions.dimensions[i].is_param){
-      printf("adding a dimension argument\n");
       register_file_push_named(rf, 4, ptype->dimensions.dimensions[i].param->name);
       rf->argument_count++;
     }
@@ -18,7 +16,6 @@ void pattern_type_to_registers(pattern_type_t* ptype, register_file_t* rf){
 
 }
 void pattern_variable_to_registers(pattern_variable_t* pvar, register_file_t* rf){
-  printf("Adding a pattern variable named \"%s\"\n", pvar->name);
   pattern_type_to_registers(&pvar->type, rf);
   
   register_file_push_named(rf, 4, pvar->name);

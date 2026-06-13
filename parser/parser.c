@@ -100,6 +100,7 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
   result->type_id = contents.type_literal->type_id;
   result->num_params = contents.type_literal->num_params;
   result->params = contents.type_literal->params;
+
   tc_inc(&tc);
 
   *base_tc = tc;
@@ -188,7 +189,7 @@ parse_result_t parse_vardec(token_cursor_t* base_tc, variable_declaration_t* res
     return PRS_ERROR;
   }
   result->var_name = name;//malloc((1 + strlen(name) * sizeof(char)));
-  strcpy(result->var_name, name);
+  //strcpy(result->var_name, name);
 
   *base_tc = tc;
   return PRS_SUCCESS;
@@ -353,7 +354,6 @@ parse_result_t parse_pattern_vardec(token_cursor_t* base_tc, pattern_variable_t*
   if(!parse_pattern_type(&tc, &result->type)){
     return PRS_ERROR;
   }
-
   result->name = name;
   variable_declaration_t vardec = {
     .constant_lvl = result->constant_lvl, 
@@ -495,7 +495,6 @@ bool parse_expression(token_cursor_t* base_tc, token_type_t end_type, expression
     } 
     else if(tc.tk.type == end_type || tc.tk.type == TK_FORCE_EXP_END || tc.tk.type == TK_ENDLINE){
       pattern_trie_t* trie = (end_type == TK_TYPE)? tc.type_trie : tc.fn_trie;
-      printf(" Building at Line %i, Column %i", tc.tk.line_number, tc.tk.start_pos);
       if(!build_expression(trie, &root, result, end_type == TK_VECTOR, tc.error_manager)){
         return false;
       }
@@ -522,17 +521,15 @@ bool parse_expression(token_cursor_t* base_tc, token_type_t end_type, expression
 }
 bool parse_type_entry(token_cursor_t* base_tc, type_entry_t* result, bool check_name, bool require_name){
   token_cursor_t tc = *base_tc;
-  variable_declaration_t vardec = {.constant_lvl = CL_MUTABLE, .var_name = NULL, .type.type_id = -1};
+  variable_declaration_t vardec = {.constant_lvl = CL_MUTABLE, .var_name = NULL, .type.type_id = -1, .type.size = 0};
   if(check_name){
     if(tc.tk.type != TK_IDENTIFIER){
       if(require_name){
-        printf("expected identifier on: %s\n", tc.tk.content);
         tc_throw_error(&tc, 0);
         return false;
       } 
     }
     else{
-      printf("found identifier on: %s\n", tc.tk.content);
       vardec.var_name = tc.tk.content;
       tc_inc(&tc);
       if(tc.tk.type != TK_DECL){
@@ -562,11 +559,9 @@ bool parse_type_entry(token_cursor_t* base_tc, type_entry_t* result, bool check_
     tc_inc(&vectc);
   }
   if(vectc.tk.type == TK_VECTOR && tc.tk.is_open){
-    printf("reading a new vector\n");
     tc_inc(&vectc);
     while(true){
       if(vectc.tk.type == TK_VECTOR && !vectc.tk.is_open){
-        printf("exiting a vector\n");
         tc_inc(&vectc);
         *base_tc = vectc;
         return true;
@@ -584,7 +579,6 @@ bool parse_type_entry(token_cursor_t* base_tc, type_entry_t* result, bool check_
       result->subvector.components[result->subvector.component_count - 1] = entry;
     }
   }
-  printf("didn't read a vector\n");
   if(parse_type_identifier(&tc, &vardec.type)){
     result->is_vector = false;
     result->base = vardec;
@@ -769,15 +763,15 @@ void parse_block(token_cursor_t* tc, token_type_t end_type, block_t* result){
       type_declaration_t* typedecptr = malloc(sizeof(type_declaration_t));
       *typedecptr = typedec;
       pattern_trie_push_type(tc->type_trie, typedecptr);
-      printf("successful typedec! we are now at line %i, column %i\n", tc->tk.line_number, tc->tk.start_pos);
+      //printf("successful typedec! we are now at line %i, column %i\n", tc->tk.line_number, tc->tk.start_pos);
       //continue;
     }
     else if(type_result == PRS_ERROR){
-      printf("error in type declaration, recovering now\n");
-      printf("current position: line %i, column %i\n", tc->tk.line_number, tc->tk.start_pos);
+      //printf("error in type declaration, recovering now\n");
+      //printf("current position: line %i, column %i\n", tc->tk.line_number, tc->tk.start_pos);
       pattern_trie_scope_out(tc->fn_trie);
       recover_from_error(tc);
-      printf("recovered to: line %i, column %i\n", tc->tk.line_number, tc->tk.start_pos);
+      //printf("recovered to: line %i, column %i\n", tc->tk.line_number, tc->tk.start_pos);
       //continue;
     }
     else{

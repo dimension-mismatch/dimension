@@ -1,18 +1,19 @@
 type [i] is [4];
 
-//type [prt (p ::: [i])] is [12];
-//type [j (val ::: (n ::: [i]) * (n) * [i])] holds 4;
+type [Suit] is oneof (Hearts Spades Diamonds Clubs);
 
-//fn (a ::: [i]) + (b ::: [i]) makes [i] does {~
-//  result   = + a b
-//~} priority 7;
+type [prt (p ::: [i])] is [12];
+type [j (val ::: (n ::: [i])*(n)*[i])] is [4];
+
+fn (a ::: [i]) + (b ::: [i]) makes [i] does {~
+  result   = + a b
+~} priority 7;
 
 
+test_int ::: [i];
 
+test_val ::: [prt(test_int)];
 
+test_int + test_int + test_int;
 
-//test_int ::: [i];
-
-//test_val ::: [prt(test_int)];
-
-//test_int + test_int + test_int;
+type [s] is [c]+;

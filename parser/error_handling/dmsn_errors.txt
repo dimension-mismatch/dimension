@@ -1,4 +1,4 @@
-~ in Variable Declaration |@ Expected an identifier for the name of a variable.
+~ in Variable Declaration |@ Expected an identifier for the name of a variable, but instead fount "#T"
 
 ~ in Variable Declaration |@ Expected either :, ::, or ::: to indicate variable declaration
 

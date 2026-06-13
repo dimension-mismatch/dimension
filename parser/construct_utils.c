@@ -360,9 +360,7 @@ void destroy_type_declaration(type_declaration_t* typedec){
 
 void destroy_variable_declaration(variable_declaration_t* vardec){
   if(!vardec) return;
-  free(vardec->var_name);
   vardec->var_name = NULL;
-
   destroy_type_identifier(&vardec->type);
 }
 void destroy_pattern_value(pattern_value_t* pval){
@@ -522,7 +520,8 @@ void copy_type_identifier(type_identifier_t *new, type_identifier_t *type){
     return;
   }
   new->num_params = type->num_params;
-  new->params = malloc(type->num_params * sizeof(expression_t));
+  
+  new->params = malloc(type->num_params * sizeof(type_argument_t));
 
   for(int i = 0; i < new->num_params; i++){
     copy_type_argument(new->params + i, type->params + i);
@@ -555,7 +554,7 @@ void copy_type_declaration(type_declaration_t *new, type_declaration_t *typedec)
 }
 void copy_variable_declaration(variable_declaration_t *new, variable_declaration_t *vardec){
   new->constant_lvl = vardec->constant_lvl;
-  new->var_name = malloc((1 + strlen(vardec->var_name)) * sizeof(char));
+  new->var_name = vardec->var_name;
   copy_type_identifier(&new->type, &vardec->type);
   //strcpy(new->var_name, vardec->var_name);
 }
