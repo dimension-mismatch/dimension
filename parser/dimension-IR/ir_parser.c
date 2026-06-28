@@ -1,5 +1,6 @@
 #include "ir_parser.h"
 #include "ir_constructs.h"
+#include "ir_construct_utils.h"
 #include "../hash_table/hash_table.h"
 #include "../token_cursor.h"
 #include "registers.h"
@@ -124,12 +125,7 @@ parse_result_t parse_instruction(token_cursor_t* base_tc, instruction_t* result,
   }
   //if register size was not specified, then we infer size from instruction arguments
   if(register_needs_size){
-    if(result->a1.type == VAL_REGISTER){
-      rf->registers[result->dest_register] = rf->registers[result->a1.register_id];
-    }
-    else{
-      rf->registers[result->dest_register] = result->a1.literal.byte_count;
-    }
+    rf->registers[result->dest_register] = infer_size_from_args(result->a1, result->a2, rf);
   }
   tc_inc(&tc);
   if(tc.tk.type == TK_FORCE_EXP_END){
@@ -178,8 +174,8 @@ parse_result_t parse_ir(token_cursor_t* base_tc, program_t* result, register_fil
     return PRS_NOT_FOUND;
   }
   tc_inc(&tc);
-  int instruction_count = 20;
-  char* instruction_names[] = {"+", "-", "*", "/", ">", "<", ">=", "<=", "==", "deref", ">>", "<<", "&", "|", "^", "!", "&&", "||", "^^", "!!", "printchar"};
+  int instruction_count = 42;
+  char* instruction_names[] = {"+", "-", "*", "/", ">", "<", ">=", "<=", "min", "max", "u+", "u-", "u*", "u/", "u>", "u<", "u>=", "u<=", "umin", "umax", "f+", "f-", "f*", "f/", "f>", "f<", "f>=", "f<=", "fmin", "fmax", "==", "deref", ">>", "<<", "&", "|", "^", "!", "&&", "||", "^^", "!!", "printchar"};
   hash_table_t instruction_table = init_hash_table_from_array(67, 0.9, instruction_names, instruction_count);
   hash_table_t label_table = init_hash_table(67, 0.9);
   result->registers = rf;

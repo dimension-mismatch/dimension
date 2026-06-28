@@ -6,7 +6,6 @@
 #include "token_cursor.h"
 #include "hash_table/pattern_trie.h"
 #include "colors.h"
-#include "comptime_eval.h"
 
 #include <stdlib.h>
 #include <stdio.h>

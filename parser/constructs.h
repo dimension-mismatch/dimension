@@ -131,18 +131,15 @@ typedef struct type_entry{
 typedef struct type_declaration{
   struct pattern* match_pattern;
   bool is_builtin;
+  bool is_is;
+  type_entry_t entry;
+
+  bool is_static_size;
   union{
-    struct{
-      bool is_is;
-      type_entry_t entry;
-    };
-    bool is_static_size;
-    union{
-      uint64_t size;
-      program_t compute_size;
-    };
+    uint64_t size;
+    program_t compute_size;
   };
-}type_declaration_t;
+} type_declaration_t;
 
 
 

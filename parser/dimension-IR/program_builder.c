@@ -10,14 +10,20 @@ program_t program_init(){
   return program;
 }
 
-void program_append_instruction(program_t *program, uint8_t opcode, ir_value_t arg1, ir_value_t arg2){
+void program_append_instruction(program_t *program, uint8_t opcode, ir_value_t arg1, ir_value_t arg2, uint16_t dest_reg){
   ir_block_t* block = &program->root;
   block->length++;
   block->instructions = realloc(block->instructions, block->length * sizeof(instruction_t));
-  instruction_t new = {.opcode = opcode, .a1 = arg1, .a2 = arg2};
+  instruction_t new = {.opcode = opcode, .a1 = arg1, .a2 = arg2, .dest_register = dest_reg};
   block->instructions[block->length - 1] = new;
 }
 
+ir_value_t program_append_instruction_new_reg(program_t *program, uint8_t opcode, ir_value_t arg1, ir_value_t arg2){
+  uint16_t dest_reg = program->registers.count;
+  register_file_push(&program->registers, infer_size_from_args(arg1, arg2, &program->registers));
+  program_append_instruction(program, opcode, arg1, arg2, dest_reg);
+  return register_ir_value(dest_reg);
+}
 
 void update_operand(ir_value_t* operand, ir_value_t* arg_registers, int reg_offset, int arg_count){
   if(operand->type == VAL_REGISTER){

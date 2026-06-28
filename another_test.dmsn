@@ -2,7 +2,9 @@ type [i] is [4];
 
 type [Suit] is oneof (Hearts Spades Diamonds Clubs);
 
-type [prt (p ::: [i])] is [12];
+type [Card] is ([i] [Suit]);
+
+type [prt (p ::: [i])] is 4*[12];
 type [j (val ::: (n ::: [i])*(n)*[i])] is [4];
 
 fn (a ::: [i]) + (b ::: [i]) makes [i] does {~
@@ -15,5 +17,3 @@ test_int ::: [i];
 test_val ::: [prt(test_int)];
 
 test_int + test_int + test_int;
-
-type [s] is [c]+;

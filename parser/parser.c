@@ -4,10 +4,10 @@
 #include "colors.h"
 #include "expression_builder.h"
 #include "construct_utils.h"
-#include "comptime_eval.h"
 #include "hash_table/pattern_trie.h"
 #include "dimension-IR/ir_parser.h"
 #include "variable_to_register.h"
+#include "./compiler/compute_size.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -17,6 +17,7 @@ bool parse_pattern(token_cursor_t* base_tc, token_type_t end_type, pattern_t* re
 parse_result_t parse_pattern_vardec(token_cursor_t* base_tc, pattern_variable_t* result, bool required);
 //* 2
 bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
+  printf("\nparsing type on line %i, col %i\n", base_tc->tk.line_number, base_tc->tk.start_pos);
   token_cursor_t tc = *base_tc;
   dimension_array_t dimensions = {.dimension_count = 0, .dimensions = NULL};
   while(true){
@@ -25,15 +26,17 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
       break;
     }
     else if(tc.tk.type == TK_VECTOR && tc.tk.is_open){
+      printf("expression dimension!\n");
       tc_inc(&tc);
       expression_t exp;
       if(!parse_expression(&tc, TK_VECTOR, &exp)){
         destroy_dimension_array(&dimensions);
         return false;
       }
+      printf("successfully parsed the expression!\n");
       add_dimension(&dimensions, exp);
       tc_inc(&tc);
-      continue;
+      print_token(&tc.tk);
     }
     else if(tc.tk.type == TK_NUMERIC){
       if(tc.tk.number_type == NUM_FLOAT || tc.tk.number_type == NUM_SCI_FLOAT){
@@ -47,6 +50,7 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
         .value_literal = {.type = VAL_UNSIGNED, .u = atoi(tc.tk.content)}
       };
       add_dimension(&dimensions, exp);
+      tc_inc(&tc);
     }
     else{
       destroy_dimension_array(&dimensions);
@@ -54,17 +58,21 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
 
       return false;
     }
-    tc_inc(&tc);
+    printf("checking for asterisk: ");
+    print_token(&tc.tk);
+    printf("\n");
 
     if(tc_is_asterisk(&tc)){
       tc_inc(&tc);
       continue;
     }
     else if(tc.tk.type == TK_TYPE && tc.tk.is_open){
+      printf("entering type body\n");
       //we've reached the last dimension, move on to the type itself
       break;
     }
     else{
+      printf("not the asterisk, throwing error\n\n");
       tc_throw_error(&tc, 4);
       destroy_dimension_array(&dimensions);
       return false;
@@ -105,6 +113,44 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
 
   *base_tc = tc;
   return true;
+}
+
+bool is_type_identifier_present(token_cursor_t* base_tc){
+  printf("\nchecking for type on line %i, col %i\n", base_tc->tk.line_number, base_tc->tk.start_pos);
+  token_cursor_t tc = *base_tc;
+  while(true){
+    if(tc.tk.type == TK_TYPE && tc.tk.is_open){
+      printf("type found!\n");
+      return true;
+    }
+    else if(tc.tk.type == TK_VECTOR && tc.tk.is_open){
+      printf("vector dimension\n");
+      find_closing_bracket(&tc, TK_VECTOR);
+      tc_inc(&tc);
+    }
+    else if(tc.tk.type == TK_NUMERIC){
+      tc_inc(&tc);
+    }
+    else{
+      return false;
+    }
+    printf("checking for asterisk: ");
+    print_token(&tc.tk);
+    printf("\n");
+
+    if(tc_is_asterisk(&tc)){
+      tc_inc(&tc);
+      continue;
+    }
+    else if(tc.tk.type == TK_TYPE && tc.tk.is_open){
+      printf("type found!\n");
+      return true;
+    }
+    else{
+      return false;
+    }
+  }
+  
 }
 
 expression_t resolve_pattern_value(pattern_value_t* pval){
@@ -419,6 +465,7 @@ bool parse_pattern(token_cursor_t* base_tc, token_type_t end_type, pattern_t* re
       }
       pattern_entry_t new_entry = {.type = PATTERN_TYPE, .pattern_type = subpattern};
       pattern_push_entry(result, new_entry);
+      result->param_count += subpattern.param_count;
     }
     else if(tc.tk.type == end_type){
       
@@ -520,8 +567,10 @@ bool parse_expression(token_cursor_t* base_tc, token_type_t end_type, expression
   
 }
 bool parse_type_entry(token_cursor_t* base_tc, type_entry_t* result, bool check_name, bool require_name){
+  printf("\nparsing type entry at line %i, col %i\n", base_tc->tk.line_number, base_tc->tk.start_pos);
   token_cursor_t tc = *base_tc;
   variable_declaration_t vardec = {.constant_lvl = CL_MUTABLE, .var_name = NULL, .type.type_id = -1, .type.size = 0};
+  
   if(check_name){
     if(tc.tk.type != TK_IDENTIFIER){
       if(require_name){
@@ -558,6 +607,17 @@ bool parse_type_entry(token_cursor_t* base_tc, type_entry_t* result, bool check_
     result->subvector.is_enum = true;
     tc_inc(&vectc);
   }
+  else{
+    if(is_type_identifier_present(&tc)){
+      if(parse_type_identifier(&tc, &vardec.type)){
+        result->is_vector = false;
+        result->base = vardec;
+        *base_tc = tc;
+        return true;
+      }
+      return false;
+    }
+  }
   if(vectc.tk.type == TK_VECTOR && tc.tk.is_open){
     tc_inc(&vectc);
     while(true){
@@ -572,19 +632,14 @@ bool parse_type_entry(token_cursor_t* base_tc, type_entry_t* result, bool check_
       }
       type_entry_t entry;
       if(!parse_type_entry(&vectc, &entry, true, result->subvector.is_enum)){
-        break;
+        return false;
       }
       result->subvector.component_count++;
       result->subvector.components = realloc(result->subvector.components, result->subvector.component_count * sizeof(type_entry_t));
       result->subvector.components[result->subvector.component_count - 1] = entry;
     }
   }
-  if(parse_type_identifier(&tc, &vardec.type)){
-    result->is_vector = false;
-    result->base = vardec;
-    *base_tc = tc;
-    return true;
-  }
+  
   tc_throw_error(&tc, 2);
   return false;
 }
@@ -618,7 +673,16 @@ parse_result_t parse_type_declaration(token_cursor_t* base_tc, type_declaration_
   result->is_is = (tc.tk.keyword_id == 1); 
   tc_inc(&tc);
   if(!parse_type_entry(&tc, &result->entry, false, false)) return PRS_ERROR;
-    
+  result->is_static_size = true;
+  result->size = 0;
+  if(!result->entry.is_vector && result->entry.base.type.type_id == -1 && result->entry.base.type.dimensions.dimension_count == 0){
+    result->is_static_size = true;
+    result->size = result->entry.base.type.size;
+  }
+  else{
+    compute_size(result, tc.type_trie, tc.fn_trie);
+
+  }
   if(tc.tk.type == TK_ENDLINE){
     pattern_trie_scope_out(tc.fn_trie);
     tc_inc(&tc);

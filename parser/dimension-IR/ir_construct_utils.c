@@ -14,10 +14,18 @@ void print_value(ir_value_t* value){
       break;
     case VAL_LITERAL:
       printf(MAGENTA BOLD);
-      uint8_t* data_p = value->literal.data;
+      uint8_t* data_p = value->literal.data + value->literal.byte_count - 1;
+      bool leading_zero = true;
       for(int i = 0; i < value->literal.byte_count; i++){
-        printf("%x", *data_p);
-        data_p++;
+        if(*data_p == 0 && leading_zero && data_p != value->literal.data){
+
+        }
+        else{
+          leading_zero = false;
+          printf("%x", *data_p);
+        }
+       
+        data_p--;
       }
       printf(RESET_COLOR);
   }
@@ -97,6 +105,21 @@ void destroy_ir_block(ir_block_t* block){
 void destroy_program(program_t* program){
   destroy_ir_block(&program->root);
   destroy_register_file(&program->registers);
+}
+
+uint16_t sizeof_ir_value(ir_value_t val, register_file_t* registers){
+  if(val.type == VAL_LITERAL){
+    return val.literal.byte_count;
+  }
+  else{
+    return registers->registers[val.register_id];
+  }
+}
+
+uint16_t infer_size_from_args(ir_value_t a1, ir_value_t a2, register_file_t* registers){
+  uint16_t s1 = sizeof_ir_value(a1, registers);
+  uint16_t s2 = sizeof_ir_value(a2, registers);
+  return (s1 > s2) ? s1 : s2;
 }
 
 ir_value_t single_byte_ir_value(uint8_t byte){

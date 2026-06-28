@@ -39,5 +39,12 @@ bool tc_is_asterisk(token_cursor_t* tc){
   return tc->tk.type == TK_IDENTIFIER && tc->tk.is_symbolic_identifier && tc->tk.length == 2 && tc->tk.content[0] == '*';
 }
 
-
+void find_closing_bracket(token_cursor_t* tc, token_type_t end_type){
+  while(tc->tk.type != end_type || tc->tk.is_open){
+    tc_inc(tc);
+    if(tc->tk.type == TK_VECTOR || tc->tk.type == TK_TYPE){
+      find_closing_bracket(tc, tc->tk.type);
+    }
+  }
+}
 

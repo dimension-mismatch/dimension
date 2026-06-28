@@ -120,6 +120,7 @@ void print_type_identifier(type_identifier_t* type){
 }
 void print_type_entry(type_entry_t* entry){
   if(entry->is_vector){
+    printf(" %i components\n", entry->subvector.component_count);
     if(entry->subvector.name){
       printf(MAGENTA "%s" BLUE, entry->subvector.name);
       for(int i = 0; i < entry->subvector.const_lvl + 1; i++){
@@ -156,6 +157,12 @@ void print_type_declaration(type_declaration_t* typedec){
   print_pattern(typedec->match_pattern);
   printf(CYAN "] %s ", typedec->is_is ? "is" : "has");
   print_type_entry(&typedec->entry);
+  if(typedec->is_static_size){
+    printf(" (%llu Bytes)", typedec->size);
+    return;
+  }
+  printf("\n Size Program: \n");
+  print_program(&typedec->compute_size);
 }
 void print_variable_declaration(variable_declaration_t* vardec){
   if(!vardec) return;
@@ -351,11 +358,13 @@ void destroy_type_declaration(type_declaration_t* typedec){
   destroy_pattern(typedec->match_pattern);
   free(typedec->match_pattern);
   typedec->match_pattern = NULL;
-  if(typedec->is_builtin){
-    return;
-  }
-
   destroy_type_entry(&typedec->entry);
+  if(typedec->is_static_size){
+
+  }
+  else{
+    destroy_program(&typedec->compute_size);
+  }
 }
 
 void destroy_variable_declaration(variable_declaration_t* vardec){
