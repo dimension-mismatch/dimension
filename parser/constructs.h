@@ -25,7 +25,6 @@ typedef enum value_type{
   VAL_FLOAT,
   VAL_CHAR,
   VAL_STRING,
-  VAL_DATUM
 }value_type_t;
 
 typedef enum constant_level{

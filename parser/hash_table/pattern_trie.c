@@ -65,7 +65,6 @@ bool expression_compare(expression_t* a, expression_t* b){
         case VAL_INT: return a->value_literal.i == b->value_literal.i;
         case VAL_UNSIGNED: return a->value_literal.u == b->value_literal.u;
         case VAL_STRING: return !strcmp(a->value_literal.s, b->value_literal.s);
-        case VAL_DATUM: return compare_data(&a->value_literal.datum, &b->value_literal.datum);
       }
     case EXP_VECTOR:
       if(a->vector.num_params != b->vector.num_params) return false;

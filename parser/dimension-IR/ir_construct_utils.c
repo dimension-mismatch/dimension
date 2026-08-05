@@ -10,24 +10,13 @@
 void print_value(ir_value_t* value){
   switch(value->type){
     case VAL_REGISTER:
-      printf(CYAN BOLD "R%hu" RESET_COLOR, value->register_id);
+      printf(CYAN BOLD "R%llu" RESET_COLOR, value->data);
       break;
     case VAL_LITERAL:
       printf(MAGENTA BOLD);
-      uint8_t* data_p = value->literal.data + value->literal.byte_count - 1;
-      bool leading_zero = true;
-      for(int i = 0; i < value->literal.byte_count; i++){
-        if(*data_p == 0 && leading_zero && data_p != value->literal.data){
-
-        }
-        else{
-          leading_zero = false;
-          printf("%x", *data_p);
-        }
-       
-        data_p--;
-      }
+      printf("%llx", value->data);
       printf(RESET_COLOR);
+      break;
   }
 }
 void print_ir_block(ir_block_t* block, int indent);
@@ -40,7 +29,7 @@ void print_instruction(instruction_t* instruction, int indent){
   for(int i = 0; i < indent; i++){
     printf(" ");
   }
-  printf(CYAN BOLD "R%hu " RESET_COLOR " = ", instruction->dest_register);
+  printf(CYAN BOLD "R%llu " RESET_COLOR " = ", instruction->dest_register);
   printf(GREEN BOLD "op_%i " RESET_COLOR, instruction->opcode);
   print_value(&instruction->a1);
   printf(", ");
@@ -62,34 +51,16 @@ void print_ir_block(ir_block_t* block, int indent){
   printf("{\n");
 }
 
-void print_program_registers(program_t* program){
-  printf(MAGENTA BOLD "Registers:\n" RESET_COLOR);
-  for(int i = 0; i < program->registers.count; i++){
-    printf(CYAN BOLD "R%i" RESET_COLOR " : %ib\n", i, program->registers.registers[i]);
-  }
-}
-
 void print_program(program_t* program){ 
   print_ir_block(&program->root, 0);
 }
 
-void destroy_value(ir_value_t* value){
-  if(value->type == VAL_LITERAL){
-    free(value->literal.data);
-    value->literal.data = NULL;
-    value->literal.byte_count = 0;
-  }
-}
 
 void destroy_ir_block(ir_block_t* block);
 void destroy_instruction(instruction_t* instr){
   if(instr->opcode == BLOCK_OPCODE){
-      destroy_ir_block(instr->block);
-    }
-    else{
-      destroy_value(&instr->a1);
-      destroy_value(&instr->a2);
-    }
+    destroy_ir_block(instr->block);
+  }
 }
 
 void destroy_ir_block(ir_block_t* block){
@@ -99,7 +70,6 @@ void destroy_ir_block(ir_block_t* block){
   free(block->instructions);
   block->instructions = NULL;
   block->length = 0;
-  destroy_value(&block->multiplier);
 }
 
 void destroy_program(program_t* program){
@@ -107,36 +77,12 @@ void destroy_program(program_t* program){
   destroy_register_file(&program->registers);
 }
 
-uint16_t sizeof_ir_value(ir_value_t val, register_file_t* registers){
-  if(val.type == VAL_LITERAL){
-    return val.literal.byte_count;
-  }
-  else{
-    return registers->registers[val.register_id];
-  }
+ir_value_t literal_ir_value(uint64_t value){
+  ir_value_t result = {.type = VAL_LITERAL, .data = value};
+  return result;
 }
 
-uint16_t infer_size_from_args(ir_value_t a1, ir_value_t a2, register_file_t* registers){
-  uint16_t s1 = sizeof_ir_value(a1, registers);
-  uint16_t s2 = sizeof_ir_value(a2, registers);
-  return (s1 > s2) ? s1 : s2;
-}
-
-ir_value_t single_byte_ir_value(uint8_t byte){
-  ir_value_t value = {.type = VAL_LITERAL, .literal = {.byte_count = 1, .data = malloc(1)}};
-  *value.literal.data = byte;
-  return value;
-}
-
-ir_value_t register_ir_value(uint16_t regid){
-  ir_value_t value = {.type = VAL_REGISTER, .register_id = regid};
-  return value;
-}
-
-ir_value_t literal_ir_value(uint16_t size, void *data){
-  ir_value_t value = {.type = VAL_LITERAL, .literal = {.byte_count = size, .data = malloc(size)}};
-  for(int i = 0; i < size; i++){
-    value.literal.data[i] = ((unsigned char*)data)[i];
-  }
-  return value;
+ir_value_t register_ir_value(uint64_t register_id){
+  ir_value_t result = {.type = VAL_REGISTER, .data = register_id};
+  return result;
 }

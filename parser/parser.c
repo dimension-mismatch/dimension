@@ -746,7 +746,7 @@ parse_result_t parse_fn_declaration(token_cursor_t* base_tc, function_definition
         
         register_file_t registers = register_file_init();
         pattern_to_registers(&result->match, &registers);
-        register_file_push_named(&registers, 4, "result");
+        register_file_push_named(&registers, "result");
         if(parse_ir(&tc, &ir, registers) == PRS_SUCCESS){
           result->is_IR = true;
           result->ir = ir;

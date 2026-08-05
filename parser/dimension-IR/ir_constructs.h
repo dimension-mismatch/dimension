@@ -14,21 +14,15 @@ typedef enum ir_value_type{
 
 typedef struct ir_value{
   ir_value_type_t type;
-  union{
-    uint16_t register_id;
-    struct{
-      uint16_t byte_count;
-      uint8_t* data;
-    }literal;
-  };
-}ir_value_t;
+  uint64_t data;
+} ir_value_t;
 
 struct ir_block;
 typedef struct instruction{
   uint8_t opcode;
   union{
     struct{
-      uint16_t dest_register;
+      uint64_t dest_register;
       ir_value_t a1;
       ir_value_t a2;
     };

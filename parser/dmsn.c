@@ -60,6 +60,5 @@ int main(int argc, char* argv[]){
   }
 
   program_t ir = compile_program(ast, &fn_trie, &type_trie);
-  print_program_registers(&ir);
   print_program(&ir);
 }

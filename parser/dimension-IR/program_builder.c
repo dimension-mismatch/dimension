@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 program_t program_init(){
-  program_t program = {.registers = register_file_init(), .root = {.length = 0, .instructions = NULL, .multiplier = single_byte_ir_value(1)}};
+  program_t program = {.registers = register_file_init(), .root = {.length = 0, .instructions = NULL, .multiplier = literal_ir_value(1)}};
   return program;
 }
 
@@ -20,25 +20,24 @@ void program_append_instruction(program_t *program, uint8_t opcode, ir_value_t a
 }
 
 ir_value_t program_append_instruction_new_reg(program_t *program, uint8_t opcode, ir_value_t arg1, ir_value_t arg2){
-  uint16_t outsize = infer_size_from_args(arg1, arg2, &program->registers);
   if(arg1.type == VAL_LITERAL && arg2.type == VAL_LITERAL){
-    ir_value_t result = {.type = VAL_LITERAL, .literal = {.byte_count = outsize}};
-    result.literal.data = evaluate_instruction(opcode, outsize, arg1.literal.byte_count, arg2.literal.byte_count, arg1.literal.data, arg2.literal.data);
+    ir_value_t result = {.type = VAL_LITERAL};
+    result.data = evaluate_instruction(opcode, arg1.data, arg2.data);
     return result;
   }
   uint16_t dest_reg = program->registers.count;
-  register_file_push(&program->registers, outsize);
   program_append_instruction(program, opcode, arg1, arg2, dest_reg);
-  return register_ir_value(dest_reg);
+  ir_value_t result = {.type = VAL_REGISTER, .data = dest_reg};
+  return result;
 }
 
 void update_operand(ir_value_t* operand, ir_value_t* arg_registers, int reg_offset, int arg_count){
   if(operand->type == VAL_REGISTER){
-    if(operand->register_id < arg_count){
-      *operand = arg_registers[operand->register_id];
+    if(operand->data < arg_count){
+      *operand = arg_registers[operand->data];
     }
     else{
-      operand->register_id += reg_offset;
+      operand->data += reg_offset;
     }
   }
 }
@@ -61,11 +60,6 @@ void program_call_fn_inline(program_t *program, program_t *function, ir_value_t 
     block->instructions[i] = translate_instruction(fn_block->instructions[j], arg_registers, register_offset, function->registers.argument_count);
   }
   block->length += fn_block->length;
-  uint16_t new_count = register_offset + function->registers.count;
-  program->registers.registers = realloc(program->registers.registers, new_count * sizeof(uint16_t));
-  for(int i = program->registers.count, j = function->registers.argument_count; j < function->registers.count; i++, j++){
-    
-    program->registers.registers[i] = function->registers.registers[j];
-  }
+  uint64_t new_count = register_offset + function->registers.count;
   program->registers.count = new_count;
 }

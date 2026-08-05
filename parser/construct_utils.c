@@ -55,9 +55,6 @@ void print_expression(expression_t* exp){
         case VAL_STRING:
           printf(WHITE "\"%s\"" RESET_COLOR, exp->value_literal.s);
           break;
-        case VAL_DATUM:
-          printf("0x");
-          print_datum(&exp->value_literal.datum);
       }
       break;
     case EXP_VECTOR:
