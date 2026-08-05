@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+const char* instruction_names[instruction_count];
 
 typedef enum identifier_meaning{
   ID_REGISTER,
@@ -146,8 +147,6 @@ parse_result_t parse_ir(token_cursor_t* base_tc, program_t* result, register_fil
     return PRS_NOT_FOUND;
   }
   tc_inc(&tc);
-  int instruction_count = 42;
-  char* instruction_names[] = {"+", "-", "*", "/", ">", "<", ">=", "<=", "min", "max", "u+", "u-", "u*", "u/", "u>", "u<", "u>=", "u<=", "umin", "umax", "f+", "f-", "f*", "f/", "f>", "f<", "f>=", "f<=", "fmin", "fmax", "==", "deref", ">>", "<<", "&", "|", "^", "!", "&&", "||", "^^", "!!", "printchar"};
   hash_table_t instruction_table = init_hash_table_from_array(67, 0.9, instruction_names, instruction_count);
   hash_table_t label_table = init_hash_table(67, 0.9);
   result->registers = rf;

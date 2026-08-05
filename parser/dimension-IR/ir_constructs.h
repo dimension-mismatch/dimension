@@ -7,6 +7,10 @@
 
 
 #define BLOCK_OPCODE 255
+
+#define instruction_count 43
+extern const char* instruction_names[instruction_count];
+
 typedef enum ir_value_type{
   VAL_REGISTER,
   VAL_LITERAL,

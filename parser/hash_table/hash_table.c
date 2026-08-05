@@ -9,7 +9,7 @@
 #define FNV_OFFSET 1469598103934665603
 
 
-unsigned long long hash_fn(char* input){
+unsigned long long hash_fn(const char* input){
   unsigned long long h = FNV_OFFSET;
   int done = 0;
   while(!done){
@@ -62,7 +62,7 @@ void destroy_hash_table(hash_table_t *record){
 
 
 
-void push_hash_node(hash_table_t* record, unsigned long long hash, struct hash_entry* new_node, char* name, int* id){
+void push_hash_node(hash_table_t* record, unsigned long long hash, struct hash_entry* new_node, const char* name, int* id){
   int idx = hash % record->array_size;
   struct hash_entry* ptr = record->array[idx];
   if(ptr == NULL){
@@ -84,7 +84,7 @@ void push_hash_node(hash_table_t* record, unsigned long long hash, struct hash_e
   record->key_count++;
 }
 
-void push_key_value(hash_table_t* record, char* key, int value){
+void push_key_value(hash_table_t* record, const char* key, int value){
   struct hash_entry* new_node = malloc(sizeof(struct hash_entry));
   new_node->next = NULL;
   new_node->prev = NULL;
@@ -106,7 +106,7 @@ void push_int_value(hash_table_t* record, int key, int value){
 }
 
 
-void remove_key_value(hash_table_t *record, char *key){
+void remove_key_value(hash_table_t *record, const char *key){
   if(record == NULL || key == NULL){
     return;
   }
@@ -152,7 +152,7 @@ void remove_int_value(hash_table_t* record, int key){
   record->key_count--;
 }
 
-int* get_value_from_key(hash_table_t* record, char* key){
+int* get_value_from_key(hash_table_t* record, const char* key){
   int idx = hash_fn(key) % record->array_size;
   struct hash_entry* ptr = record->array[idx];
   if(ptr == NULL){
@@ -202,7 +202,7 @@ void print_hash_table(hash_table_t* table){
   }
 }
 
-hash_table_t init_hash_table_from_array(int hash_array_size, float max_fill_factor, char* array[], int length){
+hash_table_t init_hash_table_from_array(int hash_array_size, float max_fill_factor, const char* array[], int length){
   hash_table_t res = init_hash_table(hash_array_size, max_fill_factor);
   for(int i = 0; i < length; i++){
     push_key_value(&res, array[i], i);

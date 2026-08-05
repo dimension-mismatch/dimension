@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+const char* instruction_names[instruction_count] = {"+", "-", "*", "/", ">", "<", ">=", "<=", "min", "max", "u+", "u-", "u*", "u/", "u>", "u<", "u>=", "u<=", "umin", "umax", "f+", "f-", "f*", "f/", "f>", "f<", "f>=", "f<=", "fmin", "fmax", "==", "deref", ">>", "<<", "&", "|", "^", "!", "&&", "||", "^^", "!!", "printchar"};
+
 void print_value(ir_value_t* value){
   switch(value->type){
     case VAL_REGISTER:
@@ -30,7 +32,7 @@ void print_instruction(instruction_t* instruction, int indent){
     printf(" ");
   }
   printf(CYAN BOLD "R%llu " RESET_COLOR " = ", instruction->dest_register);
-  printf(GREEN BOLD "op_%i " RESET_COLOR, instruction->opcode);
+  printf(GREEN BOLD "%s " RESET_COLOR, instruction_names[instruction->opcode]);
   print_value(&instruction->a1);
   printf(", ");
   print_value(&instruction->a2);
