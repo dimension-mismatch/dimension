@@ -61,7 +61,12 @@ ir_value_t compute_type_entry_size(type_entry_t* entry, program_t* program, patt
   printf("\n");
   if(!entry->is_vector){
     if(entry->base.type.type_id == -1){
-      return literal_ir_value(sizeof(uint64_t), &entry->base.type.size);
+      ir_value_t size =  literal_ir_value(sizeof(uint64_t), &entry->base.type.size);
+      if(entry->base.type.dimensions.dimension_count == 0){
+        return size;
+      }
+      ir_value_t dimension_multiplier = compute_dimension_array_multiplier(&entry->base.type.dimensions, program, fn_trie, var_table);
+      return program_append_instruction_new_reg(program, UMULTIPLY_INSTR, size, dimension_multiplier);
     }
     return compute_type_identifier_size(&entry->base.type, program, fn_trie, type_trie, var_table);
   }
@@ -90,7 +95,9 @@ void compute_size(type_declaration_t *typedec, pattern_trie_t *type_trie, patter
   register_file_push(&typedec->compute_size.registers, 8);
   ir_value_t result = compute_type_entry_size(&typedec->entry, &typedec->compute_size, type_trie, fn_trie, &var_table);
   if(result.type == VAL_LITERAL){
-
+    destroy_program(&typedec->compute_size);
+    typedec->is_static_size = true;
+    typedec->size = *(result.literal.data);
   }
   else{
     typedec->compute_size.root.instructions[typedec->compute_size.root.length - 1].dest_register = 0;

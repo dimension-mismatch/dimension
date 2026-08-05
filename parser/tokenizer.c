@@ -16,7 +16,7 @@ int is_numeric(char c){
 }
 
 int is_alphanumeric(char c){
-  return 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || c == '_' || is_numeric(c);
+  return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_' || is_numeric(c);
 }
 
 void push_char(token_t* token, char next){
@@ -40,6 +40,68 @@ void destroy_token(token_t* token){
   }
 }
 
+void parse_numeric_value(token_t* token){
+  numeric_literal_t* n = &token->number;
+  char* s = token->content;
+  int l = token->length - 1;
+  n->int_literal = 0;
+  switch(n->type){
+    case NUM_DECIMAL_INT:
+      for(int i = 0; i < l; i++){
+        n->int_literal = n->int_literal * 10;
+        if(s[i] >= '0' && s[i] <= '9'){
+          n->int_literal = n->int_literal + (s[i] - '0');
+        }
+        else{
+          //Throw errors in tokenizer?
+        }
+      }
+      return;
+    case NUM_BINARY_INT:
+      for(int i = 2; i < l; i++){
+        n->int_literal = n->int_literal << 1;
+        if(s[i] >= '0' && s[i] <= '1'){
+          n->int_literal = n->int_literal & (s[i] - '0');
+        }
+        else{
+          //Throw errors in tokenizer?
+        }
+      }
+      return;
+    case NUM_OCTAL_INT:
+      for(int i = 2; i < l; i++){
+        n->int_literal = n->int_literal << 3;
+        if(s[i] >= '0' && s[i] <= '7'){
+          n->int_literal = n->int_literal & (s[i] - '0');
+        }
+        else{
+          //Throw errors in tokenizer?
+        }
+      }
+      return;
+    case NUM_HEX_INT:
+      for(int i = 2; i < l; i++){
+        n->int_literal = n->int_literal << 4;
+        if(s[i] >= '0' && s[i] <= '7'){
+          n->int_literal = n->int_literal & (s[i] - '0');
+        }
+        else if(s[i] >= 'a' && s[i] <= 'f'){
+          n->int_literal = n->int_literal & (s[i] - 'a' + 10);
+        }
+        else if(s[i] >= 'A' && s[i] <= 'F'){
+          n->int_literal = n->int_literal & (s[i] - 'A' + 10);
+        }
+        else{
+          //Throw errors in tokenizer?
+        }
+        return;
+      }
+    case NUM_FLOAT:
+    case NUM_SCI_FLOAT:
+      n->float_literal = 2.71828;
+      return;
+  }
+}
 
 token_array_t* init_token_array(){
   return calloc(1, sizeof(token_array_t));
@@ -79,6 +141,9 @@ void finish_token_and_push_to_array(token_array_t* array, token_t* token, hash_t
   }
   else if(token->type == TK_DECL){
     token->decl_const_lvl = token->length - 2;
+  }
+  else if(token->type == TK_NUMERIC){
+    parse_numeric_value(token);
   }
   push_token_to_array(array, *token);
   *token = new_empty_token(line, col);
@@ -129,6 +194,9 @@ void print_token_array(token_array_t* tokens){
     }
     printf(" content: ");
     print_token(&(tokens->tokens[i]));
+    if(tokens->tokens[i].type == TK_NUMERIC){
+      printf(GREEN " 0x%llx" RESET_COLOR, tokens->tokens[i].number.int_literal);
+    }
     printf("\n");
   }
 }
@@ -201,18 +269,18 @@ token_array_t* tokenize_file(FILE* file){
     // floats (e.g. 3.14159) are NUM_FLOAT
     // scientific notation (e.g. 6.022e23) is NUM_SCI_FLOAT
     if(current_token.type == TK_NUMERIC){
-      if(current_token.number_type == NUM_DECIMAL_INT && current_token.length == 1){
+      if(current_token.number.type == NUM_DECIMAL_INT && current_token.length == 1){
         if(current_token.content[0] == '0'){
           if(ch == 'x' || ch == 'o' || ch == 'b'){
             switch(ch){
               case 'x' :
-                current_token.number_type = NUM_HEX_INT;
+                current_token.number.type = NUM_HEX_INT;
                 break;
               case 'o':
-                current_token.number_type = NUM_OCTAL_INT;
+                current_token.number.type = NUM_OCTAL_INT;
                 break;
               case 'b':
-                current_token.number_type = NUM_BINARY_INT;
+                current_token.number.type = NUM_BINARY_INT;
                 break;
             }
             push_char(&current_token, ch);
@@ -221,22 +289,22 @@ token_array_t* tokenize_file(FILE* file){
         }
         if(ch == '.'){
           push_char(&current_token, ch);
-          current_token.number_type = NUM_FLOAT;
+          current_token.number.type = NUM_FLOAT;
           continue;
         }
       }
-      if(current_token.number_type == NUM_DECIMAL_INT || current_token.number_type == NUM_FLOAT){
+      if(current_token.number.type == NUM_DECIMAL_INT || current_token.number.type == NUM_FLOAT){
         if(ch == 'e'){
-          current_token.number_type = NUM_SCI_FLOAT;
+          current_token.number.type = NUM_SCI_FLOAT;
           push_char(&current_token, ch);
           continue;
         }
       }
-      if(current_token.number_type == NUM_SCI_FLOAT && current_token.content[current_token.length - 1] == 'e' && ch == '-'){
+      if(current_token.number.type == NUM_SCI_FLOAT && current_token.content[current_token.length - 1] == 'e' && ch == '-'){
         push_char(&current_token, ch);
         continue;
       }
-      if(current_token.number_type == NUM_HEX_INT && 'a' <= ch && ch <= 'f'){
+      if(current_token.number.type == NUM_HEX_INT && (('a' <= ch && ch <= 'f') || ('A' <= ch && ch <= 'F'))){
         push_char(&current_token, ch);
         continue;
       } 
@@ -341,7 +409,7 @@ token_array_t* tokenize_file(FILE* file){
     if(current_token.length == 0){
       if(is_numeric(ch)){
         current_token.type = TK_NUMERIC;
-        current_token.number_type = NUM_DECIMAL_INT;
+        current_token.number.type = NUM_DECIMAL_INT;
       }
       else{
         current_token.type = TK_IDENTIFIER;

@@ -90,7 +90,7 @@ parse_result_t parse_instruction(token_cursor_t* base_tc, instruction_t* result,
           tc_throw_error(&tc, 8);
           return PRS_ERROR;
         }
-        if(tc.tk.number_type == NUM_SCI_FLOAT || tc.tk.number_type == NUM_FLOAT){
+        if(tc.tk.number.type == NUM_SCI_FLOAT || tc.tk.number.type == NUM_FLOAT){
           tc_throw_error(&tc, 9);
           return PRS_ERROR;
         }

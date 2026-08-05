@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdint.h>
 #pragma once
 
 typedef enum{
@@ -35,6 +36,14 @@ typedef enum{
   NUM_SCI_FLOAT
 }numeric_literal_type_t;
 
+typedef struct numeric_literal{
+  numeric_literal_type_t type;
+  union{
+    uint64_t int_literal;
+    double float_literal;
+  };
+}numeric_literal_t;
+
 typedef struct token{
   int line_number;
   int start_pos;
@@ -46,7 +55,7 @@ typedef struct token{
     int decl_const_lvl;
     int keyword_id;
     bool is_symbolic_identifier;
-    numeric_literal_type_t number_type;
+    numeric_literal_t number;
   };
 }token_t;
 

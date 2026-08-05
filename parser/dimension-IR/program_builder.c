@@ -2,6 +2,7 @@
 #include "registers.h"
 #include "ir_constructs.h"
 #include "ir_construct_utils.h"
+#include "ir_evaluation.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -19,8 +20,14 @@ void program_append_instruction(program_t *program, uint8_t opcode, ir_value_t a
 }
 
 ir_value_t program_append_instruction_new_reg(program_t *program, uint8_t opcode, ir_value_t arg1, ir_value_t arg2){
+  uint16_t outsize = infer_size_from_args(arg1, arg2, &program->registers);
+  if(arg1.type == VAL_LITERAL && arg2.type == VAL_LITERAL){
+    ir_value_t result = {.type = VAL_LITERAL, .literal = {.byte_count = outsize}};
+    result.literal.data = evaluate_instruction(opcode, outsize, arg1.literal.byte_count, arg2.literal.byte_count, arg1.literal.data, arg2.literal.data);
+    return result;
+  }
   uint16_t dest_reg = program->registers.count;
-  register_file_push(&program->registers, infer_size_from_args(arg1, arg2, &program->registers));
+  register_file_push(&program->registers, outsize);
   program_append_instruction(program, opcode, arg1, arg2, dest_reg);
   return register_ir_value(dest_reg);
 }

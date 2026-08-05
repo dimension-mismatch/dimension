@@ -2,7 +2,7 @@ type [i] is [4];
 
 type [Suit] is oneof (Hearts Spades Diamonds Clubs);
 
-type [Card] is ([i] [Suit]);
+type [Card] is ([3] [Suit]);
 
 type [prt (p ::: [i])] is 4*[12];
 type [j (val ::: (n ::: [i])*(n)*[i])] is [4];

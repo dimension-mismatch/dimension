@@ -4,11 +4,11 @@ all := dmsn
 
 .PHONY: clean
 
-dmsn : dmsn.c tokenizer.o parser.o token_cursor.o hash_table/hash_table.o construct_utils.o expression_builder.o hash_table/pattern_trie.o error_handling/error_manager.o dimension-IR/ir_construct_utils.o dimension-IR/ir_parser.o variable_to_register.o dimension-IR/registers.o compiler/compiler.o dimension-IR/program_builder.o compiler/compute_size.o
+dmsn : dmsn.c tokenizer.o parser.o token_cursor.o hash_table/hash_table.o construct_utils.o expression_builder.o hash_table/pattern_trie.o error_handling/error_manager.o dimension-IR/ir_construct_utils.o dimension-IR/ir_parser.o variable_to_register.o dimension-IR/registers.o compiler/compiler.o dimension-IR/program_builder.o dimension-IR/ir_evaluation.o compiler/compute_size.o
 	$(CC) -g -fsanitize=address -O0 -Wall -o $@ $^
 
 %.o : %.c %.h
-	$(CC) -g -c $< -o $@
+	$(CC) -g -c $< -fsanitize=address -O0 -Wall -o $@
 
 another : 
 	./dmsn ../another_test.dmsn

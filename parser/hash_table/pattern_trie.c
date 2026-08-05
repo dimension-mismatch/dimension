@@ -551,10 +551,10 @@ void pattern_trie_pop_pattern(pattern_trie_t* trie, int match_to_remove){
     
   }
   
-  int* child_index = NULL;
+  int child_index = 0;
   switch(slice_pattern->type){
     case PATTERN_IDENTIFIER:  
-      child_index = get_value_from_key(&node->next_identifiers, slice_pattern->identifier);
+      child_index = *get_value_from_key(&node->next_identifiers, slice_pattern->identifier);
       remove_key_value(&node->next_identifiers, slice_pattern->identifier);
       
       break;
@@ -573,11 +573,11 @@ void pattern_trie_pop_pattern(pattern_trie_t* trie, int match_to_remove){
         //We should always have a match so this should never be null
       }
       possible_type_matches_t*  possible_indices = node->type_matches + *match_index;
-      child_index = NULL;
+      child_index = 0;
       for(int i = possible_indices->num_possibilities - 1; i <= 0; i--){
         pattern_entry_t* compareto = &node->children[possible_indices->possible_matches[i]]->pattern;
         if(pattern_entry_compare(compareto, slice_pattern)){
-          *child_index = possible_indices->possible_matches[i];
+          child_index = possible_indices->possible_matches[i];
           if(i == 0){
             if(slice_pattern->type == PATTERN_TYPE){
               remove_int_value(&node->next_pattern_types, slice_pattern->pattern_type.base_type_id);
@@ -602,8 +602,8 @@ void pattern_trie_pop_pattern(pattern_trie_t* trie, int match_to_remove){
 
   }
 
-  destroy_pattern_trie_node(node->children[*child_index]);
-  node->children_count = *child_index;
+  destroy_pattern_trie_node(node->children[child_index]);
+  node->children_count = child_index;
   node->children = realloc(node->children, node->children_count * sizeof(pattern_trie_node_t*));
 
   destroy_trie_match_result(trie->matches + match_to_remove);

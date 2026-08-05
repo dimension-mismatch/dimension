@@ -198,7 +198,7 @@ expression_t* construct_type_call(match_t match){
   type_id->dimensions.dimensions = NULL;
   type_id->num_params = 0;
   type_id->params = NULL;
-  type_id->type_id = match.content->index; //TODO generate actual function ids
+  type_id->type_id = match.content->index;
 
   expression_array_t* start = match.location;
   expression_array_t* curr = start;
@@ -216,8 +216,9 @@ expression_t* construct_type_call(match_t match){
       case PATTERN_VARIABLE:{
         int new_c = ++type_id->num_params;
         type_id->params = realloc(type_id->params, new_c * sizeof(type_argument_t));
+        type_argument_t arg = {.type = TYPEARG_PARAM_EXP, .exp = malloc(sizeof(expression_t))};
+        *arg.exp = curr->exp;
 
-        type_argument_t arg = {.type = TYPEARG_PARAM_EXP, .exp = &curr->exp};
         type_id->params[new_c - 1] = arg;
         break;
       }
@@ -232,7 +233,6 @@ expression_t* construct_type_call(match_t match){
       break;
       case PATTERN_EXP:
         //shouldnt ever use this
-        break;
       break;
     }
     next = curr->next;

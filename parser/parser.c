@@ -17,7 +17,6 @@ bool parse_pattern(token_cursor_t* base_tc, token_type_t end_type, pattern_t* re
 parse_result_t parse_pattern_vardec(token_cursor_t* base_tc, pattern_variable_t* result, bool required);
 //* 2
 bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
-  printf("\nparsing type on line %i, col %i\n", base_tc->tk.line_number, base_tc->tk.start_pos);
   token_cursor_t tc = *base_tc;
   dimension_array_t dimensions = {.dimension_count = 0, .dimensions = NULL};
   while(true){
@@ -26,20 +25,18 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
       break;
     }
     else if(tc.tk.type == TK_VECTOR && tc.tk.is_open){
-      printf("expression dimension!\n");
       tc_inc(&tc);
       expression_t exp;
       if(!parse_expression(&tc, TK_VECTOR, &exp)){
         destroy_dimension_array(&dimensions);
         return false;
       }
-      printf("successfully parsed the expression!\n");
       add_dimension(&dimensions, exp);
       tc_inc(&tc);
       print_token(&tc.tk);
     }
     else if(tc.tk.type == TK_NUMERIC){
-      if(tc.tk.number_type == NUM_FLOAT || tc.tk.number_type == NUM_SCI_FLOAT){
+      if(tc.tk.number.type == NUM_FLOAT || tc.tk.number.type == NUM_SCI_FLOAT){
         destroy_dimension_array(&dimensions);
         tc_throw_error(&tc, 3);
         return false;
@@ -47,7 +44,7 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
       expression_t exp = {
         .type = EXP_VALUE_LITERAL,
         .const_lvl = 3,
-        .value_literal = {.type = VAL_UNSIGNED, .u = atoi(tc.tk.content)}
+        .value_literal = {.type = VAL_UNSIGNED, .u = tc.tk.number.int_literal}
       };
       add_dimension(&dimensions, exp);
       tc_inc(&tc);
@@ -58,21 +55,16 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
 
       return false;
     }
-    printf("checking for asterisk: ");
-    print_token(&tc.tk);
-    printf("\n");
 
     if(tc_is_asterisk(&tc)){
       tc_inc(&tc);
       continue;
     }
     else if(tc.tk.type == TK_TYPE && tc.tk.is_open){
-      printf("entering type body\n");
       //we've reached the last dimension, move on to the type itself
       break;
     }
     else{
-      printf("not the asterisk, throwing error\n\n");
       tc_throw_error(&tc, 4);
       destroy_dimension_array(&dimensions);
       return false;
@@ -81,8 +73,8 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
   tc_inc(&tc);
   result->dimensions = dimensions;
   token_cursor_t btc = tc;
-  if(btc.tk.type == TK_NUMERIC && btc.tk.number_type < NUM_FLOAT){
-    uint64_t size = atoi(btc.tk.content);
+  if(btc.tk.type == TK_NUMERIC && btc.tk.number.type < NUM_FLOAT){
+    uint64_t size = btc.tk.number.int_literal;
     tc_inc(&btc);
     if(btc.tk.type == TK_TYPE && !btc.tk.is_open){
       result->type_id = -1;
@@ -116,15 +108,12 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
 }
 
 bool is_type_identifier_present(token_cursor_t* base_tc){
-  printf("\nchecking for type on line %i, col %i\n", base_tc->tk.line_number, base_tc->tk.start_pos);
   token_cursor_t tc = *base_tc;
   while(true){
     if(tc.tk.type == TK_TYPE && tc.tk.is_open){
-      printf("type found!\n");
       return true;
     }
     else if(tc.tk.type == TK_VECTOR && tc.tk.is_open){
-      printf("vector dimension\n");
       find_closing_bracket(&tc, TK_VECTOR);
       tc_inc(&tc);
     }
@@ -134,16 +123,12 @@ bool is_type_identifier_present(token_cursor_t* base_tc){
     else{
       return false;
     }
-    printf("checking for asterisk: ");
-    print_token(&tc.tk);
-    printf("\n");
 
     if(tc_is_asterisk(&tc)){
       tc_inc(&tc);
       continue;
     }
     else if(tc.tk.type == TK_TYPE && tc.tk.is_open){
-      printf("type found!\n");
       return true;
     }
     else{
@@ -315,7 +300,7 @@ bool parse_pattern_type(token_cursor_t* base_tc, pattern_type_t* result){
     }
     //the expression might also just be a single number
     else if(tc.tk.type == TK_NUMERIC){
-      if(tc.tk.number_type == NUM_FLOAT || tc.tk.number_type == NUM_SCI_FLOAT){
+      if(tc.tk.number.type == NUM_FLOAT || tc.tk.number.type == NUM_SCI_FLOAT){
         destroy_pattern_dimension_array(&dimensions);
         tc_throw_error(&tc, 2);
         return false;
@@ -428,7 +413,6 @@ bool parse_pattern(token_cursor_t* base_tc, token_type_t end_type, pattern_t* re
       pattern_push_entry(result, new_entry);
     }
     else if(tc.tk.type == TK_VECTOR && tc.tk.is_open){
-      pattern_variable_t variable;
       while(true){
         tc_inc(&tc);
         pattern_variable_t variable;
@@ -501,18 +485,18 @@ bool parse_expression(token_cursor_t* base_tc, token_type_t end_type, expression
       new.return_type = NULL;
       switch(tc.tk.type){
         case TK_NUMERIC:
-          switch(tc.tk.number_type){
+          switch(tc.tk.number.type){
             case NUM_BINARY_INT:
             case NUM_DECIMAL_INT:
             case NUM_HEX_INT:
             case NUM_OCTAL_INT:
               new.value_literal.type = VAL_UNSIGNED;
-              new.value_literal.u = 6769420;
+              new.value_literal.u = tc.tk.number.int_literal;
               break;
             case NUM_FLOAT:
             case NUM_SCI_FLOAT:
               new.value_literal.type = VAL_FLOAT;
-              new.value_literal.f = 6.7;
+              new.value_literal.f = tc.tk.number.float_literal;
               break;
           }
         break;
@@ -567,7 +551,6 @@ bool parse_expression(token_cursor_t* base_tc, token_type_t end_type, expression
   
 }
 bool parse_type_entry(token_cursor_t* base_tc, type_entry_t* result, bool check_name, bool require_name){
-  printf("\nparsing type entry at line %i, col %i\n", base_tc->tk.line_number, base_tc->tk.start_pos);
   token_cursor_t tc = *base_tc;
   variable_declaration_t vardec = {.constant_lvl = CL_MUTABLE, .var_name = NULL, .type.type_id = -1, .type.size = 0};
   
@@ -819,7 +802,6 @@ void recover_from_error(token_cursor_t* tc){
 void parse_block(token_cursor_t* tc, token_type_t end_type, block_t* result){
   result->line_count = 0;
   result->lines = NULL;
-  int iters = 0;
   while(tc->tk.type != end_type && tc->tk.type != TK_NONE){
     type_declaration_t typedec;
     parse_result_t type_result = parse_type_declaration(tc, &typedec);
