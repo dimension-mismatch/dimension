@@ -99,7 +99,7 @@ void print_type_identifier(type_identifier_t* type){
   if(!type) return;
   print_dimension_array(&type->dimensions);
   if(type->type_id == -1){
-    printf("[%llu]", type->size);
+    printf("[%lu]", type->size);
     return;
   }
   printf("[" GREEN BOLD "#%i" RESET_COLOR, type->type_id);
@@ -155,7 +155,7 @@ void print_type_declaration(type_declaration_t* typedec){
   printf(CYAN "] %s ", typedec->is_is ? "is" : "has");
   print_type_entry(&typedec->entry);
   if(typedec->is_static_size){
-    printf(" (%llu Bytes)", typedec->size);
+    printf(" (%lu Bytes)", typedec->size);
     return;
   }
   printf("\n Size Program: \n");

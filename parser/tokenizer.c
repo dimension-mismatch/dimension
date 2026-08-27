@@ -195,7 +195,7 @@ void print_token_array(token_array_t* tokens){
     printf(" content: ");
     print_token(&(tokens->tokens[i]));
     if(tokens->tokens[i].type == TK_NUMERIC){
-      printf(GREEN " 0x%llx" RESET_COLOR, tokens->tokens[i].number.int_literal);
+      printf(GREEN " 0x%lx" RESET_COLOR, tokens->tokens[i].number.int_literal);
     }
     printf("\n");
   }
