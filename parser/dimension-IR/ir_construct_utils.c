@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-const char* instruction_names[instruction_count] = {"+", "-", "*", "/", ">", "<", ">=", "<=", "min", "max", "u+", "u-", "u*", "u/", "u>", "u<", "u>=", "u<=", "umin", "umax", "f+", "f-", "f*", "f/", "f>", "f<", "f>=", "f<=", "fmin", "fmax", "==", "deref", ">>", "<<", "&", "|", "^", "!", "&&", "||", "^^", "!!", "printchar"};
+const char* instruction_names[instruction_count] = {"+", "-", "*", "/", ">", "<", ">=", "<=", "min", "max", "u+", "u-", "u*", "u/", "u>", "u<", "u>=", "u<=", "umin", "umax", "f+", "f-", "f*", "f/", "f>", "f<", "f>=", "f<=", "fmin", "fmax", "==", "deref", ">>", "<<", "&", "|", "^", "&&", "||", "^^", "syscall"};
 
 void print_value(ir_value_t* value){
   switch(value->type){

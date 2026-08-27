@@ -11,6 +11,9 @@ fn (a ::: [i]) + (b ::: [i]) makes [i] does {~
   result   = + a b
 ~} priority 7;
 
+fn double(int ::: [i]) makes [i] does {
+  return int + int;
+};
 
 test_int ::: [i];
 
