@@ -8,8 +8,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-const char* instruction_names[instruction_count];
-
 typedef enum identifier_meaning{
   ID_REGISTER,
   ID_INSTRUCTION,
@@ -150,7 +148,7 @@ parse_result_t parse_ir(token_cursor_t* base_tc, program_t* result, register_fil
   hash_table_t instruction_table = init_hash_table_from_array(67, 0.9, instruction_names, instruction_count);
   hash_table_t label_table = init_hash_table(67, 0.9);
   result->registers = rf;
-  printf("\n Reading IR with %llu provided arguments\n", rf.count);
+  printf("\n Reading IR with %lu provided arguments\n", rf.count);
   
   parse_ir_block(&tc, &result->root, &instruction_table, &result->registers);
 

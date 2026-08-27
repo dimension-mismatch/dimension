@@ -12,11 +12,11 @@ const char* instruction_names[instruction_count] = {"+", "-", "*", "/", ">", "<"
 void print_value(ir_value_t* value){
   switch(value->type){
     case VAL_REGISTER:
-      printf(CYAN BOLD "R%llu" RESET_COLOR, value->data);
+      printf(CYAN BOLD "R%lu" RESET_COLOR, value->data);
       break;
     case VAL_LITERAL:
       printf(MAGENTA BOLD);
-      printf("%llx", value->data);
+      printf("%lx", value->data);
       printf(RESET_COLOR);
       break;
   }
@@ -31,7 +31,7 @@ void print_instruction(instruction_t* instruction, int indent){
   for(int i = 0; i < indent; i++){
     printf(" ");
   }
-  printf(CYAN BOLD "R%llu " RESET_COLOR " = ", instruction->dest_register);
+  printf(CYAN BOLD "R%lu " RESET_COLOR " = ", instruction->dest_register);
   printf(GREEN BOLD "%s " RESET_COLOR, instruction_names[instruction->opcode]);
   print_value(&instruction->a1);
   printf(", ");
