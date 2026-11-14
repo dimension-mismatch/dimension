@@ -49,6 +49,29 @@ void print_expression_array(expression_array_t* array){
   }
 }
 
+void destroy_expression_array(expression_array_t* array){
+  array = array->next;
+  while(array){
+    destroy_expression(&array->exp);
+    expression_array_t* next = array->next;
+    free(array);
+    array = next;
+  }
+}
+
+//Destroy the linked list, but keep the contained expressions
+void shallow_destroy_expression_array(expression_array_t* array){
+  array = array->next;
+  while(array){
+    printf("shallow destroying: ");
+    print_expression(&array->exp);
+    printf("\n");
+    expression_array_t* next = array->next;
+    free(array);
+    array = next;
+  }
+}
+
 int* node_match_expression_array(pattern_trie_node_t* node, expression_array_t* array, int depth, match_attempt_record_t* attempt){
   if(node->match_index != NO_MATCH){
     return &node->match_index;
@@ -133,13 +156,16 @@ trie_match_result_t* match_expression_array(pattern_trie_t* trie, expression_arr
 
 
 
-expression_t* construct_fn_call(match_t match){
+void construct_fn_call(match_t match){
   expression_t fn_call = {
     .type = EXP_FUNCTION_CALL, 
     .function_call = {.fn_id = match.content->index, .num_params = match.content->fndec.match.param_count, .params = NULL},
     .const_lvl = CL_SUPERCONST,
     .return_type = malloc(sizeof(type_identifier_t))
   };
+  printf("the function returns ");
+  print_type_identifier(match.content->fndec.return_type);
+  printf("\n");
   copy_type_identifier(fn_call.return_type, match.content->fndec.return_type);
   fn_call.function_call.params = malloc(fn_call.function_call.num_params * sizeof(expression_t));
   expression_array_t* start = match.location;
@@ -187,13 +213,13 @@ expression_t* construct_fn_call(match_t match){
     next->prev = new;
   }
   new->exp = fn_call;
-  return &new->exp;
 }
 
-expression_t* construct_type_call(match_t match){
+void construct_type_call(match_t match){
   expression_t type_call = {.type = EXP_TYPE_LITERAL, .const_lvl = CL_SUPERCONST};
   type_identifier_t* type_id = malloc(sizeof(type_identifier_t));
   type_call.type_literal = type_id;
+  type_call.return_type = NULL;
   type_id->dimensions.dimension_count = 0;
   type_id->dimensions.dimensions = NULL;
   type_id->num_params = 0;
@@ -248,18 +274,17 @@ expression_t* construct_type_call(match_t match){
     next->prev = new;
   }
   new->exp = type_call;
-  return &new->exp;
 }
 
-expression_t* construct_variable_read(match_t match){
+void construct_variable_read(match_t match){
   expression_t var_read = {.type = EXP_READ_VAR, .read_var_id = match.content->index, .return_type = malloc(sizeof(type_identifier_t)), .const_lvl = match.content->vardec.constant_lvl};
-
   copy_type_identifier(var_read.return_type, &match.content->vardec.type);
 
   expression_array_t* start = match.location;
   expression_array_t* next = start->next->next;
   printf("Var Read: ");
   print_variable_declaration(&match.content->vardec);
+  print_expression(&var_read);
   printf("\n");
   
   expression_array_t* new = malloc(sizeof(expression_array_t));
@@ -275,17 +300,19 @@ expression_t* construct_variable_read(match_t match){
   }
   
   new->exp = var_read;
-  return &new->exp;
 }
 
-expression_t* construct_match(match_t match){
+void construct_match(match_t match){
   switch(match.content->type){
     case MATCH_FUNCTION:
-      return construct_fn_call(match);
+      construct_fn_call(match);
+      break;
     case MATCH_TYPE:
-      return construct_type_call(match);
+      construct_type_call(match);
+      break;
     case MATCH_VARIABLE:
-      return construct_variable_read(match);
+      construct_variable_read(match);
+      break;
   }
 }
 
@@ -336,6 +363,7 @@ bool build_expression(pattern_trie_t* trie, expression_array_t* array, expressio
       printf(RED BOLD "Failed to match token \"%s\"" RESET_COLOR, ptr->exp.raw_token.content);
       throw_error(errors, 16, ptr->tk_begin);
       printf(BLUE BOLD "The match failed, but the furthest along we got was %i tokens deep into the tree.\n" RESET_COLOR, attempt.depth);
+      destroy_expression_array(array);
       return false;
     }
     ptr = ptr->next;
@@ -349,6 +377,7 @@ bool build_expression(pattern_trie_t* trie, expression_array_t* array, expressio
     result->const_lvl = CL_CONST;
     result->vector.num_params = count;
     result->vector.params = malloc(count * sizeof(expression_t));
+    result->return_type = NULL;
     ptr = array->next;
     for(int i = 0; i < count; i++){
       result->vector.params[i] = ptr->exp;
@@ -358,6 +387,7 @@ bool build_expression(pattern_trie_t* trie, expression_array_t* array, expressio
   else{
     *result = array->next->exp;
   }
+  shallow_destroy_expression_array(array);
   return true;
 }
 

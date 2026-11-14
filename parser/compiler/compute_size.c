@@ -102,4 +102,5 @@ void compute_size(type_declaration_t *typedec, pattern_trie_t *type_trie, patter
   else{
     typedec->compute_size.root.instructions[typedec->compute_size.root.length - 1].dest_register = 0;
   }
+  destroy_hash_table(&var_table);
 }

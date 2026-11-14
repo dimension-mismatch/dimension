@@ -43,6 +43,7 @@ ir_value_t compile_expression(expression_t* expr, program_t* program, hash_table
       uint16_t return_register_id;
       //TODO: don't always call functions inline
       program_call_fn_inline(program, &fn.ir, args, &return_register_id);
+      free(args);
       printf("return register: %i\n", return_register_id );
       return register_ir_value(return_register_id);
     }
@@ -67,6 +68,6 @@ program_t compile_program(block_t ast, pattern_trie_t* fn_trie, pattern_trie_t* 
   for(int i = 0; i < ast.line_count; i++){
     compile_expression(ast.lines + i, &out, &var_table, fn_trie);
   }
-  
+  destroy_hash_table(&var_table);
   return out;
 }

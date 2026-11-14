@@ -132,3 +132,20 @@ void error_printout(error_manager_t* manager){
     print_error(error_src_txt, manager, i);
   }
 }
+void destroy_error(error_t* error){
+  free(error->arg_v);
+  error->arg_c = 0;
+  error->arg_v = NULL;
+}
+void destroy_error_manager(error_manager_t* errors){
+  free(errors->index);
+  errors->err_id_count = 0;
+  errors->index = NULL;
+  
+  for(int i = 0; i < errors->error_count; i++){
+    destroy_error(errors->errors + i);
+  }
+  free(errors->errors);
+  errors->error_count = 0;
+  errors->errors = NULL;
+}

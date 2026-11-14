@@ -49,3 +49,5 @@ void err_type_arg(error_manager_t *errors, type_identifier_t *type);
 void err_function_arg(error_manager_t *errors, int fn_id);
 
 void error_printout(error_manager_t* manager);
+
+void destroy_error_manager(error_manager_t* errors);

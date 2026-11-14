@@ -37,19 +37,20 @@ hash_table_t init_hash_table(int array_size, float max_fill_factor){
   record.array = calloc(array_size, sizeof(struct hash_entry*));
   return record;
 }
-
+void destroy_hash_entry(struct hash_entry* entry){
+  if(!entry->is_int){
+    free(entry->name);
+  }
+}
 void destroy_hash_table(hash_table_t *record){
   for(int i = 0; i < record->array_size; i++){
     if(record->array[i] != NULL){
       struct hash_entry* ptr = record->array[i];
-      while(ptr->next != NULL){
-        ptr = ptr->next;
-      }
-      while(ptr->prev != NULL){
-        struct hash_entry* prev = ptr->prev;
-        free(ptr->name);
+      while(ptr){
+        destroy_hash_entry(ptr);
+        struct hash_entry* next = ptr->next;
         free(ptr);
-        ptr = prev;
+        ptr = next;
       }
     }
   }

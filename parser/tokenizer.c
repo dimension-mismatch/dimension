@@ -208,16 +208,14 @@ token_array_t* tokenize_file(FILE* file){
 
   //Creating a table to look up keywords
   int keyword_count = 9;
-  char* keywords[] = {"type","is",  "has","oneof", "fn", "makes", "does", "priority", "return"};
+  const char* keywords[] = {"type","is",  "has","oneof", "fn", "makes", "does", "priority", "return"};
 
-  hash_table_t keyword_table = init_hash_table(67, 0.95);
-  for(int i = 0; i < keyword_count; i++){
-    push_key_value(&keyword_table, keywords[i], i);
-  }
+  hash_table_t keyword_table = init_hash_table_from_array(67, 0.95, keywords, keyword_count);
+  
 
   //Creating a table to look up symbols
   int symbol_count = 9;
-  char symbols[] = {'{', '}', '[', ']', '(', ')', ':', ';', ','};
+  const char symbols[] = {'{', '}', '[', ']', '(', ')', ':', ';', ','};
   token_type_t symbol_types[] = {TK_BLOCK, TK_BLOCK, TK_TYPE, TK_TYPE, TK_VECTOR, TK_VECTOR, TK_DECL, TK_ENDLINE, TK_FORCE_EXP_END};
 
   hash_table_t symbol_table = init_hash_table(67, 0.95);
@@ -426,5 +424,6 @@ token_array_t* tokenize_file(FILE* file){
   current_token.type = TK_NONE;
   finish_token_and_push_to_array(all_tokens, &current_token, &keyword_table, line, col);
   destroy_hash_table(&keyword_table);
+  destroy_hash_table(&symbol_table);
   return all_tokens;
 }

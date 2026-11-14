@@ -266,6 +266,11 @@ void destroy_block(block_t* block){
 }
 void destroy_expression(expression_t* exp){
   if(!exp) return;
+  if(exp->return_type){
+    destroy_type_identifier(exp->return_type);
+    free(exp->return_type);
+    exp->return_type = NULL;
+  }
   switch(exp->type){
     case EXP_FUNCTION_CALL:
       for(int i = 0; i < exp->function_call.num_params; i++){
@@ -276,6 +281,9 @@ void destroy_expression(expression_t* exp){
       exp->function_call.num_params = 0;
       break;
     case EXP_TYPE_LITERAL:
+      printf("destroying type literal: ");
+      print_type_identifier(exp->type_literal);
+      printf("\n");
       destroy_type_identifier(exp->type_literal);
       free(exp->type_literal);
       exp->type_literal = NULL;
@@ -299,6 +307,7 @@ void destroy_expression(expression_t* exp){
       }
       break;
     case EXP_RAW_TOKEN:
+      break;
     case EXP_READ_VAR:
       break;
   }
@@ -314,9 +323,13 @@ void destroy_type_argument(type_argument_t* arg){
   switch(arg->type){
     case TYPEARG_SUBTYPE:
       destroy_type_identifier(arg->subtype);
+      free(arg->subtype);
+      arg->subtype = NULL;
       break;
     case TYPEARG_PARAM_EXP:
       destroy_expression(arg->exp);
+      free(arg->exp);
+      arg->exp = NULL;
       break;
   }
 }
@@ -367,19 +380,35 @@ void destroy_type_declaration(type_declaration_t* typedec){
 void destroy_variable_declaration(variable_declaration_t* vardec){
   if(!vardec) return;
   vardec->var_name = NULL;
+  printf("destroying variable with type ");
+  print_type_identifier(&vardec->type);
+  printf("\n");
   destroy_type_identifier(&vardec->type);
 }
 void destroy_pattern_value(pattern_value_t* pval){
+  printf("destroying pattern value: ");
+  print_pattern_value(pval);
+  printf(pval->is_param ? " (param)" : " (not param)");
+  printf("\n");
+
   if(pval->is_param){
     destroy_pattern_variable(pval->param);
+    free(pval->param);
+    pval->param = NULL;
   }
   else{
+    printf("expression returns type: ");
+    //print_type_identifier(pval->base_value->return_type);
+    printf("%p", pval->base_value->return_type);
+    printf("\n");
+    printf("\n");
     destroy_expression(pval->base_value);
   }
 }
 void destroy_pattern_dimension_array(pattern_dimension_array_t* array){
   for(int i = 0; i < array->dimension_count; i++){
     destroy_pattern_value(array->dimensions + i);
+    
   }
   free(array->dimensions);
   array->dimensions = NULL;
@@ -395,6 +424,8 @@ void destroy_pattern_type(pattern_type_t* ptype){
   }
   else{
     destroy_pattern(ptype->subpattern);
+    free(ptype->subpattern);
+    ptype->subpattern = NULL;
   }
 }
 void destroy_pattern_variable(pattern_variable_t* pvar){
@@ -473,6 +504,13 @@ void copy_type_argument(type_argument_t* new, type_argument_t* arg){
 }
 
 void copy_expression(expression_t *new, expression_t *exp){
+  if(exp->return_type){
+    new->return_type = malloc(sizeof(type_identifier_t));
+    copy_type_identifier(new->return_type, exp->return_type);
+  }
+  else{
+    new->return_type = NULL;
+  }
   new->type = exp->type;
   switch(new->type){
     case EXP_FUNCTION_CALL:

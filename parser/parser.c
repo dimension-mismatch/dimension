@@ -71,7 +71,7 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
     }
   }
   tc_inc(&tc);
-  result->dimensions = dimensions;
+  
   token_cursor_t btc = tc;
   if(btc.tk.type == TK_NUMERIC && btc.tk.number.type < NUM_FLOAT){
     uint64_t size = btc.tk.number.int_literal;
@@ -81,6 +81,7 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
       result->size = size;
       tc_inc(&btc);
       *base_tc = btc;
+      result->dimensions = dimensions;
       return true;    
     }
   }
@@ -97,10 +98,12 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
     destroy_dimension_array(&result->dimensions);
     return false;
   }
-  result->type_id = contents.type_literal->type_id;
-  result->num_params = contents.type_literal->num_params;
-  result->params = contents.type_literal->params;
-
+  //we take ownership of the type literal from the built expression
+  result = contents.type_literal;
+  result->dimensions = dimensions;
+  printf("type literal: ");
+  print_type_identifier(result);
+  printf("\n");
   tc_inc(&tc);
 
   *base_tc = tc;
@@ -141,11 +144,12 @@ bool is_type_identifier_present(token_cursor_t* base_tc){
 expression_t resolve_pattern_value(pattern_value_t* pval){
   expression_t result;
   if(pval->is_param){
+    result.return_type = NULL;
     result.type = EXP_READ_VAR;
     result.read_var_id = pval->param->var_id;
   }
   else{
-    result = *pval->base_value;//create_exp_from_datum(pval->base_value);
+    copy_expression(&result, pval->base_value);
   }
   return result;
 }
@@ -160,13 +164,7 @@ type_identifier_t resolve_pattern_type(pattern_type_t* ptype){
     .type_id = ptype->base_type_id
     };
   for(int i = 0; i < ptype->dimensions.dimension_count; i++){
-    if(ptype->dimensions.dimensions[i].is_param){
-      expression_t exp = {.type = EXP_READ_VAR, .const_lvl = 2, .read_var_id = ptype->dimensions.dimensions[i].param->var_id};
-      result.dimensions.dimensions[i] = exp;
-    }else{
-      copy_expression(result.dimensions.dimensions + i, ptype->dimensions.dimensions[i].base_value);
-    }
-     resolve_pattern_value(ptype->dimensions.dimensions + i);
+    result.dimensions.dimensions[i] = resolve_pattern_value(ptype->dimensions.dimensions + i);
   }
   if(ptype->is_param){
     result.type_id = -1; //TODO: Figure out how to handle fully parameterized types?
@@ -243,7 +241,7 @@ bool parse_pattern_type(token_cursor_t* base_tc, pattern_type_t* result){
     //dimensions may be defined with an expression or declared as a pattern variable
     if(tc.tk.type == TK_VECTOR && tc.tk.is_open){
       pattern_variable_t pvar;
-      expression_t* exp = malloc(sizeof(expression_t));
+      expression_t exp;
       tc_inc(&tc);
       
       parse_result_t var_result = parse_pattern_vardec(&tc, &pvar, false);
@@ -287,10 +285,11 @@ bool parse_pattern_type(token_cursor_t* base_tc, pattern_type_t* result){
         result->param_count++;
       }
       //if that fails, try reading an expression
-      else if(parse_expression(&tc, TK_VECTOR, exp)){
+      else if(parse_expression(&tc, TK_VECTOR, &exp)){
         pattern_value_t* value = add_pattern_dimension(&dimensions);
         value->is_param = false;
-        value->base_value = exp;
+        value->base_value = malloc(sizeof(expression_t));
+        *value->base_value = exp;
       }
       else{
         //not an expression or pattern variable, throw an error!!
@@ -308,10 +307,9 @@ bool parse_pattern_type(token_cursor_t* base_tc, pattern_type_t* result){
       pattern_value_t* new = add_pattern_dimension(&dimensions);
       new->is_param = false;
       new->base_value = malloc(sizeof(expression_t));
-      new->base_value->type = EXP_VALUE_LITERAL;
-      new->base_value->const_lvl = 3;
-      new->base_value->value_literal.type = VAL_UNSIGNED;
-      new->base_value->value_literal.u = atoi(tc.tk.content);
+      expression_t exp = {.type = EXP_VALUE_LITERAL, .const_lvl = CL_SUPERCONST, 
+        .value_literal = {.type = VAL_UNSIGNED, .u = atoi(tc.tk.content)}};
+      *(new->base_value) = exp;
     }
     else if(!tc_is_asterisk(&tc)){
       break;
@@ -709,10 +707,12 @@ parse_result_t parse_fn_declaration(token_cursor_t* base_tc, function_definition
       }
       has_makes = true;
       tc_inc(&tc);
-      result->return_type = malloc(sizeof(type_identifier_t));
-      if(!parse_type_identifier(&tc, result->return_type)){
+      type_identifier_t return_type;
+      if(!parse_type_identifier(&tc, &return_type)){
         return PRS_ERROR;
       }
+      result->return_type = malloc(sizeof(type_identifier_t));
+      *result->return_type = return_type;
     }
     else if(tc.tk.keyword_id == 7){
       //priority clause
@@ -762,6 +762,7 @@ parse_result_t parse_fn_declaration(token_cursor_t* base_tc, function_definition
           }
         }
         tc_inc(&tc);
+        //destroy_register_file(&registers);
       }
       else if(parse_expression(&tc, TK_KEYWORD, &one_liner)){
 
@@ -806,9 +807,9 @@ void parse_block(token_cursor_t* tc, token_type_t end_type, block_t* result){
     type_declaration_t typedec;
     parse_result_t type_result = parse_type_declaration(tc, &typedec);
     if(type_result == PRS_SUCCESS){
-      type_declaration_t* typedecptr = malloc(sizeof(type_declaration_t));
-      *typedecptr = typedec;
-      pattern_trie_push_type(tc->type_trie, typedecptr);
+      // type_declaration_t* typedecptr = malloc(sizeof(type_declaration_t));
+      // *typedecptr = typedec;
+      pattern_trie_push_type(tc->type_trie, &typedec);
       //printf("successful typedec! we are now at line %i, column %i\n", tc->tk.line_number, tc->tk.start_pos);
       //continue;
     }

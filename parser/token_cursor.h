@@ -34,3 +34,5 @@ bool tc_is_asterisk(token_cursor_t *tc);
 void find_closing_bracket(token_cursor_t *tc, token_type_t end_type);
 
 void tc_throw_error(token_cursor_t* tc, int error_num);
+
+void tc_destroy(token_cursor_t* tc);

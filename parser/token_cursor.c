@@ -48,3 +48,9 @@ void find_closing_bracket(token_cursor_t* tc, token_type_t end_type){
   }
 }
 
+void tc_destroy(token_cursor_t* tc){
+  destroy_pattern_trie(tc->fn_trie);
+  destroy_pattern_trie(tc->type_trie);
+  destroy_token_array(tc->array);
+  destroy_error_manager(tc->error_manager);
+}

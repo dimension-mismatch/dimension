@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+void print_single_trie_node(pattern_trie_node_t* node);
 bool type_identifier_compare(type_identifier_t* a, type_identifier_t* b);
 bool pattern_entry_compare(pattern_entry_t* a, pattern_entry_t* b);
 
@@ -350,7 +351,6 @@ pattern_trie_node_t* pattern_trie_node_push_pattern(pattern_trie_node_t* root, p
     *new_node = trie_node_init();
     new_node->parent = node;
     copy_pattern_entry(&new_node->pattern, pattern->entries + entry_index);
-
     node = new_node;
     entry_index++;
   }
@@ -488,6 +488,7 @@ void destroy_pattern_trie_node(pattern_trie_node_t* node){
   destroy_pattern_entry(&node->pattern);
   destroy_hash_table(&node->next_identifiers);
   destroy_hash_table(&node->next_parameters);
+  destroy_hash_table(&node->next_pattern_types);
   for(int i = 0; i < node->children_count; i++){
     destroy_pattern_trie_node(node->children[i]);
     free(node->children[i]);
@@ -513,8 +514,12 @@ void destroy_trie_match_result(trie_match_result_t* result){
   }
 }
 void destroy_pattern_trie(pattern_trie_t* trie){
+  printf("destroying a pattern trie!\n");
   destroy_pattern_trie_node(trie->root);
+  free(trie->root);
   for(int i = 0; i < trie->match_count; i++){
+    print_trie_match_result(trie->matches + i);
+    printf("\n");
     destroy_trie_match_result(trie->matches + i);
   }
   free(trie->matches);
@@ -602,6 +607,7 @@ void pattern_trie_pop_pattern(pattern_trie_t* trie, int match_to_remove){
   }
 
   destroy_pattern_trie_node(node->children[child_index]);
+  free(node->children[child_index]);
   node->children_count = child_index;
   node->children = realloc(node->children, node->children_count * sizeof(pattern_trie_node_t*));
 

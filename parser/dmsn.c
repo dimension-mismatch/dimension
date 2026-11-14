@@ -48,6 +48,8 @@ int main(int argc, char* argv[]){
   print_pattern_trie(&fn_trie);
 
 
+
+
   printf("\n");
 
   
@@ -56,11 +58,20 @@ int main(int argc, char* argv[]){
   error_printout(&errors);
 
   if(errors.error_count != 0){
-    return 0;
+    
   }
+  else{
+    program_t ir = compile_program(ast, &fn_trie, &type_trie);
+  
+    
 
-  program_t ir = compile_program(ast, &fn_trie, &type_trie);
-  print_program(&ir);
-  printf("end of main");
+    print_program(&ir);
+    destroy_program(&ir);
+  }
+  
+  tc_destroy(&tc);
+  destroy_block(&ast);
+  
+
   return 0;
 }
