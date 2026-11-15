@@ -63,9 +63,6 @@ void destroy_expression_array(expression_array_t* array){
 void shallow_destroy_expression_array(expression_array_t* array){
   array = array->next;
   while(array){
-    printf("shallow destroying: ");
-    print_expression(&array->exp);
-    printf("\n");
     expression_array_t* next = array->next;
     free(array);
     array = next;

@@ -99,7 +99,9 @@ bool parse_type_identifier(token_cursor_t* base_tc, type_identifier_t* result){
     return false;
   }
   //we take ownership of the type literal from the built expression
-  result = contents.type_literal;
+  *result = *(contents.type_literal);
+  free(contents.type_literal);
+
   result->dimensions = dimensions;
   printf("type literal: ");
   print_type_identifier(result);
@@ -707,6 +709,7 @@ parse_result_t parse_fn_declaration(token_cursor_t* base_tc, function_definition
       }
       has_makes = true;
       tc_inc(&tc);
+      printf("parsing return type @(%i, %i)\n", tc.tk.line_number, tc.tk.start_pos);
       type_identifier_t return_type;
       if(!parse_type_identifier(&tc, &return_type)){
         return PRS_ERROR;

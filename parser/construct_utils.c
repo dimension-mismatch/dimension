@@ -281,9 +281,6 @@ void destroy_expression(expression_t* exp){
       exp->function_call.num_params = 0;
       break;
     case EXP_TYPE_LITERAL:
-      printf("destroying type literal: ");
-      print_type_identifier(exp->type_literal);
-      printf("\n");
       destroy_type_identifier(exp->type_literal);
       free(exp->type_literal);
       exp->type_literal = NULL;
@@ -380,9 +377,6 @@ void destroy_type_declaration(type_declaration_t* typedec){
 void destroy_variable_declaration(variable_declaration_t* vardec){
   if(!vardec) return;
   vardec->var_name = NULL;
-  printf("destroying variable with type ");
-  print_type_identifier(&vardec->type);
-  printf("\n");
   destroy_type_identifier(&vardec->type);
 }
 void destroy_pattern_value(pattern_value_t* pval){
@@ -403,6 +397,8 @@ void destroy_pattern_value(pattern_value_t* pval){
     printf("\n");
     printf("\n");
     destroy_expression(pval->base_value);
+    free(pval->base_value);
+    pval->base_value = NULL;
   }
 }
 void destroy_pattern_dimension_array(pattern_dimension_array_t* array){
@@ -462,9 +458,11 @@ void destroy_pattern(pattern_t* pattern){
   pattern->entry_count = 0;
 }
 void destroy_function_definition(function_definition_t* fn_def){
+
   destroy_pattern(&fn_def->match);
   destroy_type_identifier(fn_def->return_type);
   free(fn_def->return_type);
+
   fn_def->return_type = NULL;
 
   if(fn_def->is_IR){

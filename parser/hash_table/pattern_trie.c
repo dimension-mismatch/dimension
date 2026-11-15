@@ -514,17 +514,17 @@ void destroy_trie_match_result(trie_match_result_t* result){
   }
 }
 void destroy_pattern_trie(pattern_trie_t* trie){
-  printf("destroying a pattern trie!\n");
   destroy_pattern_trie_node(trie->root);
   free(trie->root);
   for(int i = 0; i < trie->match_count; i++){
-    print_trie_match_result(trie->matches + i);
-    printf("\n");
     destroy_trie_match_result(trie->matches + i);
   }
   free(trie->matches);
+  free(trie->scopes);
+  trie->scopes = NULL;
   trie->matches = NULL;
   trie->match_count = 0;
+  trie->scope_levels = 0;
 }
 
 
