@@ -1,6 +1,6 @@
 #pragma once
 #include <stdbool.h>
-
+#include <stdint.h>
 
 struct hash_entry{
   struct hash_entry* next;
@@ -20,13 +20,13 @@ typedef struct{
   struct hash_entry** array;
 } hash_table_t;
 
-unsigned long long hash_fn(const char *input);
+unsigned long long hash_fn(const void* data, u_int32_t byte_count);
 
 hash_table_t init_hash_table(int array_size, float max_fill_factor);
 
 hash_table_t init_hash_table_from_array(int hash_array_size, float max_fill_factor, const char* array[], int length);
 
-void push_key_value(hash_table_t *record, const char *key, int value);
+void hash_(hash_table_t *record, const char *key, int value);
 
 void push_int_value(hash_table_t *record, int key, int value);
 

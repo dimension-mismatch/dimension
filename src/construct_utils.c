@@ -708,4 +708,3 @@ bool compatible_const_levels(const_lvl_t slot, const_lvl_t input){
   if(slot == CL_CONST) return true;
   return input == slot;
 }
-
