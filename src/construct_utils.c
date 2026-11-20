@@ -1,8 +1,8 @@
-#include "construct_utils.h"
-#include "constructs.h"
-#include "colors.h"
-#include "tokenizer.h"
-#include "dimension-IR/ir_construct_utils.h"
+#include <construct_utils.h>
+#include <constructs.h>
+#include <colors.h>
+#include <tokenizer.h>
+#include <dimension-IR/ir_construct_utils.h>
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,5 +1,5 @@
-#include "variable_to_register.h"
-#include "dimension-IR/registers.h"
+#include <variable_to_register.h>
+#include <dimension-IR/registers.h>
 
 void pattern_to_registers(pattern_t* pattern, register_file_t* rf);
 

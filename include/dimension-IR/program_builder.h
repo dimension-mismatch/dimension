@@ -1,4 +1,4 @@
-#include "ir_constructs.h"
+#include <ir_constructs.h>
 
 program_t program_init();
 

@@ -1,8 +1,8 @@
-#include "pattern_trie.h"
-#include "hash_table.h"
-#include "../colors.h"
-#include "../constructs.h"
-#include "../construct_utils.h"
+#include <hash_table/pattern_trie.h>
+#include <hash_table/hash_table.h>
+#include <colors.h>
+#include <constructs.h>
+#include <construct_utils.h>
 
 
 #include <stdio.h>

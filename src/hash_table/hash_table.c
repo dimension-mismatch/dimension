@@ -1,5 +1,6 @@
-#include "hash_table.h"
-#include "../colors.h"
+#include <hash_table/hash_table.h>
+#include <colors.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

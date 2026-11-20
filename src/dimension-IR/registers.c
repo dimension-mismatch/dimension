@@ -1,4 +1,5 @@
-#include "registers.h"
+#include <dimension-IR/registers.h>
+
 #include <stdlib.h>
 
 register_file_t register_file_init(){

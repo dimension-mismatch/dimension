@@ -1,6 +1,6 @@
 #pragma once
 
-#include "constructs.h"
+#include <constructs.h>
 #include "tokenizer.h"
 #include "token_cursor.h"
 

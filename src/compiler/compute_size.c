@@ -1,5 +1,5 @@
-#include "compute_size.h"
-#include "compiler.h"
+#include <compiler/compute_size.h>
+#include <compiler/compiler.h>
 #include <stdlib.h>
 
 #define UMULTIPLY_INSTR 12

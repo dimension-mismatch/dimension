@@ -1,14 +1,14 @@
-#include "error_manager.h"
+#include <error_handling/error_manager.h>
 
-#include "../colors.h"
-#include "../construct_utils.h"
+#include <colors.h>
+#include <construct_utils.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 
 error_manager_t error_manager_init(token_array_t* tokens){
   error_manager_t new = {0, NULL, 0, NULL, tokens};
-  FILE* file = fopen("error_handling/dmsn_errors.txt", "r");
+  FILE* file = fopen("src/error_handling/dmsn_errors.txt", "r");
   if(file == NULL){
     printf(RED BOLD "Failed to load error handling\n" RESET_COLOR);
     exit(15);

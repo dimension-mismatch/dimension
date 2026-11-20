@@ -1,6 +1,6 @@
-#include "ir_construct_utils.h"
-#include "ir_constructs.h"
-#include "../colors.h"
+#include <dimension-IR/ir_construct_utils.h>
+#include <ir_constructs.h>
+#include <colors.h>
 
 
 #include <stdio.h>

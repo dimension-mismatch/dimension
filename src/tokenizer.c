@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "tokenizer.h"
-#include "hash_table/hash_table.h"
-#include "colors.h"
+#include <tokenizer.h>
+#include <hash_table/hash_table.h>
+#include <colors.h>
 
 token_t new_empty_token(int line, int col){
   token_t new = {.line_number = line, .start_pos = col, .length = 0, .content = NULL, .type = TK_NONE};

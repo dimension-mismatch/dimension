@@ -1,9 +1,9 @@
-#include "ir_parser.h"
-#include "ir_constructs.h"
-#include "ir_construct_utils.h"
-#include "../hash_table/hash_table.h"
-#include "../token_cursor.h"
-#include "registers.h"
+#include <dimension-IR/ir_parser.h>
+#include <ir_constructs.h>
+#include <dimension-IR/ir_construct_utils.h>
+#include <hash_table/hash_table.h>
+#include <token_cursor.h>
+#include <dimension-IR/registers.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>

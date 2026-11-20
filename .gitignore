@@ -1,8 +1,11 @@
 *.o
-/parser/dmsn
+
+dmsn
 
 .DS_store
 
 test
 
-/parser/dmsn.dSYM
+/src/dmsn.dSYM
+
+/build

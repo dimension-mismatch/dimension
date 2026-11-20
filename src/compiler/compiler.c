@@ -1,5 +1,5 @@
-#include "compiler.h"
-#include "../hash_table/hash_table.h"
+#include <compiler/compiler.h>
+#include <hash_table/hash_table.h>
 
 #include <stdlib.h>
 

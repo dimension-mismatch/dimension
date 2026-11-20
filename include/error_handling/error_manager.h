@@ -1,6 +1,6 @@
 #pragma once
-#include "../tokenizer.h"
-#include "../constructs.h"
+#include <tokenizer.h>
+#include <constructs.h>
 
 typedef enum{
   ERR_EXPRESSION,

@@ -2,15 +2,15 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "tokenizer.h"
-#include "colors.h"
-#include "parser.h"
-#include "hash_table/pattern_trie.h"
-#include "construct_utils.h"
-#include "error_handling/error_manager.h"
-#include "token_cursor.h"
+#include <tokenizer.h>
+#include <colors.h>
+#include <parser.h>
+#include <hash_table/pattern_trie.h>
+#include <construct_utils.h>
+#include <error_handling/error_manager.h>
+#include <token_cursor.h>
 
-#include "compiler/compiler.h"
+#include <compiler/compiler.h>
 
 
 

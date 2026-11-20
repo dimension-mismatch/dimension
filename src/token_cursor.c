@@ -1,8 +1,8 @@
-#include "token_cursor.h"
-#include "tokenizer.h"
-#include "constructs.h"
-#include "hash_table/pattern_trie.h"
-#include "error_handling/error_manager.h"
+#include <token_cursor.h>
+#include <tokenizer.h>
+#include <constructs.h>
+#include <hash_table/pattern_trie.h>
+#include <error_handling/error_manager.h>
 #include <stdbool.h>
 #include <stdlib.h>
 

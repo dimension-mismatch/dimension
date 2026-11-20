@@ -1,8 +1,8 @@
-#include "program_builder.h"
-#include "registers.h"
-#include "ir_constructs.h"
-#include "ir_construct_utils.h"
-#include "ir_evaluation.h"
+#include <dimension-IR/program_builder.h>
+#include <dimension-IR/registers.h>
+#include <ir_constructs.h>
+#include <dimension-IR/ir_construct_utils.h>
+#include <dimension-IR/ir_evaluation.h>
 #include <stdlib.h>
 #include <stdio.h>
 

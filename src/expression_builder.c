@@ -1,11 +1,11 @@
-#include "expression_builder.h"
+#include <expression_builder.h>
 
-#include "tokenizer.h"
-#include "constructs.h"
-#include "construct_utils.h"
-#include "token_cursor.h"
-#include "hash_table/pattern_trie.h"
-#include "colors.h"
+#include <tokenizer.h>
+#include <constructs.h>
+#include <construct_utils.h>
+#include <token_cursor.h>
+#include <hash_table/pattern_trie.h>
+#include <colors.h>
 
 #include <stdlib.h>
 #include <stdio.h>

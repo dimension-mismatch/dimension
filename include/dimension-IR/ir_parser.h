@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ir_constructs.h"
+#include <ir_constructs.h>
 #include "../token_cursor.h"
 #include <stdint.h>
 

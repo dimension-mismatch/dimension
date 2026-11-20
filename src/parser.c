@@ -1,13 +1,13 @@
-#include "parser.h"
-#include "constructs.h"
-#include "token_cursor.h"
-#include "colors.h"
-#include "expression_builder.h"
-#include "construct_utils.h"
-#include "hash_table/pattern_trie.h"
-#include "dimension-IR/ir_parser.h"
-#include "variable_to_register.h"
-#include "./compiler/compute_size.h"
+#include <parser.h>
+#include <constructs.h>
+#include <token_cursor.h>
+#include <colors.h>
+#include <expression_builder.h>
+#include <construct_utils.h>
+#include <hash_table/pattern_trie.h>
+#include <dimension-IR/ir_parser.h>
+#include <variable_to_register.h>
+#include <./compiler/compute_size.h>
 
 #include <stdlib.h>
 #include <string.h>

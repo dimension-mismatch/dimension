@@ -2,7 +2,7 @@
 #define NO_MATCH -1
 #include "hash_table.h"
 
-#include "../constructs.h"
+#include <constructs.h>
 #include <stdbool.h>
 
 typedef enum{

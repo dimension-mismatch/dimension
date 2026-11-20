@@ -1,9 +1,9 @@
 #pragma once
 #include <stdbool.h>
-#include "constructs.h"
+
 #include "tokenizer.h"
-#include "hash_table/pattern_trie.h"
-#include "error_handling/error_manager.h"
+#include <hash_table/pattern_trie.h>
+#include <error_handling/error_manager.h>
 
 typedef struct token_cursor{
   token_array_t* array;
