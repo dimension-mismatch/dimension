@@ -9,12 +9,23 @@
 #define FNV_PRIME 1099511628211
 #define FNV_OFFSET 1469598103934665603
 
+#define FILL_FACTOR 0.65
 
-unsigned long long hash_fn(const char* input){
-  unsigned long long h = FNV_OFFSET;
+#define TOMBSTONE (char*)1
+
+bool is_occupied(struct hash_entry entry){
+  return (bool)entry.key;
+}
+
+bool has_value(struct hash_entry entry){
+  return !(entry.key == 0 || entry.key == TOMBSTONE);
+}
+
+hash_t hash_string(const char* input){
+  hash_t h = FNV_OFFSET;
   int done = 0;
   while(!done){
-    unsigned long long next_chunk = 0;
+  hash_t next_chunk = 0;
     for(int i = 0; i < 8; i++){
       if(*input == '\0'){
         done = 1;
@@ -29,186 +40,138 @@ unsigned long long hash_fn(const char* input){
   return h;
 }
 
-unsigned long long hash_int(int input){
+uint64_t hash_int(int input){
   return FNV_OFFSET + input * FNV_PRIME;
 }
 
-hash_table_t init_hash_table(int array_size, float max_fill_factor){
-  hash_table_t record = {.array_size = array_size, .key_count = 0, .max_fill_factor = max_fill_factor};
-  record.array = calloc(array_size, sizeof(struct hash_entry*));
-  return record;
+void init_hash_table(hash_table_t* table){
+  table->array = NULL;
+  table->array_size = 0;
+  table->key_count = 0;
 }
-void destroy_hash_entry(struct hash_entry* entry){
-  if(!entry->is_int){
-    free(entry->name);
+
+
+void destroy_hash_table(hash_table_t *table){
+  for(int i = 0; i < table->array_size; i++){
+    struct hash_entry entry = table->array[i];
+    if(has_value(entry)){
+      free(entry.key);
+    }
   }
+  free(table->array);
+  table->array = NULL;
+  table->key_count = 0;
 }
-void destroy_hash_table(hash_table_t *record){
-  for(int i = 0; i < record->array_size; i++){
-    if(record->array[i] != NULL){
-      struct hash_entry* ptr = record->array[i];
-      while(ptr){
-        destroy_hash_entry(ptr);
-        struct hash_entry* next = ptr->next;
-        free(ptr);
-        ptr = next;
+
+
+
+
+void insert_hash_entry(struct hash_entry* array, int length, struct hash_entry entry){
+  int i = entry.hash % length;
+  while(is_occupied(array[i])){
+    i++;
+    if(i == length){i = 0;}
+  }
+  array[i] = entry;
+}
+
+void rehash_table(hash_table_t* table, int size){
+  struct hash_entry* new_array = calloc(size, sizeof(struct hash_entry));
+  for(int i = 0; i < table->array_size; i++){
+    struct hash_entry entry = table->array[i];
+    if(has_value(entry)){
+      insert_hash_entry(new_array, size, entry);
+    }
+  }
+  free(table->array);
+  table->array = new_array;
+  table->array_size = size;
+}
+
+void hash_key_value(hash_table_t* table, const char* key, int value){
+  table->key_count++;
+  struct hash_entry new_entry = {.hash = hash_string(key), .key = strdup(key), .value = value};
+  if(table->array_size == 0){
+    table->array_size = 8;
+    table->array = calloc(table->array_size, sizeof(struct hash_entry));
+  }
+  else if(table->key_count > table->array_size * FILL_FACTOR){
+    rehash_table(table, 2 * table->array_size);
+  }
+  insert_hash_entry(table->array, table->array_size, new_entry);
+}
+
+
+void remove_key_value(hash_table_t *table, const char *key){
+  hash_t hash = hash_string(key);
+  printf("removing hash %lx\n", hash);
+  int i = hash % table->array_size;
+  struct hash_entry* entry;
+
+  while(is_occupied(*(entry = table->array + i))){
+    printf("comparing to hash %lx\n", entry->hash);
+    if(hash == entry->hash && !strcmp(key, entry->key)){
+      free(entry->key);
+      int next = (i == table->array_size)? 0 : i + 1;
+      if(is_occupied(table->array[next])){
+        entry->key = TOMBSTONE;
+        
       }
+      else{
+        entry->key = 0;
+        int j = (i == 0 ? table->array_size : i) - 1;
+        while(table->array[j].key == TOMBSTONE){
+          table->array[j].key = 0;
+          j = (j == 0 ? table->array_size : j) - 1;
+        }
+      }
+      
+      entry->value = 0;
+      entry->hash = 0;
     }
+    i++;
+    if(i == table->array_size){i = 0;}
   }
-  if(record->array != NULL){
-    free(record->array);
-  }
-  record->array = NULL;
-  record->key_count = 0;
 }
 
 
 
-void push_hash_node(hash_table_t* record, unsigned long long hash, struct hash_entry* new_node, const char* name, int* id){
-  int idx = hash % record->array_size;
-  struct hash_entry* ptr = record->array[idx];
-  if(ptr == NULL){
-    record->array[idx] = new_node;
-  }
-  else{
-    if(name != NULL && !strcmp(name, ptr->name)){
-      return;
-    }
-    if(id != NULL && *id == ptr->id){
-      return;
-    }
-    while(ptr->next != NULL){
-      ptr = ptr->next;
-    }
-    new_node->prev = ptr;
-    ptr->next = new_node;
-  }
-  record->key_count++;
-}
-
-void push_key_value(hash_table_t* record, const char* key, int value){
-  struct hash_entry* new_node = malloc(sizeof(struct hash_entry));
-  new_node->next = NULL;
-  new_node->prev = NULL;
-  new_node->value = value;
-  new_node->name = malloc((strlen(key) + 1) * sizeof(char));
-  new_node->is_int = false;
-  strcpy(new_node->name, key);
-  push_hash_node(record, hash_fn(key), new_node, key, NULL);
-}
-
-void push_int_value(hash_table_t* record, int key, int value){
-  struct hash_entry* new_node = malloc(sizeof(struct hash_entry));
-  new_node->next = NULL;
-  new_node->prev = NULL;
-  new_node->value = value;
-  new_node->id = key;
-  new_node->is_int = true;
-  push_hash_node(record, hash_int(key), new_node, NULL, &key);
-}
-
-
-void remove_key_value(hash_table_t *record, const char *key){
-  if(record == NULL || key == NULL){
-    return;
-  }
-  int idx = hash_fn(key) % record->array_size;
-  struct hash_entry* ptr = record->array[idx];
-  if(ptr == NULL){
-    return;
-  }
-  while(ptr->is_int || strcmp(key, ptr->name)){
-    ptr = ptr->next;
-    if(ptr == NULL){
-      return;
+int* get_value_from_key(hash_table_t* table, const char* key){
+  hash_t hash =  hash_string(key);
+  int i = hash % table->array_size;
+  struct hash_entry entry;
+  while(is_occupied(entry = table->array[i])){
+    if(hash == entry.hash && strcmp(key, entry.key)){
+      return &(table->array[i].value);
     }
   }
-  if(ptr->prev){
-    ptr->prev->next = ptr->next;
-  }
-  else{
-    record->array[idx] = ptr->next;
-  }
-  free(ptr->name);
-  free(ptr);
-  ptr = NULL;
-  record->key_count--;
-}
-
-void remove_int_value(hash_table_t* record, int key){
-  int idx = hash_int(key) % record->array_size;
-  struct hash_entry* ptr = record->array[idx];
-  if(ptr == NULL){
-    return;
-  }
-  while(!ptr->is_int || ptr->id != key){
-    ptr = ptr->next;
-    if(ptr == NULL){
-      return;
-    }
-  }
-  ptr->prev->next = ptr->next;
-  free(ptr->name);
-  free(ptr);
-  ptr = NULL;
-  record->key_count--;
-}
-
-int* get_value_from_key(hash_table_t* record, const char* key){
-  int idx = hash_fn(key) % record->array_size;
-  struct hash_entry* ptr = record->array[idx];
-  if(ptr == NULL){
-    return NULL;
-  }
-  while(ptr->is_int || strcmp(key, ptr->name)){
-    ptr = ptr->next;
-    if(ptr == NULL){
-      return NULL;
-    }
-  }
-  return &(ptr->value);
-}
-
-int* get_value_from_int(hash_table_t* record, int key){
-  int idx = hash_int(key) % record->array_size;
-  struct hash_entry* ptr = record->array[idx];
-  if(ptr == NULL){
-    return NULL;
-  }
-  while(!ptr->is_int || ptr->id != key){
-    ptr = ptr->next;
-    if(ptr == NULL){
-      return NULL;
-    }
-  }
-  return &(ptr->value);
+  return NULL;
 }
 
 void print_hash_table(hash_table_t* table){
   for(int i = 0; i < table->array_size; i++){
-    struct hash_entry* ptr = table->array[i];
-    if(ptr){
-      printf("\n");
-    }
-    while(ptr){
-      if(ptr->is_int){
-        printf(YELLOW "%i" RESET_COLOR, ptr->id);
+    struct hash_entry entry = table->array[i];
+    printf("%i | ", i);
+    if(is_occupied(entry)){
+      if(has_value(entry)){
+        printf("%s (%lx) -> %i", entry.key, entry.hash, entry.value);
       }
       else{
-        printf(WHITE "\"%s\"" RESET_COLOR, ptr->name);
+        printf(BLACK "[tombstone]" RESET_COLOR);
       }
-      printf("  :  %i ->", ptr->value);
-      ptr = ptr->next;
     }
-    
+    else{
+      printf(BLACK "[empty]" RESET_COLOR);
+    }
+    printf("\n");
   }
 }
 
-hash_table_t init_hash_table_from_array(int hash_array_size, float max_fill_factor, const char* array[], int length){
-  hash_table_t res = init_hash_table(hash_array_size, max_fill_factor);
+void init_hash_table_from_array(hash_table_t* table, const char* array[], int length){
+  table->array_size = length / FILL_FACTOR;
+  table->array = calloc(table->array_size, sizeof(struct hash_entry));
   for(int i = 0; i < length; i++){
-    push_key_value(&res, array[i], i);
+    hash_key_value(table, array[i], i);
   }
-  return res;
 }
 

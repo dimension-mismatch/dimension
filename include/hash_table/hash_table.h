@@ -2,42 +2,66 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+typedef uint64_t hash_t;
+
 struct hash_entry{
-  struct hash_entry* next;
-  struct hash_entry* prev;
+  hash_t hash;
   int value;
-  bool is_int;
-  union{
-    char* name;
-    int id;
-  };
+  char* key;
+};
+
+struct int_hash_entry{
+  hash_t hash;
+  int value;
+  int key;
 };
 
 typedef struct{
   int array_size;
   int key_count;
-  float max_fill_factor;
-  struct hash_entry** array;
+  struct hash_entry* array;
 } hash_table_t;
 
-unsigned long long hash_fn(const char* input);
+typedef struct{
+  int array_size;
+  int key_count;
+  struct int_hash_entry* array;
+}int_hash_table_t;
 
-hash_table_t init_hash_table(int array_size, float max_fill_factor);
 
-hash_table_t init_hash_table_from_array(int hash_array_size, float max_fill_factor, const char* array[], int length);
 
-void push_key_value(hash_table_t *record, const char *key, int value);
+hash_t hash_string(const char* input);
 
-void push_int_value(hash_table_t *record, int key, int value);
+void init_hash_table(hash_table_t* table);
 
-void remove_key_value(hash_table_t *record, const char* key);
 
-void remove_int_value(hash_table_t *record, int key);
 
-int *get_value_from_key(hash_table_t *record, const char *key);
+void init_hash_table_from_array(hash_table_t* table, const char* array[], int length);
 
-int *get_value_from_int(hash_table_t *record, int key);
+void hash_key_value(hash_table_t *table, const char *key, int value);
 
-void destroy_hash_table(hash_table_t *record);
+void remove_key_value(hash_table_t *table, const char* key);
 
-void print_hash_table(hash_table_t* table);
+
+
+int *get_value_from_key(hash_table_t *table, const char *key);
+
+
+
+
+void destroy_hash_table(hash_table_t *table);
+
+
+
+void print_hash_table(hash_table_t *table);
+
+
+void init_int_hash_table(int_hash_table_t* table);
+
+void destroy_int_hash_table(int_hash_table_t* table);
+
+void hash_int_value(int_hash_table_t *table, int key, int value);
+
+void remove_int_value(int_hash_table_t *table, int key);
+
+int *get_value_from_int(int_hash_table_t *table, int key);
