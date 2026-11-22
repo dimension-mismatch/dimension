@@ -1,5 +1,5 @@
 #include <hash_table/hash_table.h>
-
+#include <stdio.h>
 
 int main(){
     hash_table_t table;
@@ -12,9 +12,25 @@ int main(){
     hash_key_value(&table, "b", 67);
     hash_key_value(&table, "c", 89);
 
-    remove_key_value(&table, "c");
-    remove_key_value(&table, "b");
     remove_key_value(&table, "835");
+    remove_key_value(&table, "hello");
+    remove_key_value(&table, "9");
+
+    int* b = get_value_from_key(&table, "b");
+    if(b){
+        printf("b : %i\n", *b);
+    }
+    else{
+        printf("\"b\" not in hash table. \n");
+    }
+
+    int* k = get_value_from_key(&table, "k");
+    if(k){
+        printf("k : %i\n", *b);
+    }
+    else{
+        printf("\"k\" not in hash table. \n");
+    }
 
     print_hash_table(&table);
 

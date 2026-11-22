@@ -7,14 +7,13 @@ typedef uint64_t hash_t;
 struct hash_entry{
   hash_t hash;
   int value;
-  char* key;
+  union{
+    char* key;
+    int int_key;
+  };
 };
 
-struct int_hash_entry{
-  hash_t hash;
-  int value;
-  int key;
-};
+
 
 typedef struct{
   int array_size;
@@ -22,19 +21,11 @@ typedef struct{
   struct hash_entry* array;
 } hash_table_t;
 
-typedef struct{
-  int array_size;
-  int key_count;
-  struct int_hash_entry* array;
-}int_hash_table_t;
-
 
 
 hash_t hash_string(const char* input);
 
 void init_hash_table(hash_table_t* table);
-
-
 
 void init_hash_table_from_array(hash_table_t* table, const char* array[], int length);
 
@@ -56,12 +47,11 @@ void destroy_hash_table(hash_table_t *table);
 void print_hash_table(hash_table_t *table);
 
 
-void init_int_hash_table(int_hash_table_t* table);
 
-void destroy_int_hash_table(int_hash_table_t* table);
+void destroy_int_hash_table(hash_table_t* table);
 
-void hash_int_value(int_hash_table_t *table, int key, int value);
+void hash_int_value(hash_table_t *table, int key, int value);
 
-void remove_int_value(int_hash_table_t *table, int key);
+void remove_int_value(hash_table_t *table, int key);
 
-int *get_value_from_int(int_hash_table_t *table, int key);
+int *get_value_from_int(hash_table_t *table, int key);
