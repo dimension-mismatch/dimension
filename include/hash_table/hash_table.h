@@ -21,13 +21,15 @@ typedef struct{
   struct hash_entry* array;
 } hash_table_t;
 
+typedef hash_table_t int_hash_table_t;
+
 
 
 hash_t hash_string(const char* input);
 
 void init_hash_table(hash_table_t* table);
 
-void init_hash_table_from_array(hash_table_t* table, const char* array[], int length);
+void init_hash_table_from_array(hash_table_t* table, const char* const array[], int length);
 
 void hash_key_value(hash_table_t *table, const char *key, int value);
 
@@ -48,10 +50,10 @@ void print_hash_table(hash_table_t *table);
 
 
 
-void destroy_int_hash_table(hash_table_t* table);
+void destroy_int_hash_table(int_hash_table_t* table);
 
-void hash_int_value(hash_table_t *table, int key, int value);
+void hash_int_value(int_hash_table_t *table, int key, int value);
 
-void remove_int_value(hash_table_t *table, int key);
+void remove_int_value(int_hash_table_t *table, int key);
 
-int *get_value_from_int(hash_table_t *table, int key);
+int *get_value_from_int(int_hash_table_t *table, int key);

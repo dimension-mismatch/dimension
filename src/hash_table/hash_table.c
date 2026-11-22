@@ -100,9 +100,8 @@ void rehash_table(hash_table_t* table, int size){
   table->array_size = size;
 }
 
-void hash_key_value(hash_table_t* table, const char* key, int value){
+void insert_entry_and_resize(hash_table_t* table, struct hash_entry entry){
   table->key_count++;
-  struct hash_entry new_entry = {.hash = hash_string(key), .key = strdup(key), .value = value};
   if(table->array_size == 0){
     table->array_size = 8;
     table->array = calloc(table->array_size, sizeof(struct hash_entry));
@@ -110,34 +109,42 @@ void hash_key_value(hash_table_t* table, const char* key, int value){
   else if(table->key_count > table->array_size * FILL_FACTOR){
     rehash_table(table, 2 * table->array_size);
   }
-  insert_hash_entry(table->array, table->array_size, new_entry);
+  insert_hash_entry(table->array, table->array_size, entry);
 }
 
+void hash_key_value(hash_table_t* table, const char* key, int value){
+  struct hash_entry new_entry = {.hash = hash_string(key), .key = strdup(key), .value = value};
+  insert_entry_and_resize(table, new_entry);
+}
+
+void clear_entry(hash_table_t* table, int index){
+  struct hash_entry* entry = table->array + index;
+  int next = inc_index(index, table->array_size);
+  if(is_occupied(table->array[next])){
+    entry->hash = TOMBSTONE;
+  }
+  else{
+    entry->hash = 0;
+    int j = dec_index(index, table->array_size);
+    while(table->array[j].hash == TOMBSTONE){
+      table->array[j].hash = 0;
+      j = dec_index(j, table->array_size);
+    }
+  }
+  
+  entry->value = 0;
+  entry->key = 0;
+}
 
 void remove_key_value(hash_table_t *table, const char *key){
   hash_t hash = hash_string(key);
   int i = hash % table->array_size;
-  struct hash_entry* entry;
+  struct hash_entry entry;
 
-  while(is_occupied(*(entry = table->array + i))){
-    if(hash == entry->hash && !strcmp(key, entry->key)){
-      free(entry->key);
-      int next = inc_index(i, table->array_size);
-      if(is_occupied(table->array[next])){
-        entry->hash = TOMBSTONE;
-        
-      }
-      else{
-        entry->hash = 0;
-        int j = dec_index(i, table->array_size);
-        while(table->array[j].hash == TOMBSTONE){
-          table->array[j].hash = 0;
-          j = dec_index(j, table->array_size);
-        }
-      }
-      
-      entry->value = 0;
-      entry->key = 0;
+  while(is_occupied(entry = table->array[i])){
+    if(hash == entry.hash && !strcmp(key, entry.key)){
+      free(entry.key);
+      clear_entry(table, i);
     }
     i = inc_index(i, table->array_size);
   }
@@ -177,7 +184,7 @@ void print_hash_table(hash_table_t* table){
   }
 }
 
-void init_hash_table_from_array(hash_table_t* table, const char* array[], int length){
+void init_hash_table_from_array(hash_table_t* table, const char* const array[], int length){
   table->array_size = length / FILL_FACTOR;
   table->array = calloc(table->array_size, sizeof(struct hash_entry));
   for(int i = 0; i < length; i++){
@@ -185,25 +192,39 @@ void init_hash_table_from_array(hash_table_t* table, const char* array[], int le
   }
 }
 
-void destroy_int_hash_table(hash_table_t *table){
+void destroy_int_hash_table(int_hash_table_t *table){
   free(table->array);
   table->array = NULL;
   table->key_count = 0;
 }
 
-void hash_int_value(hash_table_t *table, int key, int value){
-  table->key_count++;
+void hash_int_value(int_hash_table_t *table, int key, int value){
   struct hash_entry new_entry = {.hash = hash_int(key), .int_key = key, .value = value};
-  if(table->array_size == 0){
-    table->array_size = 8;
-    table->array = calloc(table->array_size, sizeof(struct hash_entry));
-  }
-  else if(table->key_count > table->array_size * FILL_FACTOR){
-    rehash_table(table, 2 * table->array_size);
-  }
-  insert_hash_entry(table->array, table->array_size, new_entry);
+  insert_entry_and_resize(table, new_entry);
 }
 
-void remove_int_value(hash_table_t *table, int key){
+void remove_int_value(int_hash_table_t *table, int key){
+  hash_t hash = hash_int(key);
+  int i = hash % table->array_size;
+  struct hash_entry entry;
 
+  while(is_occupied(entry = table->array[i])){
+    if(key == entry.int_key){
+      clear_entry(table, i);
+    }
+    i = inc_index(i, table->array_size);
+  }
+}
+
+int *get_value_from_int(int_hash_table_t *table, int key){
+  hash_t hash = hash_int(key);
+  int i = hash % table->array_size;
+  struct hash_entry entry;
+  while(is_occupied(entry = table->array[i])){
+    if(key == entry.int_key){
+      return &(table->array[i].value);
+    }
+    i = inc_index(i, table->array_size);
+  }
+  return NULL;
 }

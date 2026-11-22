@@ -3,14 +3,8 @@
 
 int main(){
     hash_table_t table;
-    init_hash_table(&table);
-
-    hash_key_value(&table, "hello", 5);
-    hash_key_value(&table, "835", 2);
-    hash_key_value(&table, "17", 3);
-    hash_key_value(&table, "a", 45);
-    hash_key_value(&table, "b", 67);
-    hash_key_value(&table, "c", 89);
+    const char* strings[6] = {"hello", "835", "17", "a", "b", "the quick brown fox jumps over the lazy dog"};
+    init_hash_table_from_array(&table, strings, 6);
 
     remove_key_value(&table, "835");
     remove_key_value(&table, "hello");
@@ -34,5 +28,30 @@ int main(){
 
     print_hash_table(&table);
 
+    int_hash_table_t int_table;
+    init_hash_table(&int_table);
+
+    hash_int_value(&int_table, 7, 67);
+    hash_int_value(&int_table, 8, 68);
+
+    int* i = get_value_from_int(&int_table, 8);
+    if(i){
+        printf("%i : %i\n", 8, *i);
+    }
+    else{
+        printf("8 not in hash table \n");
+    }
+
+    remove_int_value(&int_table, 8);
+
+    i = get_value_from_int(&int_table, 8);
+    if(i){
+        printf("%i : %i\n", 8, *i);
+    }
+    else{
+        printf("8 not in hash table \n");
+    }
+
     destroy_hash_table(&table);
+    destroy_int_hash_table(&int_table);
 }
